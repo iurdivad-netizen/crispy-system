@@ -1142,6 +1142,23 @@ select.form-control {
                 flex-direction: column;
                 align-items: center;
             }
+            
+            .download-notification {
+                width: calc(100vw - 20px);
+                right: 10px;
+                left: 10px;
+            }
+        }
+        
+        @keyframes slide-down {
+            from {
+                transform: translateY(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateY(100%);
+                opacity: 0;
+            }
         }
     </style>
 </head>
@@ -1281,10 +1298,62 @@ select.form-control {
                 <button class="btn btn-secondary" onclick="printTrades()" id="printBtn" disabled>
                     🖨️ Print
                 </button>
+                
+                <button onclick="toggleDownloadHelp()" class="btn btn-secondary" title="Show download help and tips">
+                    💡 Download Help
+                </button>
             </div>
 
             <!-- Messages -->
             <div id="messages"></div>
+
+            <!-- Download Help Section -->
+            <div class="mb-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded" style="background: var(--color-bg-1); border: 1px solid rgba(var(--color-primary-rgb), 0.3); border-radius: var(--radius-base); padding: var(--space-16); margin-bottom: var(--space-24);" id="downloadHelpSection" style="display: none;">
+                <h4 style="font-weight: var(--font-weight-semibold); color: var(--color-primary); margin-bottom: var(--space-12); font-size: var(--font-size-lg);">💡 Download Tips</h4>
+                <div style="font-size: var(--font-size-sm); color: var(--color-text); line-height: 1.6;">
+                    <div style="margin-bottom: var(--space-12);">
+                        <strong style="color: var(--color-primary);">To open Downloads folder:</strong>
+                        <div style="margin-left: var(--space-16); margin-top: var(--space-4);">
+                            <div style="margin-bottom: var(--space-2);">• Chrome/Edge: Press <code style="background: var(--color-secondary); padding: var(--space-2) var(--space-4); border-radius: var(--radius-sm); font-family: var(--font-family-mono);">Ctrl+J</code> (Windows) or <code style="background: var(--color-secondary); padding: var(--space-2) var(--space-4); border-radius: var(--radius-sm); font-family: var(--font-family-mono);">Cmd+Shift+J</code> (Mac)</div>
+                            <div style="margin-bottom: var(--space-2);">• Firefox: Press <code style="background: var(--color-secondary); padding: var(--space-2) var(--space-4); border-radius: var(--radius-sm); font-family: var(--font-family-mono);">Ctrl+Shift+Y</code></div>
+                            <div>• Safari: Press <code style="background: var(--color-secondary); padding: var(--space-2) var(--space-4); border-radius: var(--radius-sm); font-family: var(--font-family-mono);">Cmd+Option+L</code></div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: var(--space-12);">
+                        <strong style="color: var(--color-primary);">Browser download bar:</strong>
+                        <div style="margin-left: var(--space-16); margin-top: var(--space-4); font-size: var(--font-size-xs);">
+                            Check the bottom of your browser window for download progress
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <strong style="color: var(--color-primary);">Having issues?</strong>
+                        <div style="margin-left: var(--space-16); margin-top: var(--space-4); font-size: var(--font-size-xs);">
+                            • Check if pop-ups are blocked<br>
+                            • Try a different browser<br>
+                            • Check browser download settings
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: var(--space-16); padding: var(--space-12); background: var(--color-secondary); border-radius: var(--radius-base);">
+                    <div style="font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--color-text); margin-bottom: var(--space-4);">ℹ️ No Permissions Needed</div>
+                    <div style="font-size: var(--font-size-xs); color: var(--color-text-secondary);">
+                        This app runs entirely in your browser. No special permissions are required.
+                        Downloads work just like downloading any file from a website.
+                    </div>
+                </div>
+                
+                <div style="margin-top: var(--space-12); text-align: center;">
+                    <button onclick="testDownload()" style="background: var(--color-primary); color: var(--color-btn-primary-text); border: none; padding: var(--space-8) var(--space-16); border-radius: var(--radius-base); cursor: pointer; font-size: var(--font-size-sm); margin-right: var(--space-8);">
+                        🧪 Test Download
+                    </button>
+                    <button onclick="toggleDownloadHelp()" style="background: var(--color-secondary); color: var(--color-text); border: none; padding: var(--space-8) var(--space-16); border-radius: var(--radius-base); cursor: pointer; font-size: var(--font-size-sm);">
+                        Hide Tips
+                    </button>
+                </div>
+            </div>
 
             <!-- ACCOUNT SETTINGS SECTION - NEW LOCATION -->
             <div class="section" style="margin-bottom: 1.5rem;">
@@ -1796,9 +1865,12 @@ select.form-control {
                 </div>
             </div>
 
+            <!-- Download Notification -->
+            <div id="downloadNotificationContainer"></div>
+
             <!-- Footer -->
             <footer style="margin-top: var(--space-32); padding-top: var(--space-16); border-top: 1px solid var(--color-border); text-align: center; font-size: var(--font-size-sm); color: var(--color-text-secondary);">
-                <p>Trading Journal v1.8 | Built with Chart.js &amp; Modern Web Technologies</p>
+                <p>Trading Journal v1.9.4 | Built with Chart.js &amp; Modern Web Technologies</p>
                 <p style="font-size: var(--font-size-xs); margin-top: var(--space-4);">© 2025 | Your complete trading analysis solution</p>
             </footer>
 
@@ -1853,6 +1925,7 @@ select.form-control {
 
         // Global State Management
         let appState = {
+            downloadNotification: null,
             showExportMenu: false,
             trades: [],
             startingBalance: 10000,
@@ -2150,6 +2223,145 @@ select.form-control {
             
             reader.readAsText(file);
         }
+        
+        // Download Notification Functions
+        function showDownloadNotification(data) {
+            const container = document.getElementById('downloadNotificationContainer');
+            
+            const notification = document.createElement('div');
+            notification.className = 'download-notification';
+            notification.innerHTML = `
+                <div style="padding: var(--space-16);">
+                    <div style="display: flex; align-items: start; justify-content: space-between; margin-bottom: var(--space-12);">
+                        <div style="flex: 1;">
+                            <div style="display: flex; align-items: center; gap: var(--space-8); margin-bottom: var(--space-8);">
+                                <span style="font-size: var(--font-size-xl);">✅</span>
+                                <span style="font-weight: var(--font-weight-bold); color: white;">Download Started!</span>
+                            </div>
+                            
+                            <div style="font-size: var(--font-size-sm); color: rgba(255, 255, 255, 0.9); margin-bottom: var(--space-8);">
+                                <div style="display: flex; align-items: center; gap: var(--space-8); margin-bottom: var(--space-4);">
+                                    <span>📄</span>
+                                    <span style="font-family: var(--font-family-mono); font-size: var(--font-size-xs); word-break: break-all;">
+                                        ${data.filename}
+                                    </span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: var(--space-8);">
+                                    <span>🕐</span>
+                                    <span>${data.timestamp}</span>
+                                </div>
+                            </div>
+                            
+                            <div style="padding-top: var(--space-12); border-top: 1px solid rgba(255, 255, 255, 0.2); margin-bottom: var(--space-12);">
+                                <div style="font-size: var(--font-size-xs); font-weight: var(--font-weight-medium); color: white; margin-bottom: var(--space-8);">
+                                    <strong>📂 Check your Downloads folder:</strong>
+                                </div>
+                                <div style="font-size: var(--font-size-xs); color: rgba(255, 255, 255, 0.9); line-height: 1.4;">
+                                    • Look at bottom of browser window<br>
+                                    • Open File Explorer → Downloads<br>
+                                    • Press Ctrl+J (Chrome) or Cmd+Shift+J (Mac)
+                                </div>
+                            </div>
+                            
+                            <button onclick="showDetailedInstructions()" style="background: white; color: #10b981; border: none; padding: var(--space-6) var(--space-12); border-radius: var(--radius-base); font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); cursor: pointer; transition: all var(--duration-fast) var(--ease-standard);" onmouseover="this.style.background='#f0f9ff'" onmouseout="this.style.background='white'">
+                                📖 Detailed Instructions
+                            </button>
+                        </div>
+                        
+                        <button onclick="hideDownloadNotification()" style="background: none; border: none; color: white; font-size: var(--font-size-lg); cursor: pointer; margin-left: var(--space-8); padding: var(--space-4); border-radius: var(--radius-sm); transition: background-color var(--duration-fast) var(--ease-standard);" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">
+                            ✕
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            container.appendChild(notification);
+            
+            // Auto-hide after 10 seconds
+            setTimeout(() => {
+                hideDownloadNotification();
+            }, 10000);
+        }
+        
+        function hideDownloadNotification() {
+            const container = document.getElementById('downloadNotificationContainer');
+            const notification = container.querySelector('.download-notification');
+            if (notification) {
+                notification.style.animation = 'slide-down 0.3s ease-out';
+                setTimeout(() => {
+                    container.removeChild(notification);
+                }, 300);
+            }
+        }
+        
+        function showDetailedInstructions() {
+            alert(
+                '📂 FINDING YOUR DOWNLOAD\n\n' +
+                '1️⃣ BROWSER DOWNLOAD BAR\n' +
+                '   Look at the BOTTOM of your browser window\n' +
+                '   You should see the file downloading there\n\n' +
+                '2️⃣ OPEN DOWNLOADS FOLDER\n' +
+                '   Windows: Press Ctrl+J in Chrome/Edge\n' +
+                '   Mac: Press Cmd+Shift+J or Cmd+Option+L\n' +
+                '   Or manually open: File Explorer → Downloads\n\n' +
+                '3️⃣ FILE LOCATION\n' +
+                '   Windows: C:\\Users\\YourName\\Downloads\n' +
+                '   Mac: /Users/YourName/Downloads\n' +
+                '   Linux: ~/Downloads\n\n' +
+                '4️⃣ BROWSER SETTINGS\n' +
+                '   Check browser settings if downloads aren\'t working:\n' +
+                '   Settings → Downloads → Choose location\n\n' +
+                '5️⃣ POP-UP BLOCKER\n' +
+                '   Make sure pop-ups are allowed for this site'
+            );
+        }
+        
+        // Test Download Function
+        function testDownload() {
+            try {
+                const testData = {
+                    test: 'This is a test download',
+                    timestamp: new Date().toISOString(),
+                    message: 'If you can see this file, downloads are working correctly!'
+                };
+                const blob = new Blob([JSON.stringify(testData, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'test-download.json';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                // Show test download notification
+                showDownloadNotification({
+                    filename: 'test-download.json',
+                    type: 'test',
+                    timestamp: new Date().toLocaleTimeString()
+                });
+                
+                alert(
+                    '✅ TEST DOWNLOAD STARTED\n\n' +
+                    'Check your Downloads folder for:\n' +
+                    'test-download.json\n\n' +
+                    'If you see it, downloads are working!\n' +
+                    'If not, check:\n' +
+                    '1. Browser download settings\n' +
+                    '2. Pop-up blocker settings\n' +
+                    '3. Try a different browser'
+                );
+            } catch (error) {
+                alert('❌ Download test failed: ' + error.message);
+            }
+        }
+        
+        // Download Help Functions
+        function toggleDownloadHelp() {
+            const helpSection = document.getElementById('downloadHelpSection');
+            const isVisible = helpSection.style.display !== 'none';
+            helpSection.style.display = isVisible ? 'none' : 'block';
+        }
 
         function parseCSV(csvText) {
             try {
@@ -2389,7 +2601,7 @@ select.form-control {
             }
         }
         
-function parsecTraderDateTime(dateTimeStr) {
+        function parsecTraderDateTime(dateTimeStr) {
             // Parse cTrader format: "06 Oct 2025 04:29:33.732"
             if (!dateTimeStr || !dateTimeStr.trim()) {
                 const now = new Date();
@@ -3147,6 +3359,13 @@ function parsecTraderDateTime(dateTimeStr) {
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
                 
+                // Show download notification
+                showDownloadNotification({
+                    filename: filename,
+                    type: exportType,
+                    timestamp: new Date().toLocaleTimeString()
+                });
+                
                 showMessage(`✅ Exported successfully!\nFile: ${filename}\nType: ${exportType}`);
             } catch (error) {
                 console.error('Export error:', error);
@@ -3213,6 +3432,13 @@ function parsecTraderDateTime(dateTimeStr) {
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
+            
+            // Show CSV download notification
+            showDownloadNotification({
+                filename: `trading-journal-${timestamp}.csv`,
+                type: 'csv',
+                timestamp: new Date().toLocaleTimeString()
+            });
             
             showMessage(`✅ Exported ${appState.trades.length} trades as CSV!\nFile: trading-journal-${timestamp}.csv`);
         }
@@ -4433,73 +4659,114 @@ function parsecTraderDateTime(dateTimeStr) {
         
         function renderCalendar() {
             const calendar = document.getElementById('calendar');
-            
+
             // Ensure calendar element exists
             if (!calendar) {
                 console.warn('Calendar element not found');
                 return;
             }
-            
+
             const firstDay = new Date(appState.currentYear, appState.currentMonth, 1).getDay();
             const daysInMonth = new Date(appState.currentYear, appState.currentMonth + 1, 0).getDate();
-            
+
             // Group trades by date for this month using corrected date parsing
+            // Initialize monthly totals
+            let monthTotalWins = 0;
+            let monthTotalLosses = 0;
+            let monthTotalPL = 0;
+
             const monthlyTrades = {};
             appState.trades.forEach(trade => {
                 try {
                     const tradeDate = new Date(trade.closeTime || `${trade.date}T${trade.time}:00`);
                     if (tradeDate.getMonth() === appState.currentMonth && tradeDate.getFullYear() === appState.currentYear) {
                         const day = tradeDate.getDate();
+                        const pl = (parseFloat(trade.netPL) || parseFloat(trade.profit) || 0);
+
                         if (!monthlyTrades[day]) {
                             monthlyTrades[day] = { count: 0, profit: 0, wins: 0, losses: 0 };
                         }
-                        const pl = (parseFloat(trade.netPL) || parseFloat(trade.profit) || 0);
                         monthlyTrades[day].count++;
                         monthlyTrades[day].profit += pl;
+
+                        // Track W/L per day and month
                         if (pl > 0) {
                             monthlyTrades[day].wins++;
+                            monthTotalWins++;
                         } else if (pl < 0) {
                             monthlyTrades[day].losses++;
+                            monthTotalLosses++;
                         }
+
+                        monthTotalPL += pl;
                     }
                 } catch (error) {
                     console.warn('Error processing trade date for calendar:', error, trade);
                 }
             });
-            
+
             let html = '';
-            
+
             // Add day headers
             const dayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
             dayHeaders.forEach(day => {
                 html += `<div style="text-align: center; font-weight: bold; padding: 0.5rem; color: #94a3b8;">${day}</div>`;
             });
-            
+
             // Add empty cells for days before month start
             for (let i = 0; i < firstDay; i++) {
                 html += '<div class="calendar-day"></div>';
             }
-            
+
             // Add days of month
             for (let day = 1; day <= daysInMonth; day++) {
                 const dayData = monthlyTrades[day];
                 let className = 'calendar-day';
                 let title = `${day}`;
                 let content = day.toString();
-                
+
                 if (dayData) {
                     className += ' has-trades';
                     className += dayData.profit >= 0 ? ' profit' : ' loss';
                     title = `${day} - ${dayData.wins}W/${dayData.losses}L (${dayData.count} trade${dayData.count > 1 ? 's' : ''}), P&L: ${formatCurrency(dayData.profit)}`;
                     content += `<br><small style="font-size: 10px; line-height: 1.2;">${dayData.wins}W/${dayData.losses}L<br>${formatCurrency(dayData.profit)}</small>`;
                 }
-                
+
                 html += `<div class="${className}" title="${title}">${content}</div>`;
             }
-            
+
+            // Add monthly summary
+            const monthTotalTrades = monthTotalWins + monthTotalLosses;
+            const monthWinRate = monthTotalTrades > 0 ? ((monthTotalWins / monthTotalTrades) * 100).toFixed(1) : '0.0';
+
+            html += `
+                <div style="grid-column: 1 / -1; margin-top: 1rem; padding: 1rem; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-base); text-align: center;">
+                    <div style="font-weight: var(--font-weight-semibold); margin-bottom: 0.5rem; font-size: var(--font-size-md);">Month Total</div>
+                    <div style="display: flex; justify-content: center; gap: 2rem; flex-wrap: wrap;">
+                        <div>
+                            <div style="font-size: var(--font-size-xs); color: var(--color-text-secondary);">W/L</div>
+                            <div style="font-size: var(--font-size-lg); font-weight: var(--font-weight-bold);">
+                                <span style="color: var(--color-success);">${monthTotalWins}W</span> / <span style="color: var(--color-error);">${monthTotalLosses}L</span>
+                            </div>
+                        </div>
+                        <div>
+                            <div style="font-size: var(--font-size-xs); color: var(--color-text-secondary);">P&L</div>
+                            <div style="font-size: var(--font-size-lg); font-weight: var(--font-weight-bold); color: ${monthTotalPL >= 0 ? 'var(--color-success)' : 'var(--color-error)'};">
+                                ${formatCurrency(monthTotalPL)}
+                            </div>
+                        </div>
+                        <div>
+                            <div style="font-size: var(--font-size-xs); color: var(--color-text-secondary);">Win Rate</div>
+                            <div style="font-size: var(--font-size-lg); font-weight: var(--font-weight-bold);">
+                                ${monthWinRate}%
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
             calendar.innerHTML = html;
         }
-        
         function changeMonth(direction) {
             appState.currentMonth += direction;
             if (appState.currentMonth < 0) {
