@@ -1870,7 +1870,7 @@ select.form-control {
 
             <!-- Footer -->
             <footer style="margin-top: var(--space-32); padding-top: var(--space-16); border-top: 1px solid var(--color-border); text-align: center; font-size: var(--font-size-sm); color: var(--color-text-secondary);">
-                <p>Trading Journal v1.9.1 | Built with Chart.js &amp; Modern Web Technologies</p>
+                <p>Trading Journal v1.9.5 | Built with Chart.js &amp; Modern Web Technologies</p>
                 <p style="font-size: var(--font-size-xs); margin-top: var(--space-4);">© 2025 | Your complete trading analysis solution</p>
             </footer>
 
@@ -4673,9 +4673,6 @@ select.form-control {
             let monthTotalLosses = 0;
             let monthTotalPL = 0;
 
-            // Track weekly stats (7 days per row)
-            const weeklyStats = [];
-
             // Group trades by date
             const monthlyTrades = {};
             appState.trades.forEach(trade => {
@@ -4718,12 +4715,10 @@ select.form-control {
             let weekWins = 0;
             let weekLosses = 0;
             let weekPL = 0;
-            let cellCount = 0;
 
             // Add empty cells for days before month start
             for (let i = 0; i < firstDay; i++) {
                 html += '<div class="calendar-day"></div>';
-                cellCount++;
             }
 
             // Add days of month
@@ -4746,14 +4741,24 @@ select.form-control {
                 }
 
                 html += `<div class="${className}" title="${title}">${content}</div>`;
-                cellCount++;
 
-                // End of week (Saturday) or end of month
-                if (cellCount % 7 === 0 || day === daysInMonth) {
-                    // Add weekly summary cell
+                // Calculate current day of week (0=Sun, 6=Sat)
+                const currentDayOfWeek = (firstDay + day - 1) % 7;
+
+                // End of week (Saturday = 6) or end of month
+                if (currentDayOfWeek === 6 || day === daysInMonth) {
+                    // If it's end of month but not Saturday, fill remaining days
+                    if (day === daysInMonth && currentDayOfWeek !== 6) {
+                        const remainingInWeek = 6 - currentDayOfWeek;
+                        for (let i = 0; i < remainingInWeek; i++) {
+                            html += '<div class="calendar-day"></div>';
+                        }
+                    }
+
+                    // Add weekly summary - CENTERED
                     const weekColor = weekPL >= 0 ? 'var(--color-success)' : 'var(--color-error)';
                     html += `
-                        <div style="padding: 0.5rem; background: var(--color-surface); border-left: 2px solid var(--color-border); text-align: center; font-size: 11px;">
+                        <div style="padding: 0.5rem; background: var(--color-surface); border-left: 2px solid var(--color-border); text-align: center; font-size: 11px; display: flex; flex-direction: column; justify-content: center;">
                             <div style="font-weight: bold;">${weekWins}W/${weekLosses}L</div>
                             <div style="color: ${weekColor}; font-weight: bold; margin-top: 2px;">${formatCurrency(weekPL)}</div>
                         </div>
@@ -4764,12 +4769,6 @@ select.form-control {
                     weekLosses = 0;
                     weekPL = 0;
                 }
-            }
-
-            // Fill remaining cells if month doesn't end on Saturday
-            const remainingCells = (7 - (cellCount % 7)) % 7;
-            for (let i = 0; i < remainingCells; i++) {
-                html += '<div class="calendar-day"></div>';
             }
 
             // Add monthly summary
