@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Comprehensive Trading Journal</title>
+    <title>Comprehensive Trading Journal v1.9.5</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
@@ -997,7 +997,7 @@ select.form-control {
 
         .calendar {
             display: grid;
-            grid-template-columns: repeat(7, 1fr);
+            grid-template-columns: repeat(7, 1fr) 100px;
             gap: 2px;
             margin: 1rem 0;
         }
@@ -1870,7 +1870,7 @@ select.form-control {
 
             <!-- Footer -->
             <footer style="margin-top: var(--space-32); padding-top: var(--space-16); border-top: 1px solid var(--color-border); text-align: center; font-size: var(--font-size-sm); color: var(--color-text-secondary);">
-                <p>Trading Journal v1.9.4 | Built with Chart.js &amp; Modern Web Technologies</p>
+                <p>Trading Journal v1.9.1 | Built with Chart.js &amp; Modern Web Technologies</p>
                 <p style="font-size: var(--font-size-xs); margin-top: var(--space-4);">© 2025 | Your complete trading analysis solution</p>
             </footer>
 
@@ -4660,7 +4660,6 @@ select.form-control {
         function renderCalendar() {
             const calendar = document.getElementById('calendar');
 
-            // Ensure calendar element exists
             if (!calendar) {
                 console.warn('Calendar element not found');
                 return;
@@ -4669,12 +4668,15 @@ select.form-control {
             const firstDay = new Date(appState.currentYear, appState.currentMonth, 1).getDay();
             const daysInMonth = new Date(appState.currentYear, appState.currentMonth + 1, 0).getDate();
 
-            // Group trades by date for this month using corrected date parsing
             // Initialize monthly totals
             let monthTotalWins = 0;
             let monthTotalLosses = 0;
             let monthTotalPL = 0;
 
+            // Track weekly stats (7 days per row)
+            const weeklyStats = [];
+
+            // Group trades by date
             const monthlyTrades = {};
             appState.trades.forEach(trade => {
                 try {
@@ -4689,7 +4691,6 @@ select.form-control {
                         monthlyTrades[day].count++;
                         monthlyTrades[day].profit += pl;
 
-                        // Track W/L per day and month
                         if (pl > 0) {
                             monthlyTrades[day].wins++;
                             monthTotalWins++;
@@ -4707,15 +4708,22 @@ select.form-control {
 
             let html = '';
 
-            // Add day headers
-            const dayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            // Add day headers with week stats header
+            const dayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Week'];
             dayHeaders.forEach(day => {
                 html += `<div style="text-align: center; font-weight: bold; padding: 0.5rem; color: #94a3b8;">${day}</div>`;
             });
 
+            // Track current week stats
+            let weekWins = 0;
+            let weekLosses = 0;
+            let weekPL = 0;
+            let cellCount = 0;
+
             // Add empty cells for days before month start
             for (let i = 0; i < firstDay; i++) {
                 html += '<div class="calendar-day"></div>';
+                cellCount++;
             }
 
             // Add days of month
@@ -4730,9 +4738,38 @@ select.form-control {
                     className += dayData.profit >= 0 ? ' profit' : ' loss';
                     title = `${day} - ${dayData.wins}W/${dayData.losses}L (${dayData.count} trade${dayData.count > 1 ? 's' : ''}), P&L: ${formatCurrency(dayData.profit)}`;
                     content += `<br><small style="font-size: 10px; line-height: 1.2;">${dayData.wins}W/${dayData.losses}L<br>${formatCurrency(dayData.profit)}</small>`;
+
+                    // Add to week totals
+                    weekWins += dayData.wins;
+                    weekLosses += dayData.losses;
+                    weekPL += dayData.profit;
                 }
 
                 html += `<div class="${className}" title="${title}">${content}</div>`;
+                cellCount++;
+
+                // End of week (Saturday) or end of month
+                if (cellCount % 7 === 0 || day === daysInMonth) {
+                    // Add weekly summary cell
+                    const weekColor = weekPL >= 0 ? 'var(--color-success)' : 'var(--color-error)';
+                    html += `
+                        <div style="padding: 0.5rem; background: var(--color-surface); border-left: 2px solid var(--color-border); text-align: center; font-size: 11px;">
+                            <div style="font-weight: bold;">${weekWins}W/${weekLosses}L</div>
+                            <div style="color: ${weekColor}; font-weight: bold; margin-top: 2px;">${formatCurrency(weekPL)}</div>
+                        </div>
+                    `;
+
+                    // Reset week counters
+                    weekWins = 0;
+                    weekLosses = 0;
+                    weekPL = 0;
+                }
+            }
+
+            // Fill remaining cells if month doesn't end on Saturday
+            const remainingCells = (7 - (cellCount % 7)) % 7;
+            for (let i = 0; i < remainingCells; i++) {
+                html += '<div class="calendar-day"></div>';
             }
 
             // Add monthly summary
