@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Comprehensive Trading Journal v1.9.5</title>
+    <title>Comprehensive Trading Journal v1.9.8</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
@@ -1160,6 +1160,87 @@ select.form-control {
                 opacity: 0;
             }
         }
+    
+
+        /* Enhanced Screenshot and TradingView Button Styles */
+        .screenshot-container {
+            position: relative;
+            display: inline-block;
+        }
+
+        .screenshot-container img {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .screenshot-container img:hover {
+            transform: scale(1.05);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: var(--space-8);
+            align-items: center;
+        }
+
+        .btn-group .btn {
+            flex: 1;
+        }
+
+        .btn-group .btn-icon {
+            flex: none;
+            padding: var(--space-8);
+            min-width: 40px;
+        }
+
+        /* TradingView button specific styling */
+        .btn-tradingview {
+            background: linear-gradient(135deg, #2962FF, #1E88E5);
+            color: white;
+            border: none;
+            font-weight: var(--font-weight-medium);
+        }
+
+        .btn-tradingview:hover:not(:disabled) {
+            background: linear-gradient(135deg, #1E88E5, #1565C0);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-tradingview:disabled {
+            background: var(--color-secondary);
+            color: var(--color-text-secondary);
+            cursor: not-allowed;
+        }
+
+        /* Screenshot upload button styling */
+        .btn-screenshot {
+            background: linear-gradient(135deg, #10B981, #059669);
+            color: white;
+            border: none;
+            font-weight: var(--font-weight-medium);
+        }
+
+        .btn-screenshot:hover {
+            background: linear-gradient(135deg, #059669, #047857);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+
+        /* Clear button styling */
+        .btn-clear {
+            background: var(--color-error);
+            color: white;
+            border: none;
+            padding: var(--space-8);
+            min-width: 40px;
+        }
+
+        .btn-clear:hover {
+            background: #DC2626;
+            transform: translateY(-1px);
+        }
+    
     </style>
 </head>
 <body>
@@ -1299,9 +1380,7 @@ select.form-control {
                     🖨️ Print
                 </button>
                 
-                <button onclick="toggleDownloadHelp()" class="btn btn-secondary" title="Show download help and tips">
-                    💡 Download Help
-                </button>
+                <!-- Download help button removed -->
             </div>
 
             <!-- Messages -->
@@ -1870,7 +1949,7 @@ select.form-control {
 
             <!-- Footer -->
             <footer style="margin-top: var(--space-32); padding-top: var(--space-16); border-top: 1px solid var(--color-border); text-align: center; font-size: var(--font-size-sm); color: var(--color-text-secondary);">
-                <p>Trading Journal v1.9.5 | Built with Chart.js &amp; Modern Web Technologies</p>
+                <p>Trading Journal v1.9.8 | Built with Chart.js &amp; Modern Web Technologies</p>
                 <p style="font-size: var(--font-size-xs); margin-top: var(--space-4);">© 2025 | Your complete trading analysis solution</p>
             </footer>
 
@@ -2716,7 +2795,7 @@ select.form-control {
         function renderTradeDetails(tradeIndex) {
             const trade = appState.trades[tradeIndex];
             const container = document.getElementById(`details_${tradeIndex}`);
-            
+
             container.innerHTML = `
                 <div class="form-grid">
                     <div class="form-group">
@@ -2726,7 +2805,7 @@ select.form-control {
                             ${setupTypes.map(type => `<option value="${type}" ${trade.setupType === type ? 'selected' : ''}>${type}</option>`).join('')}
                         </select>
                     </div>
-                    
+
                     <div class="form-group">
                         <label>Market Condition</label>
                         <select class="form-control" onchange="updateTradeField(${tradeIndex}, 'marketCondition', this.value)">
@@ -2734,7 +2813,7 @@ select.form-control {
                             ${marketConditions.map(condition => `<option value="${condition}" ${trade.marketCondition === condition ? 'selected' : ''}>${condition}</option>`).join('')}
                         </select>
                     </div>
-                    
+
                     <div class="form-group">
                         <label>Emotional State</label>
                         <select class="form-control" onchange="updateTradeField(${tradeIndex}, 'emotionalState', this.value)">
@@ -2742,7 +2821,7 @@ select.form-control {
                             ${emotionalStates.map(state => `<option value="${state}" ${trade.emotionalState === state ? 'selected' : ''}>${state}</option>`).join('')}
                         </select>
                     </div>
-                    
+
                     <div class="form-group">
                         <label>Rule Adherence</label>
                         <select class="form-control" onchange="updateTradeField(${tradeIndex}, 'ruleAdherence', this.value)">
@@ -2754,47 +2833,81 @@ select.form-control {
                         </select>
                     </div>
                 </div>
-                
+
                 <div class="form-group">
                     <label>Trading Notes</label>
                     <textarea class="form-control" rows="3" placeholder="Add your trading notes..." onchange="updateTradeField(${tradeIndex}, 'notes', this.value)">${trade.notes || ''}</textarea>
                 </div>
-                
+
+                <!-- Enhanced TradingView Links Section -->
                 <div class="form-grid">
                     <div class="form-group">
                         <label>TradingView Entry Link</label>
-                        <input type="url" class="form-control" placeholder="https://tradingview.com/..." value="${trade.tradingViewEntry || ''}" onchange="updateTradeField(${tradeIndex}, 'tradingViewEntry', this.value)">
+                        <div style="display: flex; gap: var(--space-8); align-items: center;">
+                            <input type="url" class="form-control" style="flex: 1;" placeholder="https://tradingview.com/..." value="${trade.tradingViewEntry || ''}" onchange="updateTradeField(${tradeIndex}, 'tradingViewEntry', this.value)" id="tvEntry_${tradeIndex}">
+                            <button class="btn btn-tradingview" onclick="openTradingViewLink(${tradeIndex}, 'entry')" ${!trade.tradingViewEntry ? 'disabled' : ''} title="Open TradingView Entry Link">
+                                🔗 Open
+                            </button>
+                        </div>
                     </div>
-                    
+
                     <div class="form-group">
                         <label>TradingView Exit Link</label>
-                        <input type="url" class="form-control" placeholder="https://tradingview.com/..." value="${trade.tradingViewExit || ''}" onchange="updateTradeField(${tradeIndex}, 'tradingViewExit', this.value)">
+                        <div style="display: flex; gap: var(--space-8); align-items: center;">
+                            <input type="url" class="form-control" style="flex: 1;" placeholder="https://tradingview.com/..." value="${trade.tradingViewExit || ''}" onchange="updateTradeField(${tradeIndex}, 'tradingViewExit', this.value)" id="tvExit_${tradeIndex}">
+                            <button class="btn btn-tradingview" onclick="openTradingViewLink(${tradeIndex}, 'exit')" ${!trade.tradingViewExit ? 'disabled' : ''} title="Open TradingView Exit Link">
+                                🔗 Open
+                            </button>
+                        </div>
                     </div>
                 </div>
-                
+
+                <!-- Enhanced Screenshots Section -->
                 <div class="form-grid">
                     <div class="form-group">
                         <label>Entry Screenshot</label>
-                        <input type="file" class="form-control" accept="image/*" onchange="handleScreenshotUpload(${tradeIndex}, 'entry', this)">
-                        <small>Or paste with Ctrl+V</small>
-                        ${trade.entryScreenshot && typeof trade.entryScreenshot === 'string' ? `<div class="screenshot-container"><img src="${getScreenshotSrc(trade.entryScreenshot)}" class="screenshot" onclick="openLightbox('${getScreenshotSrc(trade.entryScreenshot)}')" onerror="console.error('Failed to load entry screenshot'); this.style.display='none';"></div>` : ''}
+                        <div style="display: flex; gap: var(--space-8); margin-bottom: var(--space-8);">
+                            <button class="btn btn-screenshot" onclick="document.getElementById('entryScreenshot_${tradeIndex}').click()" style="flex: 1;">
+                                📷 Upload Entry Screenshot
+                            </button>
+                            ${trade.entryScreenshot ? `<button class="btn btn-secondary" class="btn btn-clear" onclick="clearScreenshot(${tradeIndex}, 'entry')" title="Remove Screenshot">🗑️</button>` : ''}
+                        </div>
+                        <input type="file" id="entryScreenshot_${tradeIndex}" class="form-control" accept="image/*" onchange="handleScreenshotUpload(${tradeIndex}, 'entry', this)" style="display: none;">
+                        <small style="color: var(--color-text-secondary);">Or paste with Ctrl+V while this section is open</small>
+                        ${trade.entryScreenshot && typeof trade.entryScreenshot === 'string' ? `
+                            <div class="screenshot-container" style="margin-top: var(--space-8);">
+                                <img src="${getScreenshotSrc(trade.entryScreenshot)}" class="screenshot" onclick="openLightbox('${getScreenshotSrc(trade.entryScreenshot)}')" onerror="console.error('Failed to load entry screenshot'); this.style.display='none';" style="max-width: 200px; max-height: 150px; cursor: pointer; border-radius: var(--radius-base); border: 1px solid var(--color-border);">
+                                <div style="font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-top: var(--space-4);">Click to view full size</div>
+                            </div>
+                        ` : ''}
                     </div>
-                    
+
                     <div class="form-group">
                         <label>Exit Screenshot</label>
-                        <input type="file" class="form-control" accept="image/*" onchange="handleScreenshotUpload(${tradeIndex}, 'exit', this)">
-                        <small>Or paste with Ctrl+V</small>
-                        ${trade.exitScreenshot && typeof trade.exitScreenshot === 'string' ? `<div class="screenshot-container"><img src="${getScreenshotSrc(trade.exitScreenshot)}" class="screenshot" onclick="openLightbox('${getScreenshotSrc(trade.exitScreenshot)}')" onerror="console.error('Failed to load exit screenshot'); this.style.display='none';"></div>` : ''}
+                        <div style="display: flex; gap: var(--space-8); margin-bottom: var(--space-8);">
+                            <button class="btn btn-screenshot" onclick="document.getElementById('exitScreenshot_${tradeIndex}').click()" style="flex: 1;">
+                                📷 Upload Exit Screenshot
+                            </button>
+                            ${trade.exitScreenshot ? `<button class="btn btn-secondary" class="btn btn-clear" onclick="clearScreenshot(${tradeIndex}, 'exit')" title="Remove Screenshot">🗑️</button>` : ''}
+                        </div>
+                        <input type="file" id="exitScreenshot_${tradeIndex}" class="form-control" accept="image/*" onchange="handleScreenshotUpload(${tradeIndex}, 'exit', this)" style="display: none;">
+                        <small style="color: var(--color-text-secondary);">Or paste with Ctrl+V while this section is open</small>
+                        ${trade.exitScreenshot && typeof trade.exitScreenshot === 'string' ? `
+                            <div class="screenshot-container" style="margin-top: var(--space-8);">
+                                <img src="${getScreenshotSrc(trade.exitScreenshot)}" class="screenshot" onclick="openLightbox('${getScreenshotSrc(trade.exitScreenshot)}')" onerror="console.error('Failed to load exit screenshot'); this.style.display='none';" style="max-width: 200px; max-height: 150px; cursor: pointer; border-radius: var(--radius-base); border: 1px solid var(--color-border);">
+                                <div style="font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-top: var(--space-4);">Click to view full size</div>
+                            </div>
+                        ` : ''}
                     </div>
                 </div>
-                
+
                 <div class="form-group">
                     <label>Custom Rules Followed</label>
                     <div id="rulesChecklist_${tradeIndex}">
                         ${generateRulesChecklist(tradeIndex, trade.rulesFollowed || [])}
                     </div>
                 </div>
-                
+
                 <div style="margin-top: 1rem;">
                     <button class="btn btn-secondary" onclick="printTrade(${tradeIndex})">🖨️ Print This Trade</button>
                 </div>
@@ -3964,6 +4077,49 @@ select.form-control {
                 }
             };
             reader.readAsText(file);
+        }
+        
+
+        // Helper function to open TradingView links
+        function openTradingViewLink(tradeIndex, type) {
+            const trade = appState.trades[tradeIndex];
+            const url = type === 'entry' ? trade.tradingViewEntry : trade.tradingViewExit;
+
+            if (url && url.trim()) {
+                // Ensure URL has protocol
+                const fullUrl = url.startsWith('http') ? url : 'https://' + url;
+                window.open(fullUrl, '_blank', 'noopener,noreferrer');
+            } else {
+                showMessage('Please enter a TradingView URL first', 'error');
+            }
+        }
+
+        // Helper function to clear screenshots
+        function clearScreenshot(tradeIndex, type) {
+            const field = type === 'entry' ? 'entryScreenshot' : 'exitScreenshot';
+            appState.trades[tradeIndex][field] = null;
+            renderTradeDetails(tradeIndex); // Refresh the details view
+            showMessage(`${type.charAt(0).toUpperCase() + type.slice(1)} screenshot removed`, 'success');
+        }
+
+        // Enhanced updateTradeField to handle button state updates
+        function updateTradeField(tradeIndex, field, value) {
+            appState.trades[tradeIndex][field] = value;
+            calculateStatistics();
+            updateUI();
+
+            // Update TradingView button states if it's a TradingView field
+            if (field === 'tradingViewEntry') {
+                const button = document.querySelector(`button[onclick="openTradingViewLink(${tradeIndex}, 'entry')"]`);
+                if (button) {
+                    button.disabled = !value || !value.trim();
+                }
+            } else if (field === 'tradingViewExit') {
+                const button = document.querySelector(`button[onclick="openTradingViewLink(${tradeIndex}, 'exit')"]`);
+                if (button) {
+                    button.disabled = !value || !value.trim();
+                }
+            }
         }
         function updateTradeField(tradeIndex, field, value) {
             appState.trades[tradeIndex][field] = value;
