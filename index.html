@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  SECURITY HARDENED VERSION - v2.1.0-secure
+  SECURITY HARDENED VERSION - v2.2.0-secure
   
   This version includes the following security enhancements:
   
@@ -1786,10 +1786,20 @@ select.form-control {
                             <div id="dailyStats"></div>
                         </div>
                     </div>
-                    
+
                     <div class="collapsible" onclick="toggleCollapsible(this)">
                         <div class="collapsible-header">
-                            <span>Hourly Performance</span>
+                            <span>OPEN HOURLY PERFORMANCE</span>
+                            <span>▼</span>
+                        </div>
+                        <div class="collapsible-content">
+                            <div id="openHourlyStats"></div>
+                        </div>
+                    </div>
+
+                    <div class="collapsible" onclick="toggleCollapsible(this)">
+                        <div class="collapsible-header">
+                            <span>CLOSE HOURLY PERFORMANCE</span>
                             <span>▼</span>
                         </div>
                         <div class="collapsible-content">
