@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  SECURITY HARDENED VERSION - v1.9.9-secure
+  SECURITY HARDENED VERSION - v1.10.0-secure
   
   This version includes the following security enhancements:
   
@@ -37,7 +37,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Comprehensive Trading Journal v1.9.9</title>
+    <title>Comprehensive Trading Journal v1.10.0</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
@@ -2201,6 +2201,8 @@ select.form-control {
                 winLoss: true
             },
             visibleColumns: {
+                openDate: true,
+                openTime: true,
                 date: true,
                 time: true,
                 symbol: true,
@@ -2665,6 +2667,7 @@ select.form-control {
                 const columnMap = {
                     symbol: findColumnIndex(headers, ['symbol', 'instrument', 'pair']),
                     direction: findColumnIndex(headers, ['opening direction', 'direction', 'side', 'type']),
+                    openingTime: findColumnIndex(headers, ['opening time (utc-4)', 'opening time', 'open time', 'entry time']),
                     closingTime: findColumnIndex(headers, ['closing time (utc-4)', 'closing time', 'close time', 'time', 'date']),
                     entryPrice: findColumnIndex(headers, ['entry price', 'open price', 'opening price', 'price']),
                     closingPrice: findColumnIndex(headers, ['closing price', 'close price', 'exit price']),
@@ -2717,7 +2720,11 @@ select.form-control {
                             continue;
                         }
                         
-                        // Parse closing time: "06 Oct 2025 04:29:33.732" 
+                        // Parse opening time: "06 Oct 2025 04:29:33.732"
+                        const openingTimeStr = columnMap.openingTime >= 0 ? cells[columnMap.openingTime] : '';
+                        const openDateTime = parsecTraderDateTime(openingTimeStr);
+
+                        // Parse closing time: "06 Oct 2025 04:29:33.732"
                         const closingTimeStr = columnMap.closingTime >= 0 ? cells[columnMap.closingTime] : '';
                         const { date, time } = parsecTraderDateTime(closingTimeStr);
                         
@@ -2741,6 +2748,8 @@ select.form-control {
                             id: `${Date.now()}_${tradeIndex}`,
                             symbol: symbolCell.trim(),
                             direction: columnMap.direction >= 0 ? cells[columnMap.direction] || 'Buy' : 'Buy',
+                            openDate: openDateTime.date,
+                            openTime: openDateTime.time,
                             date: date,
                             time: time,
                             closeTime: closingTimeStr, // Keep original for parsing
@@ -2755,7 +2764,7 @@ select.form-control {
                             commission: commission,
                             swap: swap,
                             balance: balance,
-                            
+
                             // Additional fields for comprehensive journal
                             setupType: '',
                             marketCondition: '',
@@ -3376,8 +3385,10 @@ select.form-control {
         function updateTableHeader() {
             const header = document.getElementById('tableHeader');
             const columns = appState.visibleColumns;
-            
+
             let html = '';
+            if (columns.openDate) html += '<th>Open Date</th>';
+            if (columns.openTime) html += '<th>Open Time</th>';
             if (columns.date) html += '<th>Close Date</th>';
             if (columns.time) html += '<th>Close Time</th>';
             if (columns.symbol) html += '<th>Symbol</th>';
@@ -3388,21 +3399,23 @@ select.form-control {
             if (columns.pl) html += '<th>P&L</th>';
             if (columns.setup) html += '<th>Setup</th>';
             html += '<th>Actions</th>';
-            
+
             header.innerHTML = html;
         }
         
         function updateTableBody() {
             const tbody = document.getElementById('tradesTableBody');
             tbody.innerHTML = '';
-            
+
             appState.trades.forEach((trade, index) => {
                 const row = tbody.insertRow();
                 row.className = 'trade-row';
-                
+
                 const columns = appState.visibleColumns;
                 let html = '';
-                
+
+                if (columns.openDate) html += `<td>${trade.openDate || '-'}</td>`;
+                if (columns.openTime) html += `<td>${trade.openTime || '-'}</td>`;
                 if (columns.date) html += `<td>${trade.date}</td>`;
                 if (columns.time) html += `<td>${trade.time}</td>`;
                 if (columns.symbol) html += `<td>${trade.symbol}</td>`;
@@ -3412,11 +3425,11 @@ select.form-control {
                 if (columns.pips) html += `<td class="${trade.pips >= 0 ? 'positive' : 'negative'}">${trade.pips.toFixed(1)}</td>`;
                 if (columns.pl) html += `<td class="${(trade.netPL || trade.profit) >= 0 ? 'positive' : 'negative'}">$${(trade.netPL || trade.profit).toFixed(2)}</td>`;
                 if (columns.setup) html += `<td>${trade.setupType || '-'}</td>`;
-                
+
                 html += `<td><button class="btn btn-secondary" onclick="toggleTradeDetails(${index})">Details</button></td>`;
-                
+
                 row.innerHTML = html;
-                
+
                 // Add expandable details row
                 const detailRow = tbody.insertRow();
                 detailRow.style.display = 'none';
@@ -5782,6 +5795,8 @@ select.form-control {
         
         function getColumnLabel(key) {
             const labels = {
+                openDate: 'Open Date',
+                openTime: 'Open Time',
                 date: 'Close Date',
                 time: 'Close Time',
                 symbol: 'Symbol',
