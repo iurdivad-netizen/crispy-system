@@ -37,7 +37,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Comprehensive Trading Journal v2.1.0</title>
+    <title>Comprehensive Trading Journal v2.4.0</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
@@ -1533,9 +1533,17 @@ select.form-control {
 
             <!-- Statistics Dashboard -->
             <div class="section" id="statisticsSection" style="display: none;">
-                <div class="section-header">
-                    <h3>📊 Performance Statistics</h3>
-                    <button class="toggle-button" onclick="toggleStatsConfig()" title="Configure Statistics">⚙️</button>
+                <div class="section-header" style="cursor: pointer;" onclick="toggleStatistics()">
+                    <div style="display: flex; align-items: center; gap: var(--space-12);">
+                        <h3 style="margin: 0; display: flex; align-items: center; gap: var(--space-8);">📊 Performance Statistics</h3>
+                        <button
+                            id="statisticsToggle"
+                            style="background: none; border: none; color: white; font-size: var(--font-size-xl); cursor: pointer; padding: var(--space-4); border-radius: var(--radius-sm); transition: background-color var(--duration-fast) var(--ease-standard);"
+                            title="Collapse/Expand"
+                            onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'"
+                            onmouseout="this.style.backgroundColor='transparent'">▼</button>
+                    </div>
+                    <button class="toggle-button" onclick="toggleStatsConfig(); event.stopPropagation();" title="Configure Statistics">⚙️</button>
                 </div>
                 <div class="section-content">
                     <div id="statsConfigPanel" style="display: none; margin-bottom: 1rem; padding: 1rem; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-base);">
@@ -1557,17 +1565,25 @@ select.form-control {
 
             <!-- Performance Charts -->
             <div class="section" id="chartsSection" style="display: none;">
-                <div class="section-header">
-                    <h3>📈 Performance Charts</h3>
+                <div class="section-header" style="cursor: pointer;" onclick="toggleCharts()">
+                    <div style="display: flex; align-items: center; gap: var(--space-12);">
+                        <h3 style="margin: 0; display: flex; align-items: center; gap: var(--space-8);">📈 Performance Charts</h3>
+                        <button
+                            id="chartsToggle"
+                            style="background: none; border: none; color: white; font-size: var(--font-size-xl); cursor: pointer; padding: var(--space-4); border-radius: var(--radius-sm); transition: background-color var(--duration-fast) var(--ease-standard);"
+                            title="Collapse/Expand"
+                            onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'"
+                            onmouseout="this.style.backgroundColor='transparent'">▼</button>
+                    </div>
                     <div style="display: flex; align-items: center; gap: var(--space-8);">
-                        <select id="chartZoomSelect" onchange="updateChartZoom(this.value)" style="padding: var(--space-4) var(--space-8); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-sm); color: var(--color-text); font-size: var(--font-size-xs);" title="Chart Zoom">
+                        <select id="chartZoomSelect" onchange="updateChartZoom(this.value); event.stopPropagation();" onclick="event.stopPropagation();" style="padding: var(--space-4) var(--space-8); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-sm); color: var(--color-text); font-size: var(--font-size-xs);" title="Chart Zoom">
                             <option value="100">100%</option>
                             <option value="150">150%</option>
                             <option value="200">200%</option>
                             <option value="250">250%</option>
                             <option value="300">300%</option>
                         </select>
-                        <button class="toggle-button" onclick="toggleChartsConfig()" title="Configure Charts">⚙️</button>
+                        <button class="toggle-button" onclick="toggleChartsConfig(); event.stopPropagation();" title="Configure Charts">⚙️</button>
                     </div>
                 </div>
                 <div class="section-content">
@@ -1700,9 +1716,17 @@ select.form-control {
 
             <!-- Custom Trading Rules -->
             <div class="section" id="rulesSection" style="display: none;">
-                <div class="section-header">
-                    <h3>Custom Trading Rules</h3>
-                    <button class="btn btn-secondary" onclick="addCustomRule()">+ Add Rule</button>
+                <div class="section-header" style="cursor: pointer;" onclick="toggleRules()">
+                    <div style="display: flex; align-items: center; gap: var(--space-12);">
+                        <h3 style="margin: 0; display: flex; align-items: center; gap: var(--space-8);">Custom Trading Rules</h3>
+                        <button
+                            id="rulesToggle"
+                            style="background: none; border: none; color: white; font-size: var(--font-size-xl); cursor: pointer; padding: var(--space-4); border-radius: var(--radius-sm); transition: background-color var(--duration-fast) var(--ease-standard);"
+                            title="Collapse/Expand"
+                            onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'"
+                            onmouseout="this.style.backgroundColor='transparent'">▼</button>
+                    </div>
+                    <button class="btn btn-secondary" onclick="addCustomRule(); event.stopPropagation();">+ Add Rule</button>
                 </div>
                 <div class="section-content">
                     <div class="rules-grid" id="rulesGrid">
@@ -1717,8 +1741,16 @@ select.form-control {
 
             <!-- Performance Breakdowns -->
             <div class="section" id="breakdownsSection" style="display: none;">
-                <div class="section-header">
-                    <h3>Performance Breakdowns</h3>
+                <div class="section-header" style="cursor: pointer;" onclick="toggleBreakdowns()">
+                    <div style="display: flex; align-items: center; gap: var(--space-12);">
+                        <h3 style="margin: 0; display: flex; align-items: center; gap: var(--space-8);">Performance Breakdowns</h3>
+                        <button
+                            id="breakdownsToggle"
+                            style="background: none; border: none; color: white; font-size: var(--font-size-xl); cursor: pointer; padding: var(--space-4); border-radius: var(--radius-sm); transition: background-color var(--duration-fast) var(--ease-standard);"
+                            title="Collapse/Expand"
+                            onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'"
+                            onmouseout="this.style.backgroundColor='transparent'">▼</button>
+                    </div>
                 </div>
                 <div class="section-content">
                     <div class="collapsible" onclick="toggleCollapsible(this)">
@@ -1765,8 +1797,16 @@ select.form-control {
 
             <!-- Time-based Analytics -->
             <div class="section" id="timeAnalyticsSection" style="display: none;">
-                <div class="section-header">
-                    <h3>Time-based Analytics</h3>
+                <div class="section-header" style="cursor: pointer;" onclick="toggleTimeAnalytics()">
+                    <div style="display: flex; align-items: center; gap: var(--space-12);">
+                        <h3 style="margin: 0; display: flex; align-items: center; gap: var(--space-8);">Time-based Analytics</h3>
+                        <button
+                            id="timeAnalyticsToggle"
+                            style="background: none; border: none; color: white; font-size: var(--font-size-xl); cursor: pointer; padding: var(--space-4); border-radius: var(--radius-sm); transition: background-color var(--duration-fast) var(--ease-standard);"
+                            title="Collapse/Expand"
+                            onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'"
+                            onmouseout="this.style.backgroundColor='transparent'">▼</button>
+                    </div>
                 </div>
                 <div class="section-content">
                     <div class="collapsible" onclick="toggleCollapsible(this)">
@@ -1813,12 +1853,20 @@ select.form-control {
 
             <!-- Calendar View -->
             <div class="section" id="calendarSection" style="display: none;">
-                <div class="section-header">
-                    <h3>Calendar View</h3>
+                <div class="section-header" style="cursor: pointer;" onclick="toggleCalendar()">
+                    <div style="display: flex; align-items: center; gap: var(--space-12);">
+                        <h3 style="margin: 0; display: flex; align-items: center; gap: var(--space-8);">Calendar View</h3>
+                        <button
+                            id="calendarToggle"
+                            style="background: none; border: none; color: white; font-size: var(--font-size-xl); cursor: pointer; padding: var(--space-4); border-radius: var(--radius-sm); transition: background-color var(--duration-fast) var(--ease-standard);"
+                            title="Collapse/Expand"
+                            onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'"
+                            onmouseout="this.style.backgroundColor='transparent'">▼</button>
+                    </div>
                     <div>
-                        <button class="btn btn-secondary" onclick="changeMonth(-1)">‹ Prev</button>
+                        <button class="btn btn-secondary" onclick="changeMonth(-1); event.stopPropagation();">‹ Prev</button>
                         <span id="calendarMonth"></span>
-                        <button class="btn btn-secondary" onclick="changeMonth(1)">Next ›</button>
+                        <button class="btn btn-secondary" onclick="changeMonth(1); event.stopPropagation();">Next ›</button>
                     </div>
                 </div>
                 <div class="section-content">
@@ -1828,8 +1876,16 @@ select.form-control {
 
             <!-- AI Analysis -->
             <div class="section" id="aiSection" style="display: none;">
-                <div class="section-header">
-                    <h3>🤖 AI Analysis</h3>
+                <div class="section-header" style="cursor: pointer;" onclick="toggleAI()">
+                    <div style="display: flex; align-items: center; gap: var(--space-12);">
+                        <h3 style="margin: 0; display: flex; align-items: center; gap: var(--space-8);">🤖 AI Analysis</h3>
+                        <button
+                            id="aiToggle"
+                            style="background: none; border: none; color: white; font-size: var(--font-size-xl); cursor: pointer; padding: var(--space-4); border-radius: var(--radius-sm); transition: background-color var(--duration-fast) var(--ease-standard);"
+                            title="Collapse/Expand"
+                            onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'"
+                            onmouseout="this.style.backgroundColor='transparent'">▼</button>
+                    </div>
                 </div>
                 <div class="section-content">
                     <!-- Strategy Context Box - NEW -->
@@ -2171,6 +2227,13 @@ select.form-control {
             showTradeHistory: true,
             showAccountSettings: false,
             showRuleCombinations: false,
+            showStatistics: true,
+            showCharts: true,
+            showRules: true,
+            showBreakdowns: true,
+            showTimeAnalytics: true,
+            showCalendar: true,
+            showAI: true,
             visibleStats: {
                 startingBalance: true,
                 currentBalance: true,
@@ -4779,7 +4842,99 @@ select.form-control {
                 toggleButton.textContent = '▶';
             }
         }
-        
+
+        // Toggle functions for collapsible sections
+        function toggleStatistics() {
+            appState.showStatistics = !appState.showStatistics;
+            const content = document.querySelector('#statisticsSection .section-content');
+            const toggleButton = document.getElementById('statisticsToggle');
+            if (appState.showStatistics) {
+                content.style.display = 'block';
+                toggleButton.textContent = '▼';
+            } else {
+                content.style.display = 'none';
+                toggleButton.textContent = '▶';
+            }
+        }
+
+        function toggleCharts() {
+            appState.showCharts = !appState.showCharts;
+            const content = document.querySelector('#chartsSection .section-content');
+            const toggleButton = document.getElementById('chartsToggle');
+            if (appState.showCharts) {
+                content.style.display = 'block';
+                toggleButton.textContent = '▼';
+            } else {
+                content.style.display = 'none';
+                toggleButton.textContent = '▶';
+            }
+        }
+
+        function toggleRules() {
+            appState.showRules = !appState.showRules;
+            const content = document.querySelector('#rulesSection .section-content');
+            const toggleButton = document.getElementById('rulesToggle');
+            if (appState.showRules) {
+                content.style.display = 'block';
+                toggleButton.textContent = '▼';
+            } else {
+                content.style.display = 'none';
+                toggleButton.textContent = '▶';
+            }
+        }
+
+        function toggleBreakdowns() {
+            appState.showBreakdowns = !appState.showBreakdowns;
+            const content = document.querySelector('#breakdownsSection .section-content');
+            const toggleButton = document.getElementById('breakdownsToggle');
+            if (appState.showBreakdowns) {
+                content.style.display = 'block';
+                toggleButton.textContent = '▼';
+            } else {
+                content.style.display = 'none';
+                toggleButton.textContent = '▶';
+            }
+        }
+
+        function toggleTimeAnalytics() {
+            appState.showTimeAnalytics = !appState.showTimeAnalytics;
+            const content = document.querySelector('#timeAnalyticsSection .section-content');
+            const toggleButton = document.getElementById('timeAnalyticsToggle');
+            if (appState.showTimeAnalytics) {
+                content.style.display = 'block';
+                toggleButton.textContent = '▼';
+            } else {
+                content.style.display = 'none';
+                toggleButton.textContent = '▶';
+            }
+        }
+
+        function toggleCalendar() {
+            appState.showCalendar = !appState.showCalendar;
+            const content = document.querySelector('#calendarSection .section-content');
+            const toggleButton = document.getElementById('calendarToggle');
+            if (appState.showCalendar) {
+                content.style.display = 'block';
+                toggleButton.textContent = '▼';
+            } else {
+                content.style.display = 'none';
+                toggleButton.textContent = '▶';
+            }
+        }
+
+        function toggleAI() {
+            appState.showAI = !appState.showAI;
+            const content = document.querySelector('#aiSection .section-content');
+            const toggleButton = document.getElementById('aiToggle');
+            if (appState.showAI) {
+                content.style.display = 'block';
+                toggleButton.textContent = '▼';
+            } else {
+                content.style.display = 'none';
+                toggleButton.textContent = '▶';
+            }
+        }
+
         // Performance Breakdowns
         function updatePerformanceBreakdowns() {
             updateSetupBreakdown();
