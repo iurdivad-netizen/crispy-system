@@ -1293,6 +1293,7 @@ select.form-control {
                 <select id="importMode" class="form-control" style="width: auto;">
                     <option value="overwrite">Overwrite</option>
                     <option value="append">Append</option>
+                    <option value="update-open-datetime">Update Open Date/Time</option>
                 </select>
                 
                 <input type="file" id="jsonInput" class="file-input" accept=".json" />
@@ -1514,30 +1515,44 @@ select.form-control {
                             <span>📥</span>
                             <span>CSV Import Mode</span>
                         </label>
-                        <div style="display: flex; gap: var(--space-8);">
-                            <label style="display: flex; align-items: center; gap: var(--space-8); flex: 1; padding: var(--space-8); background: var(--color-secondary); border-radius: var(--radius-base); cursor: pointer; transition: background-color var(--duration-fast) var(--ease-standard);" onmouseover="this.style.backgroundColor='var(--color-secondary-hover)'" onmouseout="this.style.backgroundColor='var(--color-secondary)'">
+                        <div style="display: flex; flex-direction: column; gap: var(--space-8);">
+                            <div style="display: flex; gap: var(--space-8);">
+                                <label style="display: flex; align-items: center; gap: var(--space-8); flex: 1; padding: var(--space-8); background: var(--color-secondary); border-radius: var(--radius-base); cursor: pointer; transition: background-color var(--duration-fast) var(--ease-standard);" onmouseover="this.style.backgroundColor='var(--color-secondary-hover)'" onmouseout="this.style.backgroundColor='var(--color-secondary)'">
+                                    <input
+                                        type="radio"
+                                        name="importModeRadio"
+                                        value="overwrite"
+                                        checked
+                                        onchange="updateImportMode('overwrite')"
+                                        style="accent-color: var(--color-primary);">
+                                    <div>
+                                        <div style="font-size: var(--font-size-sm); font-weight: var(--font-weight-medium);">Overwrite</div>
+                                        <div style="font-size: var(--font-size-xs); color: var(--color-text-secondary);">Replace all trades</div>
+                                    </div>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: var(--space-8); flex: 1; padding: var(--space-8); background: var(--color-secondary); border-radius: var(--radius-base); cursor: pointer; transition: background-color var(--duration-fast) var(--ease-standard);" onmouseover="this.style.backgroundColor='var(--color-secondary-hover)'" onmouseout="this.style.backgroundColor='var(--color-secondary)'">
+                                    <input
+                                        type="radio"
+                                        name="importModeRadio"
+                                        value="append"
+                                        onchange="updateImportMode('append')"
+                                        style="accent-color: var(--color-primary);">
+                                    <div>
+                                        <div style="font-size: var(--font-size-sm); font-weight: var(--font-weight-medium);">Append</div>
+                                        <div style="font-size: var(--font-size-xs); color: var(--color-text-secondary);">Add to existing</div>
+                                    </div>
+                                </label>
+                            </div>
+                            <label style="display: flex; align-items: center; gap: var(--space-8); padding: var(--space-8); background: var(--color-secondary); border-radius: var(--radius-base); cursor: pointer; transition: background-color var(--duration-fast) var(--ease-standard);" onmouseover="this.style.backgroundColor='var(--color-secondary-hover)'" onmouseout="this.style.backgroundColor='var(--color-secondary)'">
                                 <input
                                     type="radio"
                                     name="importModeRadio"
-                                    value="overwrite"
-                                    checked
-                                    onchange="updateImportMode('overwrite')"
+                                    value="update-open-datetime"
+                                    onchange="updateImportMode('update-open-datetime')"
                                     style="accent-color: var(--color-primary);">
                                 <div>
-                                    <div style="font-size: var(--font-size-sm); font-weight: var(--font-weight-medium);">Overwrite</div>
-                                    <div style="font-size: var(--font-size-xs); color: var(--color-text-secondary);">Replace all trades</div>
-                                </div>
-                            </label>
-                            <label style="display: flex; align-items: center; gap: var(--space-8); flex: 1; padding: var(--space-8); background: var(--color-secondary); border-radius: var(--radius-base); cursor: pointer; transition: background-color var(--duration-fast) var(--ease-standard);" onmouseover="this.style.backgroundColor='var(--color-secondary-hover)'" onmouseout="this.style.backgroundColor='var(--color-secondary)'">
-                                <input
-                                    type="radio"
-                                    name="importModeRadio"
-                                    value="append"
-                                    onchange="updateImportMode('append')"
-                                    style="accent-color: var(--color-primary);">
-                                <div>
-                                    <div style="font-size: var(--font-size-sm); font-weight: var(--font-weight-medium);">Append</div>
-                                    <div style="font-size: var(--font-size-xs); color: var(--color-text-secondary);">Add to existing</div>
+                                    <div style="font-size: var(--font-size-sm); font-weight: var(--font-weight-medium);">Update Open Date/Time</div>
+                                    <div style="font-size: var(--font-size-xs); color: var(--color-text-secondary);">Add opening date/time to existing trades without replacing data</div>
                                 </div>
                             </label>
                         </div>
@@ -1983,7 +1998,7 @@ select.form-control {
 
             <!-- Footer -->
             <footer style="margin-top: var(--space-32); padding-top: var(--space-16); border-top: 1px solid var(--color-border); text-align: center; font-size: var(--font-size-sm); color: var(--color-text-secondary);">
-                <p>Trading Journal v1.9.9 | Built with Chart.js &amp; Modern Web Technologies</p>
+                <p>Trading Journal v2.0.0 | Built with Chart.js &amp; Modern Web Technologies</p>
                 <p style="font-size: var(--font-size-xs); margin-top: var(--space-4);">© 2025 | Your complete trading analysis solution</p>
             </footer>
 
@@ -2425,7 +2440,7 @@ select.form-control {
                         } else {
                             showMessage(`✅ Imported ${result.trades.length} trades successfully`);
                         }
-                    } else {
+                    } else if (mode === 'append') {
                         // Append mode with duplicate detection
                         const existingFingerprints = new Set(appState.trades.map(t => getTradeFingerprint(t)));
                         const newTrades = result.trades.filter(t => !existingFingerprints.has(getTradeFingerprint(t)));
@@ -2434,6 +2449,42 @@ select.form-control {
                             showMessage(`✅ Added ${newTrades.length} new trades (${result.trades.length - newTrades.length} duplicates, ${result.skippedCount} invalid symbols skipped)`);
                         } else {
                             showMessage(`✅ Added ${newTrades.length} new trades (${result.trades.length - newTrades.length} duplicates skipped)`);
+                        }
+                    } else if (mode === 'update-open-datetime') {
+                        // Update Open Date/Time mode: merge opening date/time without replacing other data
+                        let updatedCount = 0;
+                        let notFoundCount = 0;
+
+                        // Create a map of existing trades using a fingerprint WITHOUT openDate/openTime
+                        const existingTradesMap = new Map();
+                        appState.trades.forEach(trade => {
+                            const key = `${trade.symbol}_${trade.date}_${trade.time}_${trade.entryPrice}_${trade.exitPrice}_${trade.volume}`;
+                            existingTradesMap.set(key, trade);
+                        });
+
+                        // Update matching trades with new openDate and openTime
+                        result.trades.forEach(newTrade => {
+                            const key = `${newTrade.symbol}_${newTrade.date}_${newTrade.time}_${newTrade.entryPrice}_${newTrade.exitPrice}_${newTrade.volume}`;
+                            const existingTrade = existingTradesMap.get(key);
+
+                            if (existingTrade) {
+                                // Update only openDate and openTime fields
+                                existingTrade.openDate = newTrade.openDate;
+                                existingTrade.openTime = newTrade.openTime;
+                                updatedCount++;
+                            } else {
+                                notFoundCount++;
+                            }
+                        });
+
+                        if (updatedCount > 0) {
+                            if (result.skippedCount > 0) {
+                                showMessage(`✅ Updated ${updatedCount} trades with opening date/time (${notFoundCount} not matched, ${result.skippedCount} invalid symbols skipped)`);
+                            } else {
+                                showMessage(`✅ Updated ${updatedCount} trades with opening date/time (${notFoundCount} not matched)`);
+                            }
+                        } else {
+                            showMessage(`ℹ️ No matching trades found to update. Processed ${result.trades.length} trades from CSV.`);
                         }
                     }
 
