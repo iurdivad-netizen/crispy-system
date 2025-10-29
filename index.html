@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  SECURITY HARDENED VERSION - v2.3.0
+  SECURITY HARDENED VERSION - v2.4.0
   
   This version includes the following security enhancements:
   
@@ -1669,29 +1669,31 @@ select.form-control {
             </div>
 
             <!-- RULE COMBINATIONS ANALYSIS - NEW -->
-            <div class="mb-8" style="display: none;" id="ruleCombinationsSection">
-                <button
-                    onclick="toggleRuleCombinations()"
-                    style="width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-base); margin-bottom: 0; font-weight: var(--font-weight-medium); cursor: pointer; transition: all var(--duration-fast) var(--ease-standard);"
-                    onmouseover="this.style.backgroundColor='var(--color-secondary-hover)'" onmouseout="this.style.backgroundColor='var(--color-surface)'">
+            <div class="section" style="display: none;" id="ruleCombinationsSection">
+                <div class="section-header" style="cursor: pointer;" onclick="toggleRuleCombinations()">
                     <div style="display: flex; align-items: center; gap: var(--space-12);">
-                        <span style="font-size: var(--font-size-lg);">🔬</span>
-                        <span style="font-weight: var(--font-weight-semibold);">Rule Combinations Analysis</span>
-                        <span style="font-size: var(--font-size-xs); color: var(--color-text-secondary);">
+                        <h3 style="margin: 0; display: flex; align-items: center; gap: var(--space-8);">🔬 Rule Combinations Analysis</h3>
+                        <button
+                            id="ruleCombinationsToggle"
+                            style="background: none; border: none; color: white; font-size: var(--font-size-xl); cursor: pointer; padding: var(--space-4); border-radius: var(--radius-sm); transition: background-color var(--duration-fast) var(--ease-standard);"
+                            title="Collapse/Expand"
+                            onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'"
+                            onmouseout="this.style.backgroundColor='transparent'">▼</button>
+                        <span style="font-size: var(--font-size-xs); color: rgba(255,255,255,0.8);">
                             (Find best rule combinations)
                         </span>
                     </div>
-                    <span id="ruleCombinationsArrow" style="font-size: var(--font-size-xl); transition: transform var(--duration-normal) var(--ease-standard);">▶</span>
-                </button>
+                </div>
+                <div class="section-content">
+                    <div id="ruleCombinationsContent">
+                        <p style="font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: 1rem;">
+                            This analysis shows performance for all possible combinations of your custom trading rules.
+                            Find which rules work best together to maximize your win rate and profitability.
+                        </p>
 
-                <div id="ruleCombinationsContent" style="display: none; padding: 1rem; background: var(--color-surface); border: 1px solid var(--color-border); border-top: none; border-radius: 0 0 var(--radius-base) var(--radius-base);">
-                    <p style="font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: 1rem;">
-                        This analysis shows performance for all possible combinations of your custom trading rules.
-                        Find which rules work best together to maximize your win rate and profitability.
-                    </p>
-                    
-                    <div id="ruleCombinationsResults">
-                        <!-- Results will be generated here -->
+                        <div id="ruleCombinationsResults">
+                            <!-- Results will be generated here -->
+                        </div>
                     </div>
                 </div>
             </div>
@@ -4767,14 +4769,14 @@ select.form-control {
         
         function updateRuleCombinationsDisplay() {
             const content = document.getElementById('ruleCombinationsContent');
-            const arrow = document.getElementById('ruleCombinationsArrow');
-            
+            const toggleButton = document.getElementById('ruleCombinationsToggle');
+
             if (appState.showRuleCombinations) {
                 content.style.display = 'block';
-                arrow.textContent = '▼';
+                toggleButton.textContent = '▼';
             } else {
                 content.style.display = 'none';
-                arrow.textContent = '▶';
+                toggleButton.textContent = '▶';
             }
         }
         
