@@ -2114,6 +2114,8 @@ select.form-control {
             customRules: [],
             statistics: {},
             chartInstances: {},
+            activeTradeIndex: null,
+            activePasteTarget: 'entry', // 'entry' or 'exit'
             viewSettings: {
                 showStats: {
                     totalTrades: true,
@@ -2899,12 +2901,14 @@ select.form-control {
         function toggleTradeDetails(tradeIndex) {
             const detailsRow = document.querySelector(`#details_${tradeIndex}`).parentElement.parentElement;
             const isVisible = detailsRow.style.display !== 'none';
-            
+
             if (isVisible) {
                 detailsRow.style.display = 'none';
+                appState.activeTradeIndex = null;
             } else {
                 detailsRow.style.display = 'table-row';
                 renderTradeDetails(tradeIndex);
+                appState.activeTradeIndex = tradeIndex;
             }
         }
         
@@ -2980,16 +2984,16 @@ select.form-control {
 
                 <!-- Enhanced Screenshots Section -->
                 <div class="form-grid">
-                    <div class="form-group">
+                    <div class="form-group" onclick="appState.activePasteTarget = 'entry'">
                         <label>Entry Screenshot</label>
                         <div style="display: flex; gap: var(--space-8); margin-bottom: var(--space-8);">
-                            <button class="btn btn-screenshot" onclick="document.getElementById('entryScreenshot_${tradeIndex}').click()" style="flex: 1;">
+                            <button class="btn btn-screenshot" onclick="appState.activePasteTarget = 'entry'; document.getElementById('entryScreenshot_${tradeIndex}').click()" style="flex: 1;">
                                 📷 Upload Entry Screenshot
                             </button>
                             ${trade.entryScreenshot ? `<button class="btn btn-secondary" class="btn btn-clear" onclick="clearScreenshot(${tradeIndex}, 'entry')" title="Remove Screenshot">🗑️</button>` : ''}
                         </div>
                         <input type="file" id="entryScreenshot_${tradeIndex}" class="form-control" accept="image/*" onchange="handleScreenshotUpload(${tradeIndex}, 'entry', this)" style="display: none;">
-                        <small style="color: var(--color-text-secondary);">Or paste with Ctrl+V while this section is open</small>
+                        <small style="color: var(--color-text-secondary);">Or paste with Ctrl+V (active target: entry)</small>
                         ${trade.entryScreenshot && typeof trade.entryScreenshot === 'string' ? `
                             <div class="screenshot-container" style="margin-top: var(--space-8);">
                                 <img src="${getScreenshotSrc(trade.entryScreenshot)}" class="screenshot" onclick="openLightbox('${getScreenshotSrc(trade.entryScreenshot)}')" onerror="console.error('Failed to load entry screenshot'); this.style.display='none';" style="max-width: 200px; max-height: 150px; cursor: pointer; border-radius: var(--radius-base); border: 1px solid var(--color-border);">
@@ -2998,16 +3002,16 @@ select.form-control {
                         ` : ''}
                     </div>
 
-                    <div class="form-group">
+                    <div class="form-group" onclick="appState.activePasteTarget = 'exit'">
                         <label>Exit Screenshot</label>
                         <div style="display: flex; gap: var(--space-8); margin-bottom: var(--space-8);">
-                            <button class="btn btn-screenshot" onclick="document.getElementById('exitScreenshot_${tradeIndex}').click()" style="flex: 1;">
+                            <button class="btn btn-screenshot" onclick="appState.activePasteTarget = 'exit'; document.getElementById('exitScreenshot_${tradeIndex}').click()" style="flex: 1;">
                                 📷 Upload Exit Screenshot
                             </button>
                             ${trade.exitScreenshot ? `<button class="btn btn-secondary" class="btn btn-clear" onclick="clearScreenshot(${tradeIndex}, 'exit')" title="Remove Screenshot">🗑️</button>` : ''}
                         </div>
                         <input type="file" id="exitScreenshot_${tradeIndex}" class="form-control" accept="image/*" onchange="handleScreenshotUpload(${tradeIndex}, 'exit', this)" style="display: none;">
-                        <small style="color: var(--color-text-secondary);">Or paste with Ctrl+V while this section is open</small>
+                        <small style="color: var(--color-text-secondary);">Or paste with Ctrl+V (active target: exit)</small>
                         ${trade.exitScreenshot && typeof trade.exitScreenshot === 'string' ? `
                             <div class="screenshot-container" style="margin-top: var(--space-8);">
                                 <img src="${getScreenshotSrc(trade.exitScreenshot)}" class="screenshot" onclick="openLightbox('${getScreenshotSrc(trade.exitScreenshot)}')" onerror="console.error('Failed to load exit screenshot'); this.style.display='none';" style="max-width: 200px; max-height: 150px; cursor: pointer; border-radius: var(--radius-base); border: 1px solid var(--color-border);">
@@ -4268,13 +4272,38 @@ select.form-control {
         function handlePaste(event) {
             const items = event.clipboardData?.items;
             if (!items) return;
-            
+
+            // Check if we have an active trade details section open
+            if (appState.activeTradeIndex === null) {
+                return; // No trade details open, ignore paste
+            }
+
             for (let item of items) {
                 if (item.type.startsWith('image/')) {
+                    event.preventDefault(); // Prevent default paste behavior
+
                     const file = item.getAsFile();
-                    // Find active trade details and add screenshot
-                    // This is a simplified version - in real app you'd track which trade details are open
-                    console.log('Image pasted:', file);
+                    if (!file) continue;
+
+                    // Read the file and save it to the appropriate screenshot field
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const tradeIndex = appState.activeTradeIndex;
+                        const field = appState.activePasteTarget === 'entry' ? 'entryScreenshot' : 'exitScreenshot';
+                        const type = appState.activePasteTarget;
+
+                        // Save the screenshot to the trade
+                        appState.trades[tradeIndex][field] = e.target.result;
+
+                        // Refresh the trade details to show the new screenshot
+                        renderTradeDetails(tradeIndex);
+
+                        // Show success message
+                        showMessage(`${type.charAt(0).toUpperCase() + type.slice(1)} screenshot pasted successfully`, 'success');
+                    };
+                    reader.readAsDataURL(file);
+
+                    break; // Only handle the first image
                 }
             }
         }
