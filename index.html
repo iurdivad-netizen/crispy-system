@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  SECURITY HARDENED VERSION - v1.9.8-secure
+  SECURITY HARDENED VERSION - v1.9.9-secure
   
   This version includes the following security enhancements:
   
@@ -37,7 +37,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Comprehensive Trading Journal v1.9.8</title>
+    <title>Comprehensive Trading Journal v1.9.9</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
@@ -1983,7 +1983,7 @@ select.form-control {
 
             <!-- Footer -->
             <footer style="margin-top: var(--space-32); padding-top: var(--space-16); border-top: 1px solid var(--color-border); text-align: center; font-size: var(--font-size-sm); color: var(--color-text-secondary);">
-                <p>Trading Journal v1.9.8 | Built with Chart.js &amp; Modern Web Technologies</p>
+                <p>Trading Journal v1.9.9 | Built with Chart.js &amp; Modern Web Technologies</p>
                 <p style="font-size: var(--font-size-xs); margin-top: var(--space-4);">© 2025 | Your complete trading analysis solution</p>
             </footer>
 
@@ -3378,8 +3378,8 @@ select.form-control {
             const columns = appState.visibleColumns;
             
             let html = '';
-            if (columns.date) html += '<th>Date</th>';
-            if (columns.time) html += '<th>Time</th>';
+            if (columns.date) html += '<th>Close Date</th>';
+            if (columns.time) html += '<th>Close Time</th>';
             if (columns.symbol) html += '<th>Symbol</th>';
             if (columns.direction) html += '<th>Direction</th>';
             if (columns.entry) html += '<th>Entry</th>';
@@ -5782,8 +5782,8 @@ select.form-control {
         
         function getColumnLabel(key) {
             const labels = {
-                date: 'Date',
-                time: 'Time',
+                date: 'Close Date',
+                time: 'Close Time',
                 symbol: 'Symbol',
                 direction: 'Direction',
                 entry: 'Entry Price',
