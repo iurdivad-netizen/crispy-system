@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  SECURITY HARDENED VERSION - v2.2.0-secure
+  SECURITY HARDENED VERSION - v2.3.0
   
   This version includes the following security enhancements:
   
@@ -1907,8 +1907,20 @@ select.form-control {
                                 <span>Rule Adherence</span>
                             </label>
                             <label style="display: flex; align-items: center; gap: var(--space-8); font-size: var(--font-size-sm); color: var(--color-text);">
-                                <input type="checkbox" id="includeTimeBasedStats" checked onchange="updateAiPromptInclusion('timeBasedStats', this.checked)" style="border-radius: var(--radius-sm);">
-                                <span>Time-Based Analytics</span>
+                                <input type="checkbox" id="includeMonthlyPerformance" checked onchange="updateAiPromptInclusion('monthlyPerformance', this.checked)" style="border-radius: var(--radius-sm);">
+                                <span>Monthly Performance</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: var(--space-8); font-size: var(--font-size-sm); color: var(--color-text);">
+                                <input type="checkbox" id="includeDailyPerformance" checked onchange="updateAiPromptInclusion('dailyPerformance', this.checked)" style="border-radius: var(--radius-sm);">
+                                <span>Daily Performance</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: var(--space-8); font-size: var(--font-size-sm); color: var(--color-text);">
+                                <input type="checkbox" id="includeOpenHourlyPerformance" checked onchange="updateAiPromptInclusion('openHourlyPerformance', this.checked)" style="border-radius: var(--radius-sm);">
+                                <span>Open Hourly Performance</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: var(--space-8); font-size: var(--font-size-sm); color: var(--color-text);">
+                                <input type="checkbox" id="includeCloseHourlyPerformance" checked onchange="updateAiPromptInclusion('closeHourlyPerformance', this.checked)" style="border-radius: var(--radius-sm);">
+                                <span>Close Hourly Performance</span>
                             </label>
                             <label style="display: flex; align-items: center; gap: var(--space-8); font-size: var(--font-size-sm); color: var(--color-text);">
                                 <input type="checkbox" id="includeCustomRules" checked onchange="updateAiPromptInclusion('customRules', this.checked)" style="border-radius: var(--radius-sm);">
@@ -2137,7 +2149,10 @@ select.form-control {
                 marketCondition: true,
                 emotionalState: true,
                 ruleAdherence: true,
-                timeBasedStats: true,
+                monthlyPerformance: true,
+                dailyPerformance: true,
+                openHourlyPerformance: true,
+                closeHourlyPerformance: true,
                 customRules: true,
                 tradesOption: 'none',  // Changed from boolean to string with options
                 screenshots: false  // Don't include screenshots in prompt
@@ -4887,6 +4902,7 @@ select.form-control {
         function updateTimeAnalytics() {
             updateMonthlyStats();
             updateDailyStats();
+            updateOpenHourlyStats();
             updateHourlyStats();
         }
         
@@ -4952,7 +4968,44 @@ select.form-control {
                 </div>
             `;
         }
-        
+
+        function updateOpenHourlyStats() {
+            const container = document.getElementById('openHourlyStats');
+            const hourlyData = {};
+
+            // Initialize hours 0-23
+            for (let i = 0; i < 24; i++) {
+                hourlyData[i] = { trades: 0, profit: 0, wins: 0 };
+            }
+
+            appState.trades.forEach(trade => {
+                if (trade.openTime) {
+                    const hour = parseInt(trade.openTime.split(':')[0]);
+                    hourlyData[hour].trades++;
+                    hourlyData[hour].profit += (trade.netPL || trade.profit);
+                    if ((trade.netPL || trade.profit) > 0) hourlyData[hour].wins++;
+                }
+            });
+
+            // Only show hours with trades
+            const activeHours = Object.entries(hourlyData).filter(([hour, data]) => data.trades > 0);
+
+            container.innerHTML = `
+                <div class="breakdown-grid">
+                    ${activeHours.map(([hour, data]) => `
+                        <div class="breakdown-item">
+                            <div class="breakdown-header">${hour}:00</div>
+                            <div class="breakdown-stats">
+                                Trades: ${data.trades}<br>
+                                Win Rate: ${((data.wins / data.trades) * 100).toFixed(1)}%<br>
+                                P&L: <span class="${data.profit >= 0 ? 'positive' : 'negative'}">${formatCurrency(data.profit)}</span>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
         function updateHourlyStats() {
             const container = document.getElementById('hourlyStats');
             const hourlyData = {};
@@ -5308,14 +5361,26 @@ select.form-control {
                 }
             }
             
-            if (inclusions.timeBasedStats) {
+            // Calculate time-based stats if any of the time-based options are selected
+            if (inclusions.monthlyPerformance || inclusions.dailyPerformance ||
+                inclusions.openHourlyPerformance || inclusions.closeHourlyPerformance) {
                 const timeStats = calculateTimeBasedStats();
-                analysisData.timeBasedStats = {
-                    bestDay: timeStats.bestDay,
-                    worstDay: timeStats.worstDay,
-                    mostProfitableHours: timeStats.mostProfitableHours,
-                    leastProfitableHours: timeStats.leastProfitableHours
-                };
+
+                if (inclusions.monthlyPerformance) {
+                    analysisData.monthlyPerformance = timeStats.monthly;
+                }
+
+                if (inclusions.dailyPerformance) {
+                    analysisData.dailyPerformance = timeStats.daily;
+                }
+
+                if (inclusions.openHourlyPerformance) {
+                    analysisData.openHourlyPerformance = timeStats.openHourly;
+                }
+
+                if (inclusions.closeHourlyPerformance) {
+                    analysisData.closeHourlyPerformance = timeStats.closeHourly;
+                }
             }
             
             if (inclusions.customRules && appState.customRules.length > 0) {
@@ -5413,14 +5478,45 @@ select.form-control {
                 prompt += `\n`;
             }
             
-            if (data.timeBasedStats) {
-                prompt += `⏰ TIME-BASED ANALYTICS:\n`;
-                if (data.timeBasedStats.bestDay) {
-                    prompt += `• Best Day: ${data.timeBasedStats.bestDay[0]} (${formatCurrency(data.timeBasedStats.bestDay[1].pl)} P&L)\n`;
-                }
-                if (data.timeBasedStats.worstDay) {
-                    prompt += `• Worst Day: ${data.timeBasedStats.worstDay[0]} (${formatCurrency(data.timeBasedStats.worstDay[1].pl)} P&L)\n`;
-                }
+            if (data.monthlyPerformance) {
+                prompt += `📅 MONTHLY PERFORMANCE:\n`;
+                Object.entries(data.monthlyPerformance).forEach(([month, perf]) => {
+                    const winRate = perf.trades > 0 ? (perf.wins / perf.trades * 100).toFixed(1) : '0.0';
+                    prompt += `• ${month}: ${perf.trades} trades, ${winRate}% win rate, ${formatCurrency(perf.profit)} P&L\n`;
+                });
+                prompt += `\n`;
+            }
+
+            if (data.dailyPerformance) {
+                prompt += `📆 DAILY PERFORMANCE (Day of Week):\n`;
+                Object.entries(data.dailyPerformance).forEach(([day, perf]) => {
+                    const winRate = perf.trades > 0 ? (perf.wins / perf.trades * 100).toFixed(1) : '0.0';
+                    prompt += `• ${day}: ${perf.trades} trades, ${winRate}% win rate, ${formatCurrency(perf.profit)} P&L\n`;
+                });
+                prompt += `\n`;
+            }
+
+            if (data.openHourlyPerformance) {
+                prompt += `🕐 OPEN HOURLY PERFORMANCE:\n`;
+                const activeOpenHours = Object.entries(data.openHourlyPerformance)
+                    .filter(([hour, perf]) => perf.trades > 0)
+                    .sort((a, b) => b[1].profit - a[1].profit);
+                activeOpenHours.forEach(([hour, perf]) => {
+                    const winRate = perf.trades > 0 ? (perf.wins / perf.trades * 100).toFixed(1) : '0.0';
+                    prompt += `• ${hour}:00 - ${perf.trades} trades, ${winRate}% win rate, ${formatCurrency(perf.profit)} P&L\n`;
+                });
+                prompt += `\n`;
+            }
+
+            if (data.closeHourlyPerformance) {
+                prompt += `🕐 CLOSE HOURLY PERFORMANCE:\n`;
+                const activeCloseHours = Object.entries(data.closeHourlyPerformance)
+                    .filter(([hour, perf]) => perf.trades > 0)
+                    .sort((a, b) => b[1].profit - a[1].profit);
+                activeCloseHours.forEach(([hour, perf]) => {
+                    const winRate = perf.trades > 0 ? (perf.wins / perf.trades * 100).toFixed(1) : '0.0';
+                    prompt += `• ${hour}:00 - ${perf.trades} trades, ${winRate}% win rate, ${formatCurrency(perf.profit)} P&L\n`;
+                });
                 prompt += `\n`;
             }
             
@@ -5622,35 +5718,66 @@ select.form-control {
         }
         
         function calculateTimeBasedStats() {
-            // Calculate daily stats
+            const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+            // Monthly stats
+            const monthlyStats = {};
+            // Daily (day of week) stats
             const dailyStats = {};
-            const hourlyStats = {};
-            
-            appState.trades.forEach(trade => {
-                // Daily stats
-                if (!dailyStats[trade.date]) {
-                    dailyStats[trade.date] = { trades: 0, pl: 0 };
-                }
-                dailyStats[trade.date].trades++;
-                dailyStats[trade.date].pl += (trade.netPL || trade.profit);
-                
-                // Hourly stats
-                const hour = parseInt(trade.time.split(':')[0]);
-                if (!hourlyStats[hour]) {
-                    hourlyStats[hour] = { trades: 0, pl: 0 };
-                }
-                hourlyStats[hour].trades++;
-                hourlyStats[hour].pl += (trade.netPL || trade.profit);
+            daysOfWeek.forEach(day => {
+                dailyStats[day] = { trades: 0, profit: 0, wins: 0 };
             });
-            
-            const sortedDays = Object.entries(dailyStats).sort((a, b) => b[1].pl - a[1].pl);
-            const sortedHours = Object.entries(hourlyStats).sort((a, b) => b[1].pl - a[1].pl);
-            
+            // Open hourly stats
+            const openHourlyStats = {};
+            // Close hourly stats
+            const closeHourlyStats = {};
+
+            // Initialize hourly stats
+            for (let i = 0; i < 24; i++) {
+                openHourlyStats[i] = { trades: 0, profit: 0, wins: 0 };
+                closeHourlyStats[i] = { trades: 0, profit: 0, wins: 0 };
+            }
+
+            appState.trades.forEach(trade => {
+                const pl = trade.netPL || trade.profit;
+                const isWin = pl > 0;
+
+                // Monthly stats
+                const month = trade.date.substring(0, 7); // YYYY-MM
+                if (!monthlyStats[month]) {
+                    monthlyStats[month] = { trades: 0, profit: 0, wins: 0 };
+                }
+                monthlyStats[month].trades++;
+                monthlyStats[month].profit += pl;
+                if (isWin) monthlyStats[month].wins++;
+
+                // Daily (day of week) stats
+                const tradeDate = new Date(trade.closeTime || `${trade.date}T${trade.time}:00`);
+                const dayOfWeek = daysOfWeek[tradeDate.getDay()];
+                dailyStats[dayOfWeek].trades++;
+                dailyStats[dayOfWeek].profit += pl;
+                if (isWin) dailyStats[dayOfWeek].wins++;
+
+                // Open hourly stats
+                if (trade.openTime) {
+                    const openHour = parseInt(trade.openTime.split(':')[0]);
+                    openHourlyStats[openHour].trades++;
+                    openHourlyStats[openHour].profit += pl;
+                    if (isWin) openHourlyStats[openHour].wins++;
+                }
+
+                // Close hourly stats
+                const closeHour = parseInt(trade.time.split(':')[0]);
+                closeHourlyStats[closeHour].trades++;
+                closeHourlyStats[closeHour].profit += pl;
+                if (isWin) closeHourlyStats[closeHour].wins++;
+            });
+
             return {
-                bestDay: sortedDays[0] || null,
-                worstDay: sortedDays[sortedDays.length - 1] || null,
-                mostProfitableHours: sortedHours.slice(0, 3),
-                leastProfitableHours: sortedHours.slice(-3)
+                monthly: monthlyStats,
+                daily: dailyStats,
+                openHourly: openHourlyStats,
+                closeHourly: closeHourlyStats
             };
         }
         
