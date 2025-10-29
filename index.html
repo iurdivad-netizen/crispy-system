@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  SECURITY HARDENED VERSION - v1.10.1-secure
+  SECURITY HARDENED VERSION - v1.10.0-secure
   
   This version includes the following security enhancements:
   
@@ -37,7 +37,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Comprehensive Trading Journal v1.10.1</title>
+    <title>Comprehensive Trading Journal v1.10.0</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
@@ -2344,25 +2344,6 @@ select.form-control {
         }
 
         // CSV Import Functions
-
-        // Helper function to generate a unique fingerprint for a trade
-        function getTradeFingerprint(trade) {
-            // Create a unique identifier based on key trade properties
-            return `${trade.symbol}_${trade.openDate}_${trade.openTime}_${trade.date}_${trade.time}_${trade.entryPrice}_${trade.exitPrice}_${trade.volume}`;
-        }
-
-        // Helper function to calculate similarity between existing and new trades
-        function calculateTradeSimilarity(existingTrades, newTrades) {
-            if (existingTrades.length === 0) {
-                return 0; // No existing trades, 0% similarity
-            }
-
-            const existingFingerprints = new Set(existingTrades.map(t => getTradeFingerprint(t)));
-            const matchingCount = newTrades.filter(t => existingFingerprints.has(getTradeFingerprint(t))).length;
-
-            return (matchingCount / newTrades.length) * 100;
-        }
-
         function handleCSVImport(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -2390,29 +2371,8 @@ select.form-control {
                         showMessage('❌ Error: No valid trades found in CSV file', 'error');
                         return;
                     }
-
-                    // Calculate similarity between existing and new trades
-                    const similarity = calculateTradeSimilarity(appState.trades, result.trades);
-                    console.log(`Trade similarity: ${similarity.toFixed(2)}%`);
-
-                    // Intelligent merge: if 90% or more of data is the same, add only missing trades
-                    if (appState.trades.length > 0 && similarity >= 90) {
-                        // Smart merge: add only new trades that don't exist
-                        const existingFingerprints = new Set(appState.trades.map(t => getTradeFingerprint(t)));
-                        const newTrades = result.trades.filter(t => !existingFingerprints.has(getTradeFingerprint(t)));
-
-                        if (newTrades.length > 0) {
-                            appState.trades = [...appState.trades, ...newTrades];
-                            if (result.skippedCount > 0) {
-                                showMessage(`✅ Smart merge: Added ${newTrades.length} new trades (${result.trades.length - newTrades.length} existing, ${result.skippedCount} invalid symbols skipped)`);
-                            } else {
-                                showMessage(`✅ Smart merge: Added ${newTrades.length} new trades (${result.trades.length - newTrades.length} already exist)`);
-                            }
-                        } else {
-                            showMessage(`ℹ️ No new trades to add - all ${result.trades.length} trades already exist`);
-                        }
-                    } else if (mode === 'overwrite') {
-                        // Overwrite mode: replace all trades
+                    
+                    if (mode === 'overwrite') {
                         appState.trades = result.trades;
                         appState.startingBalance = result.startingBalance || 10000;
                         // Update import mode to match the selected radio button
@@ -2420,15 +2380,10 @@ select.form-control {
                         if (checkedMode) {
                             document.getElementById('importMode').value = checkedMode.value;
                         }
-                        if (result.skippedCount > 0) {
-                            showMessage(`✅ Imported ${result.trades.length} trades (${result.skippedCount} skipped - invalid symbols)`);
-                        } else {
-                            showMessage(`✅ Imported ${result.trades.length} trades successfully`);
-                        }
                     } else {
                         // Append mode with duplicate detection
-                        const existingFingerprints = new Set(appState.trades.map(t => getTradeFingerprint(t)));
-                        const newTrades = result.trades.filter(t => !existingFingerprints.has(getTradeFingerprint(t)));
+                        const existingIds = appState.trades.map(t => t.id);
+                        const newTrades = result.trades.filter(t => !existingIds.includes(t.id));
                         appState.trades = [...appState.trades, ...newTrades];
                         if (result.skippedCount > 0) {
                             showMessage(`✅ Added ${newTrades.length} new trades (${result.trades.length - newTrades.length} duplicates, ${result.skippedCount} invalid symbols skipped)`);
@@ -2436,8 +2391,15 @@ select.form-control {
                             showMessage(`✅ Added ${newTrades.length} new trades (${result.trades.length - newTrades.length} duplicates skipped)`);
                         }
                     }
-
+                    
                     updateUI();
+                    
+                    // Show import message with filtering info
+                    if (result.skippedCount > 0) {
+                        showMessage(`✅ Imported ${result.trades.length} trades (${result.skippedCount} skipped - invalid symbols)`);
+                    } else {
+                        showMessage(`✅ Imported ${result.trades.length} trades successfully`);
+                    }
                     
                     // Auto-expand trade history after successful import
                     if (result.trades.length > 0) {
