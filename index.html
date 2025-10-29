@@ -5341,10 +5341,12 @@ select.form-control {
 
                     // Add weekly summary - CENTERED
                     const weekColor = weekPL >= 0 ? 'var(--color-success)' : 'var(--color-error)';
+                    const weekBgColor = weekPL > 0 ? 'rgba(16, 185, 129, 0.2)' : weekPL < 0 ? 'rgba(239, 68, 68, 0.2)' : 'transparent';
+                    const weekTextColor = weekPL > 0 ? '#10b981' : weekPL < 0 ? '#ef4444' : '#94a3b8';
                     html += `
-                        <div style="padding: 0.5rem; background: var(--color-surface); border-left: 2px solid var(--color-border); text-align: center; font-size: 11px; display: flex; flex-direction: column; justify-content: center;">
+                        <div style="aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 4px; font-size: 0.75rem; position: relative; min-height: 40px; border: 1px solid transparent; background: ${weekBgColor}; color: ${weekTextColor}; text-align: center; padding: 0.5rem;">
                             <div style="font-weight: bold;">${weekWins}W/${weekLosses}L</div>
-                            <div style="color: ${weekColor}; font-weight: bold; margin-top: 2px;">${formatCurrency(weekPL)}</div>
+                            <div style="font-weight: bold; margin-top: 2px;">${formatCurrency(weekPL)}</div>
                         </div>
                     `;
 
