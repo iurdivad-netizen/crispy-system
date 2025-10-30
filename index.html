@@ -2250,7 +2250,16 @@ select.form-control {
                 largestWin: true,
                 largestLoss: true,
                 expectancy: true,
-                totalFees: true
+                totalFees: true,
+                // Phase 1 New Stats
+                maxDrawdown: true,
+                maxDrawdownPercent: true,
+                recoveryFactor: true,
+                currentStreak: true,
+                longestWinStreak: true,
+                longestLossStreak: true,
+                riskRewardRatio: true,
+                avgTradeDuration: true
             },
             visibleCharts: {
                 equityCurve: true,
@@ -2357,6 +2366,27 @@ select.form-control {
 
         function formatPercentage(value) {
             return value.toFixed(1) + '%';
+        }
+
+        function formatDuration(milliseconds) {
+            if (milliseconds === 0) return '0m';
+
+            const seconds = Math.floor(milliseconds / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const hours = Math.floor(minutes / 60);
+            const days = Math.floor(hours / 24);
+
+            if (days > 0) {
+                const remainingHours = hours % 24;
+                return remainingHours > 0 ? `${days}d ${remainingHours}h` : `${days}d`;
+            } else if (hours > 0) {
+                const remainingMinutes = minutes % 60;
+                return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
+            } else if (minutes > 0) {
+                return `${minutes}m`;
+            } else {
+                return `${seconds}s`;
+            }
         }
 
         function updateUI() {
@@ -3188,16 +3218,115 @@ select.form-control {
             const totalLoss = Math.abs(losses.reduce((sum, t) => sum + (t.netPL || t.profit), 0));
             const netPL = trades.reduce((sum, t) => sum + (t.netPL || t.profit), 0);
             const totalFees = trades.reduce((sum, t) => sum + t.commission + t.swap, 0);
-            
+
             // Rule adherence statistics
             const tradesWithRules = trades.filter(t => t.rulesFollowed && t.rulesFollowed.length > 0);
             const rulesWins = tradesWithRules.filter(t => (t.netPL || t.profit) > 0);
             const rulesWinRate = tradesWithRules.length > 0 ? (rulesWins.length / tradesWithRules.length * 100) : 0;
-            
+
             const currentBalance = appState.startingBalance + netPL;
             const accountGrowth = ((currentBalance - appState.startingBalance) / appState.startingBalance * 100);
             const expectancy = trades.length > 0 ? netPL / trades.length : 0;
-            
+
+            // PHASE 1 STATS: Calculate Max Drawdown and Recovery Factor
+            // Sort trades chronologically for equity curve calculation
+            const sortedTrades = [...trades].sort((a, b) => {
+                const dateA = new Date(a.closeTime || `${a.date}T${a.time}:00`);
+                const dateB = new Date(b.closeTime || `${b.date}T${b.time}:00`);
+                return dateA - dateB;
+            });
+
+            // Build equity curve and calculate max drawdown
+            let runningBalance = appState.startingBalance;
+            let peak = appState.startingBalance;
+            let maxDrawdown = 0;
+            let maxDrawdownPercent = 0;
+
+            sortedTrades.forEach(trade => {
+                const tradePL = parseFloat(trade.netPL) || parseFloat(trade.profit) || 0;
+                runningBalance += tradePL;
+
+                // Update peak if we've reached a new high
+                if (runningBalance > peak) {
+                    peak = runningBalance;
+                }
+
+                // Calculate current drawdown
+                const drawdown = peak - runningBalance;
+                const drawdownPercent = peak > 0 ? (drawdown / peak * 100) : 0;
+
+                // Update max drawdown
+                if (drawdown > maxDrawdown) {
+                    maxDrawdown = drawdown;
+                    maxDrawdownPercent = drawdownPercent;
+                }
+            });
+
+            // Recovery Factor = Net P/L / Max Drawdown
+            const recoveryFactor = maxDrawdown > 0 ? (netPL / maxDrawdown) : 0;
+
+            // PHASE 1 STATS: Calculate Consecutive Win/Loss Streaks
+            let currentStreak = 0;
+            let longestWinStreak = 0;
+            let longestLossStreak = 0;
+            let currentWinStreak = 0;
+            let currentLossStreak = 0;
+
+            sortedTrades.forEach((trade, index) => {
+                const tradePL = parseFloat(trade.netPL) || parseFloat(trade.profit) || 0;
+                const isWin = tradePL > 0;
+
+                if (isWin) {
+                    currentWinStreak++;
+                    currentLossStreak = 0;
+                    if (currentWinStreak > longestWinStreak) {
+                        longestWinStreak = currentWinStreak;
+                    }
+                } else if (tradePL < 0) {
+                    currentLossStreak++;
+                    currentWinStreak = 0;
+                    if (currentLossStreak > longestLossStreak) {
+                        longestLossStreak = currentLossStreak;
+                    }
+                } else {
+                    // Break-even trade resets both streaks
+                    currentWinStreak = 0;
+                    currentLossStreak = 0;
+                }
+
+                // Current streak is determined by the last trade
+                if (index === sortedTrades.length - 1) {
+                    currentStreak = isWin ? currentWinStreak : (tradePL < 0 ? -currentLossStreak : 0);
+                }
+            });
+
+            // PHASE 1 STATS: Risk-Reward Ratio
+            const avgWin = wins.length > 0 ? (totalProfit / wins.length) : 0;
+            const avgLoss = losses.length > 0 ? (totalLoss / losses.length) : 0;
+            const riskRewardRatio = avgLoss > 0 ? (avgWin / avgLoss) : 0;
+
+            // PHASE 1 STATS: Average Trade Duration
+            let totalDuration = 0;
+            let tradesWithDuration = 0;
+
+            trades.forEach(trade => {
+                // Check if we have both open and close times
+                if (trade.openDate && trade.date) {
+                    const openDateTime = new Date(`${trade.openDate}T${trade.openTime || '00:00:00'}`);
+                    const closeDateTime = new Date(`${trade.date}T${trade.time || '00:00:00'}`);
+
+                    if (!isNaN(openDateTime.getTime()) && !isNaN(closeDateTime.getTime())) {
+                        const durationMs = closeDateTime - openDateTime;
+                        if (durationMs >= 0) {
+                            totalDuration += durationMs;
+                            tradesWithDuration++;
+                        }
+                    }
+                }
+            });
+
+            const avgTradeDuration = tradesWithDuration > 0 ? (totalDuration / tradesWithDuration) : 0;
+
             appState.statistics = {
                 totalTrades: trades.length,
                 winningTrades: wins.length,
@@ -3209,14 +3338,23 @@ select.form-control {
                 totalProfit: totalProfit,
                 totalLoss: totalLoss,
                 profitFactor: totalLoss > 0 ? (totalProfit / totalLoss) : 0,
-                avgWin: wins.length > 0 ? (totalProfit / wins.length) : 0,
-                avgLoss: losses.length > 0 ? (totalLoss / losses.length) : 0,
+                avgWin: avgWin,
+                avgLoss: avgLoss,
                 largestWin: wins.length > 0 ? Math.max(...wins.map(t => t.profit)) : 0,
                 largestLoss: losses.length > 0 ? Math.min(...losses.map(t => t.profit)) : 0,
                 expectancy: expectancy,
                 accountGrowth: accountGrowth,
                 currentBalance: currentBalance,
-                startingBalance: appState.startingBalance
+                startingBalance: appState.startingBalance,
+                // Phase 1 New Stats
+                maxDrawdown: maxDrawdown,
+                maxDrawdownPercent: maxDrawdownPercent,
+                recoveryFactor: recoveryFactor,
+                currentStreak: currentStreak,
+                longestWinStreak: longestWinStreak,
+                longestLossStreak: longestLossStreak,
+                riskRewardRatio: riskRewardRatio,
+                avgTradeDuration: avgTradeDuration
             };
 
             appState.currentBalance = currentBalance;
@@ -3227,10 +3365,10 @@ select.form-control {
         function updateStatisticsDisplay() {
             const stats = appState.statistics;
             if (!stats.totalTrades) return;
-            
+
             const statsGrid = document.getElementById('statsGrid');
             const statsConfig = appState.visibleStats;
-            
+
             const statsData = [
                 { key: 'totalTrades', label: 'Total Trades', value: stats.totalTrades, format: 'number' },
                 { key: 'winningTrades', label: 'Winning Trades', value: stats.winningTrades, format: 'number', class: 'positive' },
@@ -3247,9 +3385,18 @@ select.form-control {
                 { key: 'expectancy', label: 'Expectancy', value: stats.expectancy, format: 'currency', class: stats.expectancy >= 0 ? 'positive' : 'negative' },
                 { key: 'accountGrowth', label: 'Account Growth', value: stats.accountGrowth, format: 'percentage', class: stats.accountGrowth >= 0 ? 'positive' : 'negative' },
                 { key: 'currentBalance', label: 'Current Balance', value: stats.currentBalance, format: 'currency' },
-                { key: 'startingBalance', label: 'Starting Balance', value: stats.startingBalance, format: 'currency' }
+                { key: 'startingBalance', label: 'Starting Balance', value: stats.startingBalance, format: 'currency' },
+                // Phase 1 New Stats
+                { key: 'maxDrawdown', label: 'Max Drawdown', value: stats.maxDrawdown, format: 'currency', class: 'negative' },
+                { key: 'maxDrawdownPercent', label: 'Max Drawdown %', value: stats.maxDrawdownPercent, format: 'percentage', class: 'negative' },
+                { key: 'recoveryFactor', label: 'Recovery Factor', value: stats.recoveryFactor, format: 'decimal', class: stats.recoveryFactor >= 1 ? 'positive' : 'negative' },
+                { key: 'currentStreak', label: 'Current Streak', value: stats.currentStreak, format: 'streak' },
+                { key: 'longestWinStreak', label: 'Longest Win Streak', value: stats.longestWinStreak, format: 'number', class: 'positive' },
+                { key: 'longestLossStreak', label: 'Longest Loss Streak', value: stats.longestLossStreak, format: 'number', class: 'negative' },
+                { key: 'riskRewardRatio', label: 'Risk/Reward Ratio', value: stats.riskRewardRatio, format: 'decimal', class: stats.riskRewardRatio >= 1 ? 'positive' : 'negative' },
+                { key: 'avgTradeDuration', label: 'Avg Trade Duration', value: stats.avgTradeDuration, format: 'duration' }
             ];
-            
+
             let html = '';
             statsData.filter(stat => statsConfig[stat.key]).forEach(stat => {
                 let formattedValue = stat.value;
@@ -3257,17 +3404,27 @@ select.form-control {
                     case 'currency': formattedValue = formatCurrency(stat.value); break;
                     case 'percentage': formattedValue = formatPercentage(stat.value); break;
                     case 'decimal': formattedValue = stat.value.toFixed(2); break;
+                    case 'duration': formattedValue = formatDuration(stat.value); break;
+                    case 'streak':
+                        formattedValue = stat.value === 0 ? '0' : (stat.value > 0 ? `+${stat.value}` : stat.value.toString());
+                        break;
                     default: formattedValue = stat.value.toString();
                 }
-                
+
+                // Determine class for streak
+                let itemClass = stat.class || '';
+                if (stat.format === 'streak') {
+                    itemClass = stat.value > 0 ? 'positive' : (stat.value < 0 ? 'negative' : '');
+                }
+
                 html += `
                     <div class="stat-card">
-                        <div class="stat-value ${stat.class || ''}">${formattedValue}</div>
+                        <div class="stat-value ${itemClass}">${formattedValue}</div>
                         <div class="stat-label">${stat.label}</div>
                     </div>
                 `;
             });
-            
+
             statsGrid.innerHTML = html;
         }
 
@@ -6125,7 +6282,16 @@ select.form-control {
                 largestWin: 'Largest Win',
                 largestLoss: 'Largest Loss',
                 expectancy: 'Expectancy',
-                totalFees: 'Total Fees'
+                totalFees: 'Total Fees',
+                // Phase 1 New Stats
+                maxDrawdown: 'Max Drawdown',
+                maxDrawdownPercent: 'Max Drawdown %',
+                recoveryFactor: 'Recovery Factor',
+                currentStreak: 'Current Streak',
+                longestWinStreak: 'Longest Win Streak',
+                longestLossStreak: 'Longest Loss Streak',
+                riskRewardRatio: 'Risk/Reward Ratio',
+                avgTradeDuration: 'Avg Trade Duration'
             };
             return labels[key] || key;
         }
