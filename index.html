@@ -1310,25 +1310,16 @@ select.form-control {
                 <button class="btn btn-secondary" onclick="printTrades()" id="printBtn" disabled>
                     🖨️ Print
                 </button>
-                
-                <!-- Download help button removed -->
-            </div>
 
-            <!-- Messages -->
-            <div id="messages"></div>
-
-            <!-- Export Section - Independent of collapsible sections -->
-            <div style="margin: 1.5rem 0;">
+                <!-- Export with dropdown -->
                 <div class="export-menu-container" style="position: relative; display: inline-block;">
                     <button
                         onclick="toggleExportMenu()"
                         class="btn btn-secondary"
                         id="exportBtn"
                         disabled
-                        style="display: flex; align-items: center; gap: 8px;"
                         title="Export options">
-                        <span>💾 Export</span>
-                        <span style="font-size: 10px;">▼</span>
+                        💾 Export ▾
                     </button>
 
                     <!-- Export Options Dropdown -->
@@ -1427,7 +1418,12 @@ select.form-control {
                         </div>
                     </div>
                 </div>
+
+                <!-- Download help button removed -->
             </div>
+
+            <!-- Messages -->
+            <div id="messages"></div>
 
             <!-- ACCOUNT SETTINGS SECTION - NEW LOCATION -->
             <div class="section" style="margin-bottom: 1.5rem;">
