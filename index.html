@@ -1289,7 +1289,13 @@ select.form-control {
                 <button class="btn" onclick="document.getElementById('csvInput').click()">
                     📄 Import CSV
                 </button>
-                
+
+                <select id="platform" class="form-control" style="width: auto;">
+                    <option value="ctrader">cTrader</option>
+                    <option value="mt4">MT4</option>
+                    <option value="mt5">MT5</option>
+                </select>
+
                 <select id="importMode" class="form-control" style="width: auto;">
                     <option value="overwrite">Overwrite</option>
                     <option value="append">Append</option>
@@ -1459,6 +1465,50 @@ select.form-control {
                         <p style="font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-top: var(--space-4); margin-bottom: 0;">
                             Current: $<span id="currentStartingBalance">10,000.00</span>
                         </p>
+                    </div>
+
+                    <!-- Platform Selection -->
+                    <div style="margin-bottom: 1rem;">
+                        <label class="form-label" style="display: flex; align-items: center; gap: var(--space-8); margin-bottom: var(--space-8); font-weight: var(--font-weight-medium);">
+                            <span>🔧</span>
+                            <span>Trading Platform</span>
+                        </label>
+                        <div style="display: flex; gap: var(--space-8);">
+                            <label style="display: flex; align-items: center; gap: var(--space-8); flex: 1; padding: var(--space-8); background: var(--color-secondary); border-radius: var(--radius-base); cursor: pointer; transition: background-color var(--duration-fast) var(--ease-standard);" onmouseover="this.style.backgroundColor='var(--color-secondary-hover)'" onmouseout="this.style.backgroundColor='var(--color-secondary)'">
+                                <input
+                                    type="radio"
+                                    name="platformRadio"
+                                    value="ctrader"
+                                    checked
+                                    onchange="updatePlatform('ctrader')"
+                                    style="accent-color: var(--color-primary);">
+                                <div>
+                                    <div style="font-size: var(--font-size-sm); font-weight: var(--font-weight-medium);">cTrader</div>
+                                </div>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: var(--space-8); flex: 1; padding: var(--space-8); background: var(--color-secondary); border-radius: var(--radius-base); cursor: pointer; transition: background-color var(--duration-fast) var(--ease-standard);" onmouseover="this.style.backgroundColor='var(--color-secondary-hover)'" onmouseout="this.style.backgroundColor='var(--color-secondary)'">
+                                <input
+                                    type="radio"
+                                    name="platformRadio"
+                                    value="mt4"
+                                    onchange="updatePlatform('mt4')"
+                                    style="accent-color: var(--color-primary);">
+                                <div>
+                                    <div style="font-size: var(--font-size-sm); font-weight: var(--font-weight-medium);">MT4</div>
+                                </div>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: var(--space-8); flex: 1; padding: var(--space-8); background: var(--color-secondary); border-radius: var(--radius-base); cursor: pointer; transition: background-color var(--duration-fast) var(--ease-standard);" onmouseover="this.style.backgroundColor='var(--color-secondary-hover)'" onmouseout="this.style.backgroundColor='var(--color-secondary)'">
+                                <input
+                                    type="radio"
+                                    name="platformRadio"
+                                    value="mt5"
+                                    onchange="updatePlatform('mt5')"
+                                    style="accent-color: var(--color-primary);">
+                                <div>
+                                    <div style="font-size: var(--font-size-sm); font-weight: var(--font-weight-medium);">MT5</div>
+                                </div>
+                            </label>
+                        </div>
                     </div>
 
                     <!-- Import Mode -->
@@ -2037,8 +2087,8 @@ select.form-control {
             <!-- Empty State -->
             <div id="emptyState" class="section" style="text-align: center; padding: 4rem 2rem;">
                 <h2>📊 Welcome to Your Trading Journal</h2>
-                <p style="color: #94a3b8; margin: 1rem 0;">Import your cTrader CSV data to start analyzing your trading performance</p>
-                <p style="font-size: 0.875rem; color: #6b7280;">Supported: cTrader CSV exports with SUMMARY and DEALS sections<br>
+                <p style="color: #94a3b8; margin: 1rem 0;">Import your trading data to start analyzing your performance</p>
+                <p style="font-size: 0.875rem; color: #6b7280;">Supported platforms: cTrader, MT4, MT5<br>
                 <em>Note: Trades with numeric-only symbols will be automatically filtered out</em></p>
                 <button class="btn" onclick="document.getElementById('csvInput').click()" style="margin-top: 1rem;">
                     📄 Import Your First CSV
@@ -2466,12 +2516,22 @@ select.form-control {
             }
 
             const mode = document.getElementById('importMode').value;
+            const platform = document.getElementById('platform').value;
             const reader = new FileReader();
-            
+
             reader.onload = function(e) {
                 try {
                     const csvText = e.target.result;
-                    const result = parseCSV(csvText);
+
+                    // Route to appropriate parser based on platform
+                    let result;
+                    if (platform === 'mt4') {
+                        result = parseMT4CSV(csvText);
+                    } else if (platform === 'mt5') {
+                        result = parseMT5CSV(csvText);
+                    } else {
+                        result = parseCSV(csvText); // cTrader
+                    }
                     
                     if (result.trades.length === 0) {
                         showMessage('❌ Error: No valid trades found in CSV file', 'error');
@@ -2967,7 +3027,367 @@ select.form-control {
                 throw new Error(`CSV parsing failed: ${error.message}`);
             }
         }
-        
+
+        // Parse MT4 CSV format
+        function parseMT4CSV(csvText) {
+            try {
+                const lines = csvText.split('\n').filter(line => line.trim());
+                const trades = [];
+                const skippedTrades = [];
+                let tradeIndex = 1;
+
+                // Find header line (usually first line or after some metadata)
+                let headerIndex = -1;
+                for (let i = 0; i < Math.min(lines.length, 10); i++) {
+                    const line = lines[i].trim().toLowerCase();
+                    if ((line.includes('order') || line.includes('ticket')) &&
+                        (line.includes('time') || line.includes('open')) &&
+                        line.includes('type') && line.includes('symbol')) {
+                        headerIndex = i;
+                        break;
+                    }
+                }
+
+                if (headerIndex === -1) {
+                    headerIndex = 0; // Assume first line is header
+                }
+
+                const headerLine = lines[headerIndex];
+                const headers = parseCSVLine(headerLine).map(h => h.trim().toLowerCase());
+
+                // Map columns for MT4 format
+                const columnMap = {
+                    order: findColumnIndex(headers, ['order', 'ticket', '#']),
+                    openTime: findColumnIndex(headers, ['open time', 'time', 'open', 'date']),
+                    type: findColumnIndex(headers, ['type', 'cmd', 'order type']),
+                    size: findColumnIndex(headers, ['size', 'volume', 'lots', 'quantity']),
+                    symbol: findColumnIndex(headers, ['symbol', 'item', 'instrument']),
+                    openPrice: findColumnIndex(headers, ['price', 'open price', 'opening price']),
+                    sl: findColumnIndex(headers, ['s/l', 'sl', 'stop loss', 'stoploss']),
+                    tp: findColumnIndex(headers, ['t/p', 'tp', 'take profit', 'takeprofit']),
+                    closeTime: findColumnIndex(headers, ['close time', 'closing time']),
+                    closePrice: findColumnIndex(headers, ['close price', 'closing price', 'price']),
+                    commission: findColumnIndex(headers, ['commission', 'commissions', 'fee']),
+                    swap: findColumnIndex(headers, ['swap', 'rollover']),
+                    profit: findColumnIndex(headers, ['profit', 'p/l', 'pl', 'net']),
+                    balance: findColumnIndex(headers, ['balance'])
+                };
+
+                console.log('MT4 Column mapping:', columnMap);
+                console.log('MT4 Headers found:', headers);
+
+                // Parse trade data
+                for (let i = headerIndex + 1; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (!line) continue;
+
+                    try {
+                        const cells = parseCSVLine(line);
+                        if (cells.length < 3) continue;
+
+                        // Get basic trade info
+                        const typeCell = columnMap.type >= 0 ? cells[columnMap.type].toLowerCase() : '';
+
+                        // Skip balance adjustments and pending orders
+                        if (typeCell.includes('balance') ||
+                            typeCell.includes('credit') ||
+                            typeCell.includes('deposit') ||
+                            typeCell.includes('limit') ||
+                            typeCell.includes('stop') && !typeCell.includes('buy') && !typeCell.includes('sell')) {
+                            continue;
+                        }
+
+                        const symbolCell = columnMap.symbol >= 0 ? cells[columnMap.symbol] : '';
+                        if (!symbolCell || !isValidSymbol(symbolCell.trim())) {
+                            skippedTrades.push({ symbol: symbolCell, reason: 'Invalid symbol' });
+                            continue;
+                        }
+
+                        // Parse times (MT4 format: YYYY.MM.DD HH:MM)
+                        const openTimeStr = columnMap.openTime >= 0 ? cells[columnMap.openTime] : '';
+                        const closeTimeStr = columnMap.closeTime >= 0 ? cells[columnMap.closeTime] : '';
+
+                        const openDateTime = parseMT4DateTime(openTimeStr);
+                        const closeDateTime = parseMT4DateTime(closeTimeStr);
+
+                        // Parse direction
+                        let direction = 'Buy';
+                        if (typeCell.includes('sell')) {
+                            direction = 'Sell';
+                        } else if (typeCell.includes('buy')) {
+                            direction = 'Buy';
+                        }
+
+                        // Parse numeric values
+                        const volume = columnMap.size >= 0 ? parseFloat(cells[columnMap.size].replace(/[^\d.-]/g, '')) || 0 : 0;
+                        const entryPrice = columnMap.openPrice >= 0 ? parseFloat(cells[columnMap.openPrice].replace(/[^\d.-]/g, '')) || 0 : 0;
+                        const exitPrice = columnMap.closePrice >= 0 ? parseFloat(cells[columnMap.closePrice].replace(/[^\d.-]/g, '')) || 0 : 0;
+                        const profit = columnMap.profit >= 0 ? parseFloat(cells[columnMap.profit].replace(/[^\d.-]/g, '')) || 0 : 0;
+                        const commission = columnMap.commission >= 0 ? parseFloat(cells[columnMap.commission].replace(/[^\d.-]/g, '')) || 0 : 0;
+                        const swap = columnMap.swap >= 0 ? parseFloat(cells[columnMap.swap].replace(/[^\d.-]/g, '')) || 0 : 0;
+                        const balance = columnMap.balance >= 0 ? parseFloat(cells[columnMap.balance].replace(/\s+/g, '').replace(/[^\d.-]/g, '')) || 0 : 0;
+
+                        // Calculate pips (approximate)
+                        const priceDiff = direction === 'Buy' ? exitPrice - entryPrice : entryPrice - exitPrice;
+                        const symbol = symbolCell.trim();
+                        const pipMultiplier = symbol.includes('JPY') ? 100 : 10000;
+                        const pips = Math.round(priceDiff * pipMultiplier * 10) / 10;
+
+                        const trade = {
+                            id: `${Date.now()}_${tradeIndex++}`,
+                            symbol: symbol,
+                            direction: direction,
+                            openDate: openDateTime.date,
+                            openTime: openDateTime.time,
+                            date: closeDateTime.date,
+                            time: closeDateTime.time,
+                            closeTime: closeTimeStr,
+                            entryPrice: entryPrice,
+                            exitPrice: exitPrice,
+                            volume: volume,
+                            pips: pips,
+                            grossProfit: profit - commission - swap,
+                            netProfit: profit,
+                            netPL: profit,
+                            profit: profit,
+                            commission: commission,
+                            swap: swap,
+                            balance: balance,
+
+                            // Journal fields
+                            setupType: '',
+                            marketCondition: '',
+                            emotionalState: '',
+                            ruleAdherence: '',
+                            notes: '',
+                            entryScreenshot: null,
+                            exitScreenshot: null,
+                            tradingViewEntry: '',
+                            tradingViewExit: '',
+                            rulesFollowed: []
+                        };
+
+                        if (validateTrade(trade)) {
+                            trades.push(trade);
+                        } else {
+                            skippedTrades.push({ symbol: trade.symbol, reason: 'Validation failed' });
+                        }
+                    } catch (error) {
+                        console.error('Error parsing MT4 trade line:', error, line);
+                        continue;
+                    }
+                }
+
+                return {
+                    trades: trades,
+                    skippedCount: skippedTrades.length,
+                    startingBalance: 10000
+                };
+            } catch (error) {
+                console.error('MT4 CSV parsing failed:', error);
+                throw new Error(`MT4 CSV parsing failed: ${error.message}`);
+            }
+        }
+
+        // Parse MT5 CSV format
+        function parseMT5CSV(csvText) {
+            try {
+                const lines = csvText.split('\n').filter(line => line.trim());
+                const trades = [];
+                const skippedTrades = [];
+                let tradeIndex = 1;
+
+                // Find header line
+                let headerIndex = -1;
+                for (let i = 0; i < Math.min(lines.length, 10); i++) {
+                    const line = lines[i].trim().toLowerCase();
+                    if ((line.includes('ticket') || line.includes('order')) &&
+                        (line.includes('time') || line.includes('open')) &&
+                        line.includes('type') && line.includes('symbol')) {
+                        headerIndex = i;
+                        break;
+                    }
+                }
+
+                if (headerIndex === -1) {
+                    headerIndex = 0; // Assume first line is header
+                }
+
+                const headerLine = lines[headerIndex];
+                const headers = parseCSVLine(headerLine).map(h => h.trim().toLowerCase());
+
+                // Map columns for MT5 format (similar to MT4 but may have different column names)
+                const columnMap = {
+                    ticket: findColumnIndex(headers, ['ticket', 'order', '#']),
+                    openTime: findColumnIndex(headers, ['time', 'open time', 'entry time', 'date']),
+                    type: findColumnIndex(headers, ['type', 'order type', 'action']),
+                    volume: findColumnIndex(headers, ['volume', 'size', 'lots', 'quantity']),
+                    symbol: findColumnIndex(headers, ['symbol', 'item', 'instrument']),
+                    openPrice: findColumnIndex(headers, ['price', 'open price', 'entry price']),
+                    sl: findColumnIndex(headers, ['s/l', 'sl', 'stop loss']),
+                    tp: findColumnIndex(headers, ['t/p', 'tp', 'take profit']),
+                    closeTime: findColumnIndex(headers, ['close time', 'closing time', 'exit time']),
+                    closePrice: findColumnIndex(headers, ['close price', 'exit price', 'closing price']),
+                    commission: findColumnIndex(headers, ['commission', 'fee']),
+                    swap: findColumnIndex(headers, ['swap', 'rollover']),
+                    profit: findColumnIndex(headers, ['profit', 'p/l', 'pl', 'net']),
+                    balance: findColumnIndex(headers, ['balance'])
+                };
+
+                console.log('MT5 Column mapping:', columnMap);
+                console.log('MT5 Headers found:', headers);
+
+                // Parse trade data
+                for (let i = headerIndex + 1; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (!line) continue;
+
+                    try {
+                        const cells = parseCSVLine(line);
+                        if (cells.length < 3) continue;
+
+                        // Get basic trade info
+                        const typeCell = columnMap.type >= 0 ? cells[columnMap.type].toLowerCase() : '';
+
+                        // Skip balance adjustments and pending orders
+                        if (typeCell.includes('balance') ||
+                            typeCell.includes('credit') ||
+                            typeCell.includes('deposit') ||
+                            typeCell.includes('limit') ||
+                            typeCell.includes('stop') && !typeCell.includes('buy') && !typeCell.includes('sell')) {
+                            continue;
+                        }
+
+                        const symbolCell = columnMap.symbol >= 0 ? cells[columnMap.symbol] : '';
+                        if (!symbolCell || !isValidSymbol(symbolCell.trim())) {
+                            skippedTrades.push({ symbol: symbolCell, reason: 'Invalid symbol' });
+                            continue;
+                        }
+
+                        // Parse times (MT5 format similar to MT4: YYYY.MM.DD HH:MM)
+                        const openTimeStr = columnMap.openTime >= 0 ? cells[columnMap.openTime] : '';
+                        const closeTimeStr = columnMap.closeTime >= 0 ? cells[columnMap.closeTime] : '';
+
+                        const openDateTime = parseMT4DateTime(openTimeStr); // MT5 uses similar format
+                        const closeDateTime = parseMT4DateTime(closeTimeStr);
+
+                        // Parse direction
+                        let direction = 'Buy';
+                        if (typeCell.includes('sell')) {
+                            direction = 'Sell';
+                        } else if (typeCell.includes('buy')) {
+                            direction = 'Buy';
+                        }
+
+                        // Parse numeric values
+                        const volume = columnMap.volume >= 0 ? parseFloat(cells[columnMap.volume].replace(/[^\d.-]/g, '')) || 0 : 0;
+                        const entryPrice = columnMap.openPrice >= 0 ? parseFloat(cells[columnMap.openPrice].replace(/[^\d.-]/g, '')) || 0 : 0;
+                        const exitPrice = columnMap.closePrice >= 0 ? parseFloat(cells[columnMap.closePrice].replace(/[^\d.-]/g, '')) || 0 : 0;
+                        const profit = columnMap.profit >= 0 ? parseFloat(cells[columnMap.profit].replace(/[^\d.-]/g, '')) || 0 : 0;
+                        const commission = columnMap.commission >= 0 ? parseFloat(cells[columnMap.commission].replace(/[^\d.-]/g, '')) || 0 : 0;
+                        const swap = columnMap.swap >= 0 ? parseFloat(cells[columnMap.swap].replace(/[^\d.-]/g, '')) || 0 : 0;
+                        const balance = columnMap.balance >= 0 ? parseFloat(cells[columnMap.balance].replace(/\s+/g, '').replace(/[^\d.-]/g, '')) || 0 : 0;
+
+                        // Calculate pips (approximate)
+                        const priceDiff = direction === 'Buy' ? exitPrice - entryPrice : entryPrice - exitPrice;
+                        const symbol = symbolCell.trim();
+                        const pipMultiplier = symbol.includes('JPY') ? 100 : 10000;
+                        const pips = Math.round(priceDiff * pipMultiplier * 10) / 10;
+
+                        const trade = {
+                            id: `${Date.now()}_${tradeIndex++}`,
+                            symbol: symbol,
+                            direction: direction,
+                            openDate: openDateTime.date,
+                            openTime: openDateTime.time,
+                            date: closeDateTime.date,
+                            time: closeDateTime.time,
+                            closeTime: closeTimeStr,
+                            entryPrice: entryPrice,
+                            exitPrice: exitPrice,
+                            volume: volume,
+                            pips: pips,
+                            grossProfit: profit - commission - swap,
+                            netProfit: profit,
+                            netPL: profit,
+                            profit: profit,
+                            commission: commission,
+                            swap: swap,
+                            balance: balance,
+
+                            // Journal fields
+                            setupType: '',
+                            marketCondition: '',
+                            emotionalState: '',
+                            ruleAdherence: '',
+                            notes: '',
+                            entryScreenshot: null,
+                            exitScreenshot: null,
+                            tradingViewEntry: '',
+                            tradingViewExit: '',
+                            rulesFollowed: []
+                        };
+
+                        if (validateTrade(trade)) {
+                            trades.push(trade);
+                        } else {
+                            skippedTrades.push({ symbol: trade.symbol, reason: 'Validation failed' });
+                        }
+                    } catch (error) {
+                        console.error('Error parsing MT5 trade line:', error, line);
+                        continue;
+                    }
+                }
+
+                return {
+                    trades: trades,
+                    skippedCount: skippedTrades.length,
+                    startingBalance: 10000
+                };
+            } catch (error) {
+                console.error('MT5 CSV parsing failed:', error);
+                throw new Error(`MT5 CSV parsing failed: ${error.message}`);
+            }
+        }
+
+        // Parse MT4/MT5 DateTime format (YYYY.MM.DD HH:MM or YYYY.MM.DD HH:MM:SS)
+        function parseMT4DateTime(dateTimeStr) {
+            if (!dateTimeStr || !dateTimeStr.trim()) {
+                const now = new Date();
+                const yyyy = now.getFullYear();
+                const mm = (now.getMonth() + 1).toString().padStart(2, '0');
+                const dd = now.getDate().toString().padStart(2, '0');
+                return {
+                    date: `${yyyy}-${mm}-${dd}`,
+                    time: '12:00'
+                };
+            }
+
+            try {
+                // Match pattern: "YYYY.MM.DD HH:MM:SS" or "YYYY.MM.DD HH:MM"
+                const match = dateTimeStr.match(/(\d{4})\.(\d{2})\.(\d{2})\s+(\d{1,2}):(\d{2})/);
+                if (match) {
+                    const [, year, month, day, hour, minute] = match;
+                    return {
+                        date: `${year}-${month}-${day}`,
+                        time: `${hour.padStart(2, '0')}:${minute}`
+                    };
+                }
+            } catch (error) {
+                console.error('Error parsing MT4/MT5 date:', error, dateTimeStr);
+            }
+
+            // Fallback
+            const now = new Date();
+            const yyyy = now.getFullYear();
+            const mm = (now.getMonth() + 1).toString().padStart(2, '0');
+            const dd = now.getDate().toString().padStart(2, '0');
+            return {
+                date: `${yyyy}-${mm}-${dd}`,
+                time: '12:00'
+            };
+        }
+
         function parsecTraderDateTime(dateTimeStr) {
             // Parse cTrader format: "06 Oct 2025 04:29:33.732"
             if (!dateTimeStr || !dateTimeStr.trim()) {
@@ -6542,7 +6962,11 @@ select.form-control {
         function updateImportMode(mode) {
             document.getElementById('importMode').value = mode;
         }
-        
+
+        function updatePlatform(platform) {
+            document.getElementById('platform').value = platform;
+        }
+
         function clearAllData() {
             if (window.confirm('⚠️ This will delete ALL trades, screenshots, and settings. This cannot be undone!\n\nAre you sure?')) {
                 appState.trades = [];
