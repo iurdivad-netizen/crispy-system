@@ -1307,7 +1307,18 @@ select.form-control {
                     📁 Import Data
                 </button>
                 
-                <!-- Export with Options - NEW -->
+                <button class="btn btn-secondary" onclick="printTrades()" id="printBtn" disabled>
+                    🖨️ Print
+                </button>
+                
+                <!-- Download help button removed -->
+            </div>
+
+            <!-- Messages -->
+            <div id="messages"></div>
+
+            <!-- Export Section - Independent of collapsible sections -->
+            <div style="margin: 1.5rem 0;">
                 <div class="relative export-menu-container">
                     <button
                         onclick="toggleExportMenu()"
@@ -1319,7 +1330,7 @@ select.form-control {
                         <span>💾 Export</span>
                         <span style="font-size: 10px;">▼</span>
                     </button>
-                    
+
                     <!-- Export Options Dropdown -->
                     <div id="exportDropdown" style="display: none; position: absolute; top: 100%; left: 0; width: 320px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-base); box-shadow: var(--shadow-lg); z-index: 2000; margin-top: 4px;">
                         <!-- Info box at top -->
@@ -1331,7 +1342,7 @@ select.form-control {
                                 Files save to your browser's default download folder (usually "Downloads")
                             </div>
                         </div>
-                        
+
                         <div style="padding: 8px;">
                             <button
                                 onclick="handleExportData('full'); setShowExportMenu(false);"
@@ -1343,7 +1354,7 @@ select.form-control {
                                     Everything (trades, screenshots, settings)
                                 </div>
                             </button>
-                            
+
                             <button
                                 onclick="handleExportData('trades-only'); setShowExportMenu(false);"
                                 style="width: 100%; text-align: left; padding: 12px; background: none; border: none; color: var(--color-text); border-radius: var(--radius-sm); cursor: pointer; transition: background-color var(--duration-fast) var(--ease-standard);"
@@ -1354,7 +1365,7 @@ select.form-control {
                                     Just trade data (no screenshots or settings)
                                 </div>
                             </button>
-                            
+
                             <button
                                 onclick="handleExportData('no-screenshots'); setShowExportMenu(false);"
                                 style="width: 100%; text-align: left; padding: 12px; background: none; border: none; color: var(--color-text); border-radius: var(--radius-sm); cursor: pointer; transition: background-color var(--duration-fast) var(--ease-standard);"
@@ -1365,7 +1376,7 @@ select.form-control {
                                     Trades and settings (smaller file size)
                                 </div>
                             </button>
-                            
+
                             <button
                                 onclick="handleExportData('screenshots-only'); setShowExportMenu(false);"
                                 style="width: 100%; text-align: left; padding: 12px; background: none; border: none; color: var(--color-text); border-radius: var(--radius-sm); cursor: pointer; transition: background-color var(--duration-fast) var(--ease-standard);"
@@ -1376,9 +1387,9 @@ select.form-control {
                                     Just screenshots in JSON format (for backup/sharing)
                                 </div>
                             </button>
-                            
+
                             <div style="border-top: 1px solid var(--color-border); margin: 8px 0;"></div>
-                            
+
                             <button
                                 onclick="handleExportData('csv'); setShowExportMenu(false);"
                                 style="width: 100%; text-align: left; padding: 12px; background: none; border: none; color: var(--color-text); border-radius: var(--radius-sm); cursor: pointer; transition: background-color var(--duration-fast) var(--ease-standard);"
@@ -1390,19 +1401,19 @@ select.form-control {
                                 </div>
                             </button>
                         </div>
-                        
+
                         <!-- Size estimates at bottom -->
                         <div style="padding: 12px; background: var(--color-bg-8); border-top: 1px solid var(--color-border);">
                             <div style="font-size: var(--font-size-xs); color: var(--color-text-secondary); display: grid; grid-template-columns: 1fr auto; gap: var(--space-8);">
                                 <div>📦 Full Export:</div>
                                 <div id="fullSizeEstimate">~calculating...</div>
-                                
+
                                 <div>📋 Without Screenshots:</div>
                                 <div id="noScreenshotsSizeEstimate">~calculating...</div>
-                                
+
                                 <div>📸 Screenshots Only:</div>
                                 <div id="screenshotsSizeEstimate">~calculating...</div>
-                                
+
                                 <div>📊 Trades Only:</div>
                                 <div id="tradesSizeEstimate">~calculating...</div>
                             </div>
@@ -1416,16 +1427,7 @@ select.form-control {
                         </div>
                     </div>
                 </div>
-                
-                <button class="btn btn-secondary" onclick="printTrades()" id="printBtn" disabled>
-                    🖨️ Print
-                </button>
-                
-                <!-- Download help button removed -->
             </div>
-
-            <!-- Messages -->
-            <div id="messages"></div>
 
             <!-- ACCOUNT SETTINGS SECTION - NEW LOCATION -->
             <div class="section" style="margin-bottom: 1.5rem;">
