@@ -1587,9 +1587,10 @@ select.form-control {
                     <div style="display: flex; align-items: center; gap: var(--space-8);">
                         <div style="display: flex; align-items: center; gap: var(--space-8); padding: var(--space-4) var(--space-12); background: rgba(var(--color-surface), 0.3); border-radius: var(--radius-base);">
                             <button class="btn btn-secondary" onclick="changeAnalyticsMonth(-1); event.stopPropagation();" style="padding: var(--space-4) var(--space-8); font-size: var(--font-size-xs);">‹</button>
-                            <span id="analyticsStatsMonthDisplay" style="font-weight: bold; min-width: 120px; text-align: center; font-size: var(--font-size-sm);"></span>
+                            <span id="analyticsStatsMonthDisplay" style="font-weight: bold; min-width: 140px; text-align: center; font-size: var(--font-size-sm);"></span>
                             <button class="btn btn-secondary" onclick="changeAnalyticsMonth(1); event.stopPropagation();" style="padding: var(--space-4) var(--space-8); font-size: var(--font-size-xs);">›</button>
                         </div>
+                        <button class="btn btn-secondary" onclick="resetToTotalView(); event.stopPropagation();" style="padding: var(--space-4) var(--space-12); font-size: var(--font-size-xs);" title="View all-time statistics">TOTAL</button>
                         <button class="toggle-button" onclick="toggleStatsConfig(); event.stopPropagation();" title="Configure Statistics">⚙️</button>
                     </div>
                 </div>
@@ -2270,7 +2271,7 @@ select.form-control {
             currentMonth: new Date().getMonth(),
             currentYear: new Date().getFullYear(),
             // Monthly analytics navigation state
-            analyticsCurrentMonth: new Date().getMonth(),
+            analyticsCurrentMonth: -1,  // -1 means "TOTAL (All Time)" view
             analyticsCurrentYear: new Date().getFullYear(),
             aiPromptInclusions: {
                 overview: true,
@@ -3986,9 +3987,10 @@ select.form-control {
             const statsGrid = document.getElementById('statsGrid');
             const statsConfig = appState.visibleStats;
 
-            // Calculate both total and monthly statistics
-            const totalStats = appState.statistics;
-            const monthlyStats = calculateStatisticsForMonth(appState.analyticsCurrentYear, appState.analyticsCurrentMonth);
+            // Get stats based on selected view: TOTAL (-1) or specific month
+            const stats = appState.analyticsCurrentMonth === -1
+                ? appState.statistics
+                : calculateStatisticsForMonth(appState.analyticsCurrentYear, appState.analyticsCurrentMonth);
 
             // Helper function to format a stat value
             const formatStatValue = (value, format) => {
@@ -4063,37 +4065,20 @@ select.form-control {
 
             let html = '';
 
-            // Generate cards for each visible stat
+            // Generate cards for each visible stat showing only one value
             statsDefinitions.filter(stat => statsConfig[stat.key]).forEach(stat => {
-                const totalValue = totalStats[stat.key];
-                const monthValue = monthlyStats[stat.key];
+                const value = stats[stat.key];
 
                 // Adjust values that need absolute formatting
-                const displayTotalValue = (stat.key === 'avgLoss' || stat.key === 'largestLoss') ? Math.abs(totalValue) : totalValue;
-                const displayMonthValue = (stat.key === 'avgLoss' || stat.key === 'largestLoss') ? Math.abs(monthValue) : monthValue;
+                const displayValue = (stat.key === 'avgLoss' || stat.key === 'largestLoss') ? Math.abs(value) : value;
 
-                const formattedTotal = formatStatValue(displayTotalValue, stat.format);
-                const formattedMonth = formatStatValue(displayMonthValue, stat.format);
-
-                const totalClass = getStatClass(stat.key, displayTotalValue, stat.format);
-                const monthClass = getStatClass(stat.key, displayMonthValue, stat.format);
-
-                const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                const monthLabel = monthNames[appState.analyticsCurrentMonth];
+                const formattedValue = formatStatValue(displayValue, stat.format);
+                const valueClass = getStatClass(stat.key, displayValue, stat.format);
 
                 html += `
                     <div class="stat-card">
-                        <div class="stat-label" style="margin-bottom: var(--space-8); font-weight: var(--font-weight-semibold);">${stat.label}</div>
-                        <div style="display: flex; flex-direction: column; gap: var(--space-4);">
-                            <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-4); background: linear-gradient(135deg, rgba(74, 158, 255, 0.15) 0%, rgba(74, 158, 255, 0.05) 100%); border-radius: var(--radius-sm); border: 1px solid rgba(74, 158, 255, 0.3);">
-                                <span style="font-size: var(--font-size-xs); color: var(--color-text-secondary); font-weight: var(--font-weight-medium);">TOTAL</span>
-                                <span class="stat-value ${totalClass}" style="font-size: var(--font-size-base);">${formattedTotal}</span>
-                            </div>
-                            <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-4); background: rgba(var(--color-surface), 0.3); border-radius: var(--radius-sm);">
-                                <span style="font-size: var(--font-size-xs); color: var(--color-text-secondary);">${monthLabel}</span>
-                                <span class="stat-value ${monthClass}" style="font-size: var(--font-size-sm);">${formattedMonth}</span>
-                            </div>
-                        </div>
+                        <div class="stat-label">${stat.label}</div>
+                        <div class="stat-value ${valueClass}">${formattedValue}</div>
                     </div>
                 `;
             });
@@ -6459,14 +6444,41 @@ select.form-control {
 
         // Monthly Analytics Navigation
         function changeAnalyticsMonth(direction) {
-            appState.analyticsCurrentMonth += direction;
-            if (appState.analyticsCurrentMonth < 0) {
-                appState.analyticsCurrentMonth = 11;
-                appState.analyticsCurrentYear--;
-            } else if (appState.analyticsCurrentMonth > 11) {
-                appState.analyticsCurrentMonth = 0;
-                appState.analyticsCurrentYear++;
+            // If currently at TOTAL (-1) and going forward, go to the first month with trades
+            // If going backward from TOTAL, stay at TOTAL
+            if (appState.analyticsCurrentMonth === -1) {
+                if (direction > 0) {
+                    // Find the first month with trades
+                    const firstTradeDate = appState.trades.length > 0
+                        ? new Date(appState.trades.sort((a, b) => new Date(a.date) - new Date(b.date))[0].date)
+                        : new Date();
+                    appState.analyticsCurrentMonth = firstTradeDate.getMonth();
+                    appState.analyticsCurrentYear = firstTradeDate.getFullYear();
+                } else {
+                    // Stay at TOTAL when going backward
+                    return;
+                }
+            } else {
+                appState.analyticsCurrentMonth += direction;
+                if (appState.analyticsCurrentMonth < 0) {
+                    appState.analyticsCurrentMonth = 11;
+                    appState.analyticsCurrentYear--;
+                } else if (appState.analyticsCurrentMonth > 11) {
+                    appState.analyticsCurrentMonth = 0;
+                    appState.analyticsCurrentYear++;
+                }
             }
+            updateAnalyticsMonthDisplay();
+            updateMonthlyStats();
+            updateDailyStats();
+            updateOpenHourlyStats();
+            updateHourlyStats();
+            updateStatisticsDisplay();
+        }
+
+        function resetToTotalView() {
+            appState.analyticsCurrentMonth = -1;
+            appState.analyticsCurrentYear = new Date().getFullYear();
             updateAnalyticsMonthDisplay();
             updateMonthlyStats();
             updateDailyStats();
@@ -6478,7 +6490,9 @@ select.form-control {
         function updateAnalyticsMonthDisplay() {
             const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
                 'July', 'August', 'September', 'October', 'November', 'December'];
-            const displayText = `${monthNames[appState.analyticsCurrentMonth]} ${appState.analyticsCurrentYear}`;
+            const displayText = appState.analyticsCurrentMonth === -1
+                ? 'TOTAL (All Time)'
+                : `${monthNames[appState.analyticsCurrentMonth]} ${appState.analyticsCurrentYear}`;
 
             // Update all analytics month displays
             const displayElements = [
