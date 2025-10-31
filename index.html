@@ -5773,7 +5773,7 @@ select.form-control {
             // Render the monthly stats with TOTAL at the top
             const renderMonthCard = (stats, isTotal = false) => `
                 <div class="breakdown-item ${isTotal ? 'total-row' : ''}" style="${isTotal ? 'background: linear-gradient(135deg, #2a2a3e 0%, #1a1a2e 100%); border: 2px solid #4a9eff; box-shadow: 0 4px 12px rgba(74, 158, 255, 0.3);' : ''}">
-                    <div class="breakdown-header" style="${isTotal ? 'font-size: 1.2em; font-weight: bold; color: #4a9eff;' : ''}">${isTotal ? 'TOTAL MONTH' : stats.month}</div>
+                    <div class="breakdown-header" style="${isTotal ? 'font-size: 1.2em; font-weight: bold; color: #4a9eff;' : ''}">${isTotal ? 'TOTAL (All Time)' : stats.month}</div>
                     <div class="breakdown-stats" style="font-size: 0.9em;">
                         <strong>Trades:</strong> ${stats.totalTrades} (${stats.winCount}W / ${stats.lossCount}L)<br>
                         <strong>Win Rate:</strong> ${stats.winRate.toFixed(1)}%<br>
