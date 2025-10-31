@@ -5345,16 +5345,14 @@ select.form-control {
                 trade.rulesFollowed = trade.rulesFollowed.filter(id => id !== ruleId);
             }
 
-            // Update statistics and custom rules displays
+            // Update statistics and custom rules displays only
+            // Don't regenerate the form to keep checkboxes interactive
+            // The data is already saved to appState.trades[tradeIndex].rulesFollowed
+            // and will persist when closing/reopening trade details
             calculateStatistics();
             updateStatisticsDisplay();
             updateCustomRulesDisplay();
             updateRuleCombinationsAnalysis();
-
-            // Update the trade table to persist changes
-            // The updateTradesTable() function preserves the currently open trade details
-            // and re-renders them with the updated rulesFollowed data
-            updateTradesTable();
         }
         
         // Lightbox Functions
