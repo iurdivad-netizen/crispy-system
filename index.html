@@ -1748,6 +1748,14 @@ select.form-control {
                             (Find best rule combinations)
                         </span>
                     </div>
+                    <div style="display: flex; align-items: center; gap: var(--space-8);">
+                        <div style="display: flex; align-items: center; gap: var(--space-8); padding: var(--space-4) var(--space-12); background: rgba(var(--color-surface), 0.3); border-radius: var(--radius-base);">
+                            <button class="btn btn-secondary" onclick="changeRuleCombinationsMonth(-1); event.stopPropagation();" style="padding: var(--space-4) var(--space-8); font-size: var(--font-size-xs);">‹</button>
+                            <span id="ruleCombinationsMonthDisplay" style="font-weight: bold; min-width: 140px; text-align: center; font-size: var(--font-size-sm);"></span>
+                            <button class="btn btn-secondary" onclick="changeRuleCombinationsMonth(1); event.stopPropagation();" style="padding: var(--space-4) var(--space-8); font-size: var(--font-size-xs);">›</button>
+                        </div>
+                        <button class="btn btn-secondary" onclick="resetRuleCombinationsToTotalView(); event.stopPropagation();" style="padding: var(--space-4) var(--space-12); font-size: var(--font-size-xs);" title="View all-time rule combinations">TOTAL</button>
+                    </div>
                 </div>
                 <div class="section-content">
                     <div id="ruleCombinationsContent">
@@ -2273,6 +2281,9 @@ select.form-control {
             // Monthly analytics navigation state
             analyticsCurrentMonth: -1,  // -1 means "TOTAL (All Time)" view
             analyticsCurrentYear: new Date().getFullYear(),
+            // Rule combinations navigation state
+            ruleCombinationsCurrentMonth: -1,  // -1 means "TOTAL (All Time)" view
+            ruleCombinationsCurrentYear: new Date().getFullYear(),
             aiPromptInclusions: {
                 overview: true,
                 setupPerformance: true,
@@ -2490,8 +2501,9 @@ select.form-control {
                 updatePerformanceBreakdowns();
                 updateTimeAnalytics();
                 updateCalendarView();
+                updateRuleCombinationsMonthDisplay();
                 updateRuleCombinationsAnalysis();
-                
+
                 // Initialize chart zoom selector
                 document.getElementById('chartZoomSelect').value = appState.chartZoom;
                 
@@ -5311,8 +5323,11 @@ select.form-control {
         // Custom Rules Management
         function updateRuleCombinationsAnalysis() {
             const resultsDiv = document.getElementById('ruleCombinationsResults');
-            
-            const combinations = calculateRuleCombinations();
+
+            // Get combinations based on selected view: TOTAL (-1) or specific month
+            const combinations = appState.ruleCombinationsCurrentMonth === -1
+                ? calculateRuleCombinations()
+                : calculateRuleCombinations(appState.ruleCombinationsCurrentYear, appState.ruleCombinationsCurrentMonth);
             
             if (combinations.length === 0) {
                 resultsDiv.innerHTML = `
@@ -5529,15 +5544,23 @@ select.form-control {
         }
         
         // RULE COMBINATIONS ANALYSIS - NEW FEATURE
-        function calculateRuleCombinations() {
+        function calculateRuleCombinations(year = null, month = null) {
             if (!appState.trades.length || !appState.customRules.length) return [];
-            
+
             // Get all trades with Custom rule adherence and rules followed
-            const customTrades = appState.trades.filter(t => 
-                t.ruleAdherence === 'Custom' && 
-                Array.isArray(t.rulesFollowed) && 
+            let customTrades = appState.trades.filter(t =>
+                t.ruleAdherence === 'Custom' &&
+                Array.isArray(t.rulesFollowed) &&
                 t.rulesFollowed.length > 0
             );
+
+            // Filter by month if specified (month !== null and month !== -1)
+            if (month !== null && month !== -1 && year !== null) {
+                customTrades = customTrades.filter(t => {
+                    const tradeDate = new Date(t.date);
+                    return tradeDate.getMonth() === month && tradeDate.getFullYear() === year;
+                });
+            }
             
             if (customTrades.length === 0) return [];
             
@@ -6509,6 +6532,56 @@ select.form-control {
                     element.textContent = displayText;
                 }
             });
+        }
+
+        // Rule Combinations Navigation
+        function changeRuleCombinationsMonth(direction) {
+            // If currently at TOTAL (-1) and going forward, go to the first month with trades
+            // If going backward from TOTAL, stay at TOTAL
+            if (appState.ruleCombinationsCurrentMonth === -1) {
+                if (direction > 0) {
+                    // Find the first month with trades
+                    const firstTradeDate = appState.trades.length > 0
+                        ? new Date(appState.trades.sort((a, b) => new Date(a.date) - new Date(b.date))[0].date)
+                        : new Date();
+                    appState.ruleCombinationsCurrentMonth = firstTradeDate.getMonth();
+                    appState.ruleCombinationsCurrentYear = firstTradeDate.getFullYear();
+                } else {
+                    // Stay at TOTAL when going backward
+                    return;
+                }
+            } else {
+                appState.ruleCombinationsCurrentMonth += direction;
+                if (appState.ruleCombinationsCurrentMonth < 0) {
+                    appState.ruleCombinationsCurrentMonth = 11;
+                    appState.ruleCombinationsCurrentYear--;
+                } else if (appState.ruleCombinationsCurrentMonth > 11) {
+                    appState.ruleCombinationsCurrentMonth = 0;
+                    appState.ruleCombinationsCurrentYear++;
+                }
+            }
+            updateRuleCombinationsMonthDisplay();
+            updateRuleCombinationsAnalysis();
+        }
+
+        function resetRuleCombinationsToTotalView() {
+            appState.ruleCombinationsCurrentMonth = -1;
+            appState.ruleCombinationsCurrentYear = new Date().getFullYear();
+            updateRuleCombinationsMonthDisplay();
+            updateRuleCombinationsAnalysis();
+        }
+
+        function updateRuleCombinationsMonthDisplay() {
+            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                'July', 'August', 'September', 'October', 'November', 'December'];
+            const displayText = appState.ruleCombinationsCurrentMonth === -1
+                ? 'TOTAL (All Time)'
+                : `${monthNames[appState.ruleCombinationsCurrentMonth]} ${appState.ruleCombinationsCurrentYear}`;
+
+            const element = document.getElementById('ruleCombinationsMonthDisplay');
+            if (element) {
+                element.textContent = displayText;
+            }
         }
 
         // AI Analysis Functions
