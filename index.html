@@ -5345,12 +5345,9 @@ select.form-control {
                 trade.rulesFollowed = trade.rulesFollowed.filter(id => id !== ruleId);
             }
 
-            // Update statistics and displays without recreating the entire table
+            // Update statistics and UI to persist changes
             calculateStatistics();
-            updateStatisticsDisplay();
-            updateCustomRulesDisplay();
-            updatePerformanceBreakdowns();
-            updateRuleCombinationsAnalysis();
+            updateUI();
         }
         
         // Lightbox Functions
