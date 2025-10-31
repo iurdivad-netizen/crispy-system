@@ -5856,8 +5856,8 @@ select.form-control {
                 hasMonthData = Object.values(monthBreakdowns).some(d => d.trades > 0);
             }
 
-            const renderBreakdownCards = (breakdowns) => Object.entries(breakdowns).map(([setup, data]) => `
-                <div class="breakdown-item">
+            const renderBreakdownCards = (breakdowns, isTotal = false) => Object.entries(breakdowns).map(([setup, data]) => `
+                <div class="breakdown-item" style="${isTotal ? 'border: 2px solid #4a9eff; box-shadow: 0 4px 12px rgba(74, 158, 255, 0.3);' : ''}">
                     <div class="breakdown-header">${setup}</div>
                     <div class="breakdown-stats">
                         Trades: ${data.trades}<br>
@@ -5871,14 +5871,14 @@ select.form-control {
                 <div style="margin-bottom: 1.5rem;">
                     <h4 style="color: #4a9eff; margin-bottom: 0.75rem;">TOTAL (All Time)</h4>
                     <div class="breakdown-grid">
-                        ${renderBreakdownCards(totalBreakdowns)}
+                        ${renderBreakdownCards(totalBreakdowns, true)}
                     </div>
                 </div>
                 ${hasMonthData ? `
                     <div>
                         <h4 style="color: var(--color-text-secondary); margin-bottom: 0.75rem;">Selected Month</h4>
                         <div class="breakdown-grid">
-                            ${renderBreakdownCards(monthBreakdowns)}
+                            ${renderBreakdownCards(monthBreakdowns, false)}
                         </div>
                     </div>
                 ` : (appState.breakdownCurrentMonth !== -1 ? '<div style="padding: 2rem; text-align: center; color: var(--color-text-secondary);">No data for this month</div>' : '')}
@@ -5929,8 +5929,8 @@ select.form-control {
                 hasMonthData = Object.values(monthBreakdowns).some(d => d.trades > 0);
             }
 
-            const renderBreakdownCards = (breakdowns) => Object.entries(breakdowns).map(([condition, data]) => `
-                <div class="breakdown-item">
+            const renderBreakdownCards = (breakdowns, isTotal = false) => Object.entries(breakdowns).map(([condition, data]) => `
+                <div class="breakdown-item" style="${isTotal ? 'border: 2px solid #4a9eff; box-shadow: 0 4px 12px rgba(74, 158, 255, 0.3);' : ''}">
                     <div class="breakdown-header">${condition}</div>
                     <div class="breakdown-stats">
                         Trades: ${data.trades}<br>
@@ -5944,20 +5944,20 @@ select.form-control {
                 <div style="margin-bottom: 1.5rem;">
                     <h4 style="color: #4a9eff; margin-bottom: 0.75rem;">TOTAL (All Time)</h4>
                     <div class="breakdown-grid">
-                        ${renderBreakdownCards(totalBreakdowns)}
+                        ${renderBreakdownCards(totalBreakdowns, true)}
                     </div>
                 </div>
                 ${hasMonthData ? `
                     <div>
                         <h4 style="color: var(--color-text-secondary); margin-bottom: 0.75rem;">Selected Month</h4>
                         <div class="breakdown-grid">
-                            ${renderBreakdownCards(monthBreakdowns)}
+                            ${renderBreakdownCards(monthBreakdowns, false)}
                         </div>
                     </div>
                 ` : (appState.breakdownCurrentMonth !== -1 ? '<div style="padding: 2rem; text-align: center; color: var(--color-text-secondary);">No data for this month</div>' : '')}
             `;
         }
-        
+
         function updateEmotionalBreakdown() {
             const container = document.getElementById('emotionalBreakdown');
 
@@ -6002,8 +6002,8 @@ select.form-control {
                 hasMonthData = Object.values(monthBreakdowns).some(d => d.trades > 0);
             }
 
-            const renderBreakdownCards = (breakdowns) => Object.entries(breakdowns).map(([state, data]) => `
-                <div class="breakdown-item">
+            const renderBreakdownCards = (breakdowns, isTotal = false) => Object.entries(breakdowns).map(([state, data]) => `
+                <div class="breakdown-item" style="${isTotal ? 'border: 2px solid #4a9eff; box-shadow: 0 4px 12px rgba(74, 158, 255, 0.3);' : ''}">
                     <div class="breakdown-header">${state}</div>
                     <div class="breakdown-stats">
                         Trades: ${data.trades}<br>
@@ -6017,20 +6017,20 @@ select.form-control {
                 <div style="margin-bottom: 1.5rem;">
                     <h4 style="color: #4a9eff; margin-bottom: 0.75rem;">TOTAL (All Time)</h4>
                     <div class="breakdown-grid">
-                        ${renderBreakdownCards(totalBreakdowns)}
+                        ${renderBreakdownCards(totalBreakdowns, true)}
                     </div>
                 </div>
                 ${hasMonthData ? `
                     <div>
                         <h4 style="color: var(--color-text-secondary); margin-bottom: 0.75rem;">Selected Month</h4>
                         <div class="breakdown-grid">
-                            ${renderBreakdownCards(monthBreakdowns)}
+                            ${renderBreakdownCards(monthBreakdowns, false)}
                         </div>
                     </div>
                 ` : (appState.breakdownCurrentMonth !== -1 ? '<div style="padding: 2rem; text-align: center; color: var(--color-text-secondary);">No data for this month</div>' : '')}
             `;
         }
-        
+
         function updateRuleBreakdown() {
             const container = document.getElementById('ruleBreakdown');
 
@@ -6075,8 +6075,8 @@ select.form-control {
                 hasMonthData = Object.values(monthBreakdowns).some(d => d.trades > 0);
             }
 
-            const renderBreakdownCards = (breakdowns) => Object.entries(breakdowns).map(([adherence, data]) => `
-                <div class="breakdown-item">
+            const renderBreakdownCards = (breakdowns, isTotal = false) => Object.entries(breakdowns).map(([adherence, data]) => `
+                <div class="breakdown-item" style="${isTotal ? 'border: 2px solid #4a9eff; box-shadow: 0 4px 12px rgba(74, 158, 255, 0.3);' : ''}">
                     <div class="breakdown-header">${adherence}</div>
                     <div class="breakdown-stats">
                         Trades: ${data.trades}<br>
@@ -6090,20 +6090,20 @@ select.form-control {
                 <div style="margin-bottom: 1.5rem;">
                     <h4 style="color: #4a9eff; margin-bottom: 0.75rem;">TOTAL (All Time)</h4>
                     <div class="breakdown-grid">
-                        ${renderBreakdownCards(totalBreakdowns)}
+                        ${renderBreakdownCards(totalBreakdowns, true)}
                     </div>
                 </div>
                 ${hasMonthData ? `
                     <div>
                         <h4 style="color: var(--color-text-secondary); margin-bottom: 0.75rem;">Selected Month</h4>
                         <div class="breakdown-grid">
-                            ${renderBreakdownCards(monthBreakdowns)}
+                            ${renderBreakdownCards(monthBreakdowns, false)}
                         </div>
                     </div>
                 ` : (appState.breakdownCurrentMonth !== -1 ? '<div style="padding: 2rem; text-align: center; color: var(--color-text-secondary);">No data for this month</div>' : '')}
             `;
         }
-        
+
         // Time Analytics
         function updateTimeAnalytics() {
             updateMonthlyStats();
