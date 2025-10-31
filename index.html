@@ -1816,6 +1816,11 @@ select.form-control {
                             <span>▼</span>
                         </div>
                         <div class="collapsible-content">
+                            <div style="display: flex; justify-content: center; align-items: center; gap: var(--space-12); margin-bottom: 1rem; padding: 0.5rem; background: rgba(var(--color-surface), 0.3); border-radius: var(--radius-base);">
+                                <button class="btn btn-secondary" onclick="changeBreakdownMonth(-1); event.stopPropagation();">‹ Prev</button>
+                                <span id="breakdownSetupMonthDisplay" style="font-weight: bold; min-width: 150px; text-align: center;"></span>
+                                <button class="btn btn-secondary" onclick="changeBreakdownMonth(1); event.stopPropagation();">Next ›</button>
+                            </div>
                             <div class="breakdown-grid" id="setupBreakdown"></div>
                         </div>
                     </div>
@@ -1826,6 +1831,11 @@ select.form-control {
                             <span>▼</span>
                         </div>
                         <div class="collapsible-content">
+                            <div style="display: flex; justify-content: center; align-items: center; gap: var(--space-12); margin-bottom: 1rem; padding: 0.5rem; background: rgba(var(--color-surface), 0.3); border-radius: var(--radius-base);">
+                                <button class="btn btn-secondary" onclick="changeBreakdownMonth(-1); event.stopPropagation();">‹ Prev</button>
+                                <span id="breakdownMarketMonthDisplay" style="font-weight: bold; min-width: 150px; text-align: center;"></span>
+                                <button class="btn btn-secondary" onclick="changeBreakdownMonth(1); event.stopPropagation();">Next ›</button>
+                            </div>
                             <div class="breakdown-grid" id="marketBreakdown"></div>
                         </div>
                     </div>
@@ -1836,6 +1846,11 @@ select.form-control {
                             <span>▼</span>
                         </div>
                         <div class="collapsible-content">
+                            <div style="display: flex; justify-content: center; align-items: center; gap: var(--space-12); margin-bottom: 1rem; padding: 0.5rem; background: rgba(var(--color-surface), 0.3); border-radius: var(--radius-base);">
+                                <button class="btn btn-secondary" onclick="changeBreakdownMonth(-1); event.stopPropagation();">‹ Prev</button>
+                                <span id="breakdownEmotionalMonthDisplay" style="font-weight: bold; min-width: 150px; text-align: center;"></span>
+                                <button class="btn btn-secondary" onclick="changeBreakdownMonth(1); event.stopPropagation();">Next ›</button>
+                            </div>
                             <div class="breakdown-grid" id="emotionalBreakdown"></div>
                         </div>
                     </div>
@@ -1846,6 +1861,11 @@ select.form-control {
                             <span>▼</span>
                         </div>
                         <div class="collapsible-content">
+                            <div style="display: flex; justify-content: center; align-items: center; gap: var(--space-12); margin-bottom: 1rem; padding: 0.5rem; background: rgba(var(--color-surface), 0.3); border-radius: var(--radius-base);">
+                                <button class="btn btn-secondary" onclick="changeBreakdownMonth(-1); event.stopPropagation();">‹ Prev</button>
+                                <span id="breakdownRuleMonthDisplay" style="font-weight: bold; min-width: 150px; text-align: center;"></span>
+                                <button class="btn btn-secondary" onclick="changeBreakdownMonth(1); event.stopPropagation();">Next ›</button>
+                            </div>
                             <div class="breakdown-grid" id="ruleBreakdown"></div>
                         </div>
                     </div>
@@ -2284,6 +2304,9 @@ select.form-control {
             // Rule combinations navigation state
             ruleCombinationsCurrentMonth: -1,  // -1 means "TOTAL (All Time)" view
             ruleCombinationsCurrentYear: new Date().getFullYear(),
+            // Performance breakdowns navigation state
+            breakdownCurrentMonth: -1,  // -1 means "TOTAL (All Time)" view
+            breakdownCurrentYear: new Date().getFullYear(),
             aiPromptInclusions: {
                 overview: true,
                 setupPerformance: true,
@@ -5777,6 +5800,7 @@ select.form-control {
 
         // Performance Breakdowns
         function updatePerformanceBreakdowns() {
+            updateBreakdownMonthDisplay();
             updateSetupBreakdown();
             updateMarketBreakdown();
             updateEmotionalBreakdown();
@@ -5786,19 +5810,30 @@ select.form-control {
         function updateSetupBreakdown() {
             const container = document.getElementById('setupBreakdown');
             const breakdowns = {};
-            
+
+            // Filter trades by selected month/year
+            let filteredTrades = appState.trades;
+            if (appState.breakdownCurrentMonth !== -1) {
+                const selectedMonthKey = `${appState.breakdownCurrentYear}-${String(appState.breakdownCurrentMonth + 1).padStart(2, '0')}`;
+                filteredTrades = appState.trades.filter(trade => {
+                    const tradeDate = new Date(trade.date);
+                    const tradeMonthKey = `${tradeDate.getFullYear()}-${String(tradeDate.getMonth() + 1).padStart(2, '0')}`;
+                    return tradeMonthKey === selectedMonthKey;
+                });
+            }
+
             setupTypes.forEach(setup => {
-                const trades = appState.trades.filter(t => t.setupType === setup);
+                const trades = filteredTrades.filter(t => t.setupType === setup);
                 const wins = trades.filter(t => (t.netPL || t.profit) > 0);
                 const totalPL = trades.reduce((sum, t) => sum + (t.netPL || t.profit), 0);
-                
+
                 breakdowns[setup] = {
                     trades: trades.length,
                     winRate: trades.length > 0 ? (wins.length / trades.length * 100) : 0,
                     totalPL: totalPL
                 };
             });
-            
+
             container.innerHTML = Object.entries(breakdowns).map(([setup, data]) => `
                 <div class="breakdown-item">
                     <div class="breakdown-header">${setup}</div>
@@ -5814,19 +5849,30 @@ select.form-control {
         function updateMarketBreakdown() {
             const container = document.getElementById('marketBreakdown');
             const breakdowns = {};
-            
+
+            // Filter trades by selected month/year
+            let filteredTrades = appState.trades;
+            if (appState.breakdownCurrentMonth !== -1) {
+                const selectedMonthKey = `${appState.breakdownCurrentYear}-${String(appState.breakdownCurrentMonth + 1).padStart(2, '0')}`;
+                filteredTrades = appState.trades.filter(trade => {
+                    const tradeDate = new Date(trade.date);
+                    const tradeMonthKey = `${tradeDate.getFullYear()}-${String(tradeDate.getMonth() + 1).padStart(2, '0')}`;
+                    return tradeMonthKey === selectedMonthKey;
+                });
+            }
+
             marketConditions.forEach(condition => {
-                const trades = appState.trades.filter(t => t.marketCondition === condition);
+                const trades = filteredTrades.filter(t => t.marketCondition === condition);
                 const wins = trades.filter(t => (t.netPL || t.profit) > 0);
                 const totalPL = trades.reduce((sum, t) => sum + (t.netPL || t.profit), 0);
-                
+
                 breakdowns[condition] = {
                     trades: trades.length,
                     winRate: trades.length > 0 ? (wins.length / trades.length * 100) : 0,
                     totalPL: totalPL
                 };
             });
-            
+
             container.innerHTML = Object.entries(breakdowns).map(([condition, data]) => `
                 <div class="breakdown-item">
                     <div class="breakdown-header">${condition}</div>
@@ -5842,19 +5888,30 @@ select.form-control {
         function updateEmotionalBreakdown() {
             const container = document.getElementById('emotionalBreakdown');
             const breakdowns = {};
-            
+
+            // Filter trades by selected month/year
+            let filteredTrades = appState.trades;
+            if (appState.breakdownCurrentMonth !== -1) {
+                const selectedMonthKey = `${appState.breakdownCurrentYear}-${String(appState.breakdownCurrentMonth + 1).padStart(2, '0')}`;
+                filteredTrades = appState.trades.filter(trade => {
+                    const tradeDate = new Date(trade.date);
+                    const tradeMonthKey = `${tradeDate.getFullYear()}-${String(tradeDate.getMonth() + 1).padStart(2, '0')}`;
+                    return tradeMonthKey === selectedMonthKey;
+                });
+            }
+
             emotionalStates.forEach(state => {
-                const trades = appState.trades.filter(t => t.emotionalState === state);
+                const trades = filteredTrades.filter(t => t.emotionalState === state);
                 const wins = trades.filter(t => (t.netPL || t.profit) > 0);
                 const totalPL = trades.reduce((sum, t) => sum + (t.netPL || t.profit), 0);
-                
+
                 breakdowns[state] = {
                     trades: trades.length,
                     winRate: trades.length > 0 ? (wins.length / trades.length * 100) : 0,
                     totalPL: totalPL
                 };
             });
-            
+
             container.innerHTML = Object.entries(breakdowns).map(([state, data]) => `
                 <div class="breakdown-item">
                     <div class="breakdown-header">${state}</div>
@@ -5870,19 +5927,30 @@ select.form-control {
         function updateRuleBreakdown() {
             const container = document.getElementById('ruleBreakdown');
             const breakdowns = {};
-            
+
+            // Filter trades by selected month/year
+            let filteredTrades = appState.trades;
+            if (appState.breakdownCurrentMonth !== -1) {
+                const selectedMonthKey = `${appState.breakdownCurrentYear}-${String(appState.breakdownCurrentMonth + 1).padStart(2, '0')}`;
+                filteredTrades = appState.trades.filter(trade => {
+                    const tradeDate = new Date(trade.date);
+                    const tradeMonthKey = `${tradeDate.getFullYear()}-${String(tradeDate.getMonth() + 1).padStart(2, '0')}`;
+                    return tradeMonthKey === selectedMonthKey;
+                });
+            }
+
             ruleAdherence.forEach(adherence => {
-                const trades = appState.trades.filter(t => t.ruleAdherence === adherence);
+                const trades = filteredTrades.filter(t => t.ruleAdherence === adherence);
                 const wins = trades.filter(t => (t.netPL || t.profit) > 0);
                 const totalPL = trades.reduce((sum, t) => sum + (t.netPL || t.profit), 0);
-                
+
                 breakdowns[adherence] = {
                     trades: trades.length,
                     winRate: trades.length > 0 ? (wins.length / trades.length * 100) : 0,
                     totalPL: totalPL
                 };
             });
-            
+
             container.innerHTML = Object.entries(breakdowns).map(([adherence, data]) => `
                 <div class="breakdown-item">
                     <div class="breakdown-header">${adherence}</div>
@@ -6582,6 +6650,67 @@ select.form-control {
             if (element) {
                 element.textContent = displayText;
             }
+        }
+
+        // Performance Breakdowns Navigation
+        function changeBreakdownMonth(direction) {
+            // If currently at TOTAL (-1) and going forward, go to the first month with trades
+            // If going backward from TOTAL, stay at TOTAL
+            if (appState.breakdownCurrentMonth === -1) {
+                if (direction > 0) {
+                    // Find the first month with trades
+                    const firstTradeDate = appState.trades.length > 0
+                        ? new Date(appState.trades.sort((a, b) => new Date(a.date) - new Date(b.date))[0].date)
+                        : new Date();
+                    appState.breakdownCurrentMonth = firstTradeDate.getMonth();
+                    appState.breakdownCurrentYear = firstTradeDate.getFullYear();
+                } else {
+                    // Stay at TOTAL when going backward
+                    return;
+                }
+            } else {
+                appState.breakdownCurrentMonth += direction;
+                if (appState.breakdownCurrentMonth < 0) {
+                    appState.breakdownCurrentMonth = 11;
+                    appState.breakdownCurrentYear--;
+                } else if (appState.breakdownCurrentMonth > 11) {
+                    appState.breakdownCurrentMonth = 0;
+                    appState.breakdownCurrentYear++;
+                }
+            }
+            updateBreakdownMonthDisplay();
+            updateBreakdownDisplays();
+        }
+
+        function updateBreakdownMonthDisplay() {
+            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                'July', 'August', 'September', 'October', 'November', 'December'];
+            const displayText = appState.breakdownCurrentMonth === -1
+                ? 'TOTAL (All Time)'
+                : `${monthNames[appState.breakdownCurrentMonth]} ${appState.breakdownCurrentYear}`;
+
+            // Update all breakdown month displays
+            const displayElements = [
+                'breakdownSetupMonthDisplay',
+                'breakdownMarketMonthDisplay',
+                'breakdownEmotionalMonthDisplay',
+                'breakdownRuleMonthDisplay'
+            ];
+
+            displayElements.forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.textContent = displayText;
+                }
+            });
+        }
+
+        function updateBreakdownDisplays() {
+            updateBreakdownMonthDisplay();
+            updateSetupBreakdown();
+            updateMarketBreakdown();
+            updateEmotionalBreakdown();
+            updateRuleBreakdown();
         }
 
         // AI Analysis Functions
