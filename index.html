@@ -5814,32 +5814,49 @@ select.form-control {
         
         function updateSetupBreakdown() {
             const container = document.getElementById('setupBreakdown');
-            const breakdowns = {};
 
-            // Filter trades by selected month/year
-            let filteredTrades = appState.trades;
-            if (appState.breakdownCurrentMonth !== -1) {
-                const selectedMonthKey = `${appState.breakdownCurrentYear}-${String(appState.breakdownCurrentMonth + 1).padStart(2, '0')}`;
-                filteredTrades = appState.trades.filter(trade => {
-                    const tradeDate = new Date(trade.date);
-                    const tradeMonthKey = `${tradeDate.getFullYear()}-${String(tradeDate.getMonth() + 1).padStart(2, '0')}`;
-                    return tradeMonthKey === selectedMonthKey;
-                });
-            }
-
+            // Calculate TOTAL (all trades) breakdowns
+            const totalBreakdowns = {};
             setupTypes.forEach(setup => {
-                const trades = filteredTrades.filter(t => t.setupType === setup);
+                const trades = appState.trades.filter(t => t.setupType === setup);
                 const wins = trades.filter(t => (t.netPL || t.profit) > 0);
                 const totalPL = trades.reduce((sum, t) => sum + (t.netPL || t.profit), 0);
 
-                breakdowns[setup] = {
+                totalBreakdowns[setup] = {
                     trades: trades.length,
                     winRate: trades.length > 0 ? (wins.length / trades.length * 100) : 0,
                     totalPL: totalPL
                 };
             });
 
-            container.innerHTML = Object.entries(breakdowns).map(([setup, data]) => `
+            // Calculate selected month breakdowns
+            let monthBreakdowns = null;
+            let hasMonthData = false;
+            if (appState.breakdownCurrentMonth !== -1) {
+                const selectedMonthKey = `${appState.breakdownCurrentYear}-${String(appState.breakdownCurrentMonth + 1).padStart(2, '0')}`;
+                const filteredTrades = appState.trades.filter(trade => {
+                    const tradeDate = new Date(trade.date);
+                    const tradeMonthKey = `${tradeDate.getFullYear()}-${String(tradeDate.getMonth() + 1).padStart(2, '0')}`;
+                    return tradeMonthKey === selectedMonthKey;
+                });
+
+                monthBreakdowns = {};
+                setupTypes.forEach(setup => {
+                    const trades = filteredTrades.filter(t => t.setupType === setup);
+                    const wins = trades.filter(t => (t.netPL || t.profit) > 0);
+                    const totalPL = trades.reduce((sum, t) => sum + (t.netPL || t.profit), 0);
+
+                    monthBreakdowns[setup] = {
+                        trades: trades.length,
+                        winRate: trades.length > 0 ? (wins.length / trades.length * 100) : 0,
+                        totalPL: totalPL
+                    };
+                });
+
+                hasMonthData = Object.values(monthBreakdowns).some(d => d.trades > 0);
+            }
+
+            const renderBreakdownCards = (breakdowns) => Object.entries(breakdowns).map(([setup, data]) => `
                 <div class="breakdown-item">
                     <div class="breakdown-header">${setup}</div>
                     <div class="breakdown-stats">
@@ -5849,36 +5866,70 @@ select.form-control {
                     </div>
                 </div>
             `).join('');
+
+            container.innerHTML = `
+                <div style="margin-bottom: 1.5rem;">
+                    <h4 style="color: #4a9eff; margin-bottom: 0.75rem;">TOTAL (All Time)</h4>
+                    <div class="breakdown-grid">
+                        ${renderBreakdownCards(totalBreakdowns)}
+                    </div>
+                </div>
+                ${hasMonthData ? `
+                    <div>
+                        <h4 style="color: var(--color-text-secondary); margin-bottom: 0.75rem;">Selected Month</h4>
+                        <div class="breakdown-grid">
+                            ${renderBreakdownCards(monthBreakdowns)}
+                        </div>
+                    </div>
+                ` : (appState.breakdownCurrentMonth !== -1 ? '<div style="padding: 2rem; text-align: center; color: var(--color-text-secondary);">No data for this month</div>' : '')}
+            `;
         }
         
         function updateMarketBreakdown() {
             const container = document.getElementById('marketBreakdown');
-            const breakdowns = {};
 
-            // Filter trades by selected month/year
-            let filteredTrades = appState.trades;
-            if (appState.breakdownCurrentMonth !== -1) {
-                const selectedMonthKey = `${appState.breakdownCurrentYear}-${String(appState.breakdownCurrentMonth + 1).padStart(2, '0')}`;
-                filteredTrades = appState.trades.filter(trade => {
-                    const tradeDate = new Date(trade.date);
-                    const tradeMonthKey = `${tradeDate.getFullYear()}-${String(tradeDate.getMonth() + 1).padStart(2, '0')}`;
-                    return tradeMonthKey === selectedMonthKey;
-                });
-            }
-
+            // Calculate TOTAL (all trades) breakdowns
+            const totalBreakdowns = {};
             marketConditions.forEach(condition => {
-                const trades = filteredTrades.filter(t => t.marketCondition === condition);
+                const trades = appState.trades.filter(t => t.marketCondition === condition);
                 const wins = trades.filter(t => (t.netPL || t.profit) > 0);
                 const totalPL = trades.reduce((sum, t) => sum + (t.netPL || t.profit), 0);
 
-                breakdowns[condition] = {
+                totalBreakdowns[condition] = {
                     trades: trades.length,
                     winRate: trades.length > 0 ? (wins.length / trades.length * 100) : 0,
                     totalPL: totalPL
                 };
             });
 
-            container.innerHTML = Object.entries(breakdowns).map(([condition, data]) => `
+            // Calculate selected month breakdowns
+            let monthBreakdowns = null;
+            let hasMonthData = false;
+            if (appState.breakdownCurrentMonth !== -1) {
+                const selectedMonthKey = `${appState.breakdownCurrentYear}-${String(appState.breakdownCurrentMonth + 1).padStart(2, '0')}`;
+                const filteredTrades = appState.trades.filter(trade => {
+                    const tradeDate = new Date(trade.date);
+                    const tradeMonthKey = `${tradeDate.getFullYear()}-${String(tradeDate.getMonth() + 1).padStart(2, '0')}`;
+                    return tradeMonthKey === selectedMonthKey;
+                });
+
+                monthBreakdowns = {};
+                marketConditions.forEach(condition => {
+                    const trades = filteredTrades.filter(t => t.marketCondition === condition);
+                    const wins = trades.filter(t => (t.netPL || t.profit) > 0);
+                    const totalPL = trades.reduce((sum, t) => sum + (t.netPL || t.profit), 0);
+
+                    monthBreakdowns[condition] = {
+                        trades: trades.length,
+                        winRate: trades.length > 0 ? (wins.length / trades.length * 100) : 0,
+                        totalPL: totalPL
+                    };
+                });
+
+                hasMonthData = Object.values(monthBreakdowns).some(d => d.trades > 0);
+            }
+
+            const renderBreakdownCards = (breakdowns) => Object.entries(breakdowns).map(([condition, data]) => `
                 <div class="breakdown-item">
                     <div class="breakdown-header">${condition}</div>
                     <div class="breakdown-stats">
@@ -5888,36 +5939,70 @@ select.form-control {
                     </div>
                 </div>
             `).join('');
+
+            container.innerHTML = `
+                <div style="margin-bottom: 1.5rem;">
+                    <h4 style="color: #4a9eff; margin-bottom: 0.75rem;">TOTAL (All Time)</h4>
+                    <div class="breakdown-grid">
+                        ${renderBreakdownCards(totalBreakdowns)}
+                    </div>
+                </div>
+                ${hasMonthData ? `
+                    <div>
+                        <h4 style="color: var(--color-text-secondary); margin-bottom: 0.75rem;">Selected Month</h4>
+                        <div class="breakdown-grid">
+                            ${renderBreakdownCards(monthBreakdowns)}
+                        </div>
+                    </div>
+                ` : (appState.breakdownCurrentMonth !== -1 ? '<div style="padding: 2rem; text-align: center; color: var(--color-text-secondary);">No data for this month</div>' : '')}
+            `;
         }
         
         function updateEmotionalBreakdown() {
             const container = document.getElementById('emotionalBreakdown');
-            const breakdowns = {};
 
-            // Filter trades by selected month/year
-            let filteredTrades = appState.trades;
-            if (appState.breakdownCurrentMonth !== -1) {
-                const selectedMonthKey = `${appState.breakdownCurrentYear}-${String(appState.breakdownCurrentMonth + 1).padStart(2, '0')}`;
-                filteredTrades = appState.trades.filter(trade => {
-                    const tradeDate = new Date(trade.date);
-                    const tradeMonthKey = `${tradeDate.getFullYear()}-${String(tradeDate.getMonth() + 1).padStart(2, '0')}`;
-                    return tradeMonthKey === selectedMonthKey;
-                });
-            }
-
+            // Calculate TOTAL (all trades) breakdowns
+            const totalBreakdowns = {};
             emotionalStates.forEach(state => {
-                const trades = filteredTrades.filter(t => t.emotionalState === state);
+                const trades = appState.trades.filter(t => t.emotionalState === state);
                 const wins = trades.filter(t => (t.netPL || t.profit) > 0);
                 const totalPL = trades.reduce((sum, t) => sum + (t.netPL || t.profit), 0);
 
-                breakdowns[state] = {
+                totalBreakdowns[state] = {
                     trades: trades.length,
                     winRate: trades.length > 0 ? (wins.length / trades.length * 100) : 0,
                     totalPL: totalPL
                 };
             });
 
-            container.innerHTML = Object.entries(breakdowns).map(([state, data]) => `
+            // Calculate selected month breakdowns
+            let monthBreakdowns = null;
+            let hasMonthData = false;
+            if (appState.breakdownCurrentMonth !== -1) {
+                const selectedMonthKey = `${appState.breakdownCurrentYear}-${String(appState.breakdownCurrentMonth + 1).padStart(2, '0')}`;
+                const filteredTrades = appState.trades.filter(trade => {
+                    const tradeDate = new Date(trade.date);
+                    const tradeMonthKey = `${tradeDate.getFullYear()}-${String(tradeDate.getMonth() + 1).padStart(2, '0')}`;
+                    return tradeMonthKey === selectedMonthKey;
+                });
+
+                monthBreakdowns = {};
+                emotionalStates.forEach(state => {
+                    const trades = filteredTrades.filter(t => t.emotionalState === state);
+                    const wins = trades.filter(t => (t.netPL || t.profit) > 0);
+                    const totalPL = trades.reduce((sum, t) => sum + (t.netPL || t.profit), 0);
+
+                    monthBreakdowns[state] = {
+                        trades: trades.length,
+                        winRate: trades.length > 0 ? (wins.length / trades.length * 100) : 0,
+                        totalPL: totalPL
+                    };
+                });
+
+                hasMonthData = Object.values(monthBreakdowns).some(d => d.trades > 0);
+            }
+
+            const renderBreakdownCards = (breakdowns) => Object.entries(breakdowns).map(([state, data]) => `
                 <div class="breakdown-item">
                     <div class="breakdown-header">${state}</div>
                     <div class="breakdown-stats">
@@ -5927,36 +6012,70 @@ select.form-control {
                     </div>
                 </div>
             `).join('');
+
+            container.innerHTML = `
+                <div style="margin-bottom: 1.5rem;">
+                    <h4 style="color: #4a9eff; margin-bottom: 0.75rem;">TOTAL (All Time)</h4>
+                    <div class="breakdown-grid">
+                        ${renderBreakdownCards(totalBreakdowns)}
+                    </div>
+                </div>
+                ${hasMonthData ? `
+                    <div>
+                        <h4 style="color: var(--color-text-secondary); margin-bottom: 0.75rem;">Selected Month</h4>
+                        <div class="breakdown-grid">
+                            ${renderBreakdownCards(monthBreakdowns)}
+                        </div>
+                    </div>
+                ` : (appState.breakdownCurrentMonth !== -1 ? '<div style="padding: 2rem; text-align: center; color: var(--color-text-secondary);">No data for this month</div>' : '')}
+            `;
         }
         
         function updateRuleBreakdown() {
             const container = document.getElementById('ruleBreakdown');
-            const breakdowns = {};
 
-            // Filter trades by selected month/year
-            let filteredTrades = appState.trades;
-            if (appState.breakdownCurrentMonth !== -1) {
-                const selectedMonthKey = `${appState.breakdownCurrentYear}-${String(appState.breakdownCurrentMonth + 1).padStart(2, '0')}`;
-                filteredTrades = appState.trades.filter(trade => {
-                    const tradeDate = new Date(trade.date);
-                    const tradeMonthKey = `${tradeDate.getFullYear()}-${String(tradeDate.getMonth() + 1).padStart(2, '0')}`;
-                    return tradeMonthKey === selectedMonthKey;
-                });
-            }
-
+            // Calculate TOTAL (all trades) breakdowns
+            const totalBreakdowns = {};
             ruleAdherence.forEach(adherence => {
-                const trades = filteredTrades.filter(t => t.ruleAdherence === adherence);
+                const trades = appState.trades.filter(t => t.ruleAdherence === adherence);
                 const wins = trades.filter(t => (t.netPL || t.profit) > 0);
                 const totalPL = trades.reduce((sum, t) => sum + (t.netPL || t.profit), 0);
 
-                breakdowns[adherence] = {
+                totalBreakdowns[adherence] = {
                     trades: trades.length,
                     winRate: trades.length > 0 ? (wins.length / trades.length * 100) : 0,
                     totalPL: totalPL
                 };
             });
 
-            container.innerHTML = Object.entries(breakdowns).map(([adherence, data]) => `
+            // Calculate selected month breakdowns
+            let monthBreakdowns = null;
+            let hasMonthData = false;
+            if (appState.breakdownCurrentMonth !== -1) {
+                const selectedMonthKey = `${appState.breakdownCurrentYear}-${String(appState.breakdownCurrentMonth + 1).padStart(2, '0')}`;
+                const filteredTrades = appState.trades.filter(trade => {
+                    const tradeDate = new Date(trade.date);
+                    const tradeMonthKey = `${tradeDate.getFullYear()}-${String(tradeDate.getMonth() + 1).padStart(2, '0')}`;
+                    return tradeMonthKey === selectedMonthKey;
+                });
+
+                monthBreakdowns = {};
+                ruleAdherence.forEach(adherence => {
+                    const trades = filteredTrades.filter(t => t.ruleAdherence === adherence);
+                    const wins = trades.filter(t => (t.netPL || t.profit) > 0);
+                    const totalPL = trades.reduce((sum, t) => sum + (t.netPL || t.profit), 0);
+
+                    monthBreakdowns[adherence] = {
+                        trades: trades.length,
+                        winRate: trades.length > 0 ? (wins.length / trades.length * 100) : 0,
+                        totalPL: totalPL
+                    };
+                });
+
+                hasMonthData = Object.values(monthBreakdowns).some(d => d.trades > 0);
+            }
+
+            const renderBreakdownCards = (breakdowns) => Object.entries(breakdowns).map(([adherence, data]) => `
                 <div class="breakdown-item">
                     <div class="breakdown-header">${adherence}</div>
                     <div class="breakdown-stats">
@@ -5966,6 +6085,23 @@ select.form-control {
                     </div>
                 </div>
             `).join('');
+
+            container.innerHTML = `
+                <div style="margin-bottom: 1.5rem;">
+                    <h4 style="color: #4a9eff; margin-bottom: 0.75rem;">TOTAL (All Time)</h4>
+                    <div class="breakdown-grid">
+                        ${renderBreakdownCards(totalBreakdowns)}
+                    </div>
+                </div>
+                ${hasMonthData ? `
+                    <div>
+                        <h4 style="color: var(--color-text-secondary); margin-bottom: 0.75rem;">Selected Month</h4>
+                        <div class="breakdown-grid">
+                            ${renderBreakdownCards(monthBreakdowns)}
+                        </div>
+                    </div>
+                ` : (appState.breakdownCurrentMonth !== -1 ? '<div style="padding: 2rem; text-align: center; color: var(--color-text-secondary);">No data for this month</div>' : '')}
+            `;
         }
         
         // Time Analytics
