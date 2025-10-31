@@ -5636,29 +5636,131 @@ select.form-control {
         function updateMonthlyStats() {
             const container = document.getElementById('monthlyStats');
             const monthlyData = {};
-            
+
+            // Aggregate trades by month
             appState.trades.forEach(trade => {
                 const month = trade.date.substring(0, 7); // YYYY-MM
                 if (!monthlyData[month]) {
-                    monthlyData[month] = { trades: 0, profit: 0, wins: 0 };
+                    monthlyData[month] = {
+                        trades: [],
+                        wins: [],
+                        losses: []
+                    };
                 }
-                monthlyData[month].trades++;
-                monthlyData[month].profit += (trade.netPL || trade.profit);
-                if ((trade.netPL || trade.profit) > 0) monthlyData[month].wins++;
+
+                const pl = (trade.netPL || trade.profit);
+                monthlyData[month].trades.push(trade);
+
+                if (pl > 0) {
+                    monthlyData[month].wins.push(trade);
+                } else if (pl < 0) {
+                    monthlyData[month].losses.push(trade);
+                }
             });
-            
+
+            // Calculate detailed statistics for each month
+            const monthlyStats = Object.entries(monthlyData).map(([month, data]) => {
+                const totalTrades = data.trades.length;
+                const winCount = data.wins.length;
+                const lossCount = data.losses.length;
+                const winRate = totalTrades > 0 ? (winCount / totalTrades * 100) : 0;
+
+                const totalProfit = data.wins.reduce((sum, t) => sum + (t.netPL || t.profit), 0);
+                const totalLoss = Math.abs(data.losses.reduce((sum, t) => sum + (t.netPL || t.profit), 0));
+                const netPL = data.trades.reduce((sum, t) => sum + (t.netPL || t.profit), 0);
+
+                const avgWin = winCount > 0 ? (totalProfit / winCount) : 0;
+                const avgLoss = lossCount > 0 ? (totalLoss / lossCount) : 0;
+                const profitFactor = totalLoss > 0 ? (totalProfit / totalLoss) : 0;
+                const riskRewardRatio = avgLoss > 0 ? (avgWin / avgLoss) : 0;
+
+                // Calculate max drawdown for the month
+                const sortedTrades = [...data.trades].sort((a, b) => {
+                    const dateA = new Date(a.closeTime || `${a.date}T${a.time}:00`);
+                    const dateB = new Date(b.closeTime || `${b.date}T${b.time}:00`);
+                    return dateA - dateB;
+                });
+
+                let runningPL = 0;
+                let peak = 0;
+                let maxDrawdown = 0;
+
+                sortedTrades.forEach(trade => {
+                    const tradePL = parseFloat(trade.netPL) || parseFloat(trade.profit) || 0;
+                    runningPL += tradePL;
+
+                    if (runningPL > peak) {
+                        peak = runningPL;
+                    }
+
+                    const drawdown = peak - runningPL;
+                    if (drawdown > maxDrawdown) {
+                        maxDrawdown = drawdown;
+                    }
+                });
+
+                return {
+                    month,
+                    totalTrades,
+                    winCount,
+                    lossCount,
+                    winRate,
+                    netPL,
+                    totalProfit,
+                    totalLoss,
+                    avgWin,
+                    avgLoss,
+                    profitFactor,
+                    riskRewardRatio,
+                    maxDrawdown
+                };
+            });
+
+            // Calculate TOTAL statistics
+            const allTrades = appState.trades;
+            const allWins = allTrades.filter(t => (t.netPL || t.profit) > 0);
+            const allLosses = allTrades.filter(t => (t.netPL || t.profit) < 0);
+
+            const totalStats = {
+                month: 'TOTAL',
+                totalTrades: allTrades.length,
+                winCount: allWins.length,
+                lossCount: allLosses.length,
+                winRate: allTrades.length > 0 ? (allWins.length / allTrades.length * 100) : 0,
+                netPL: allTrades.reduce((sum, t) => sum + (t.netPL || t.profit), 0),
+                totalProfit: allWins.reduce((sum, t) => sum + (t.netPL || t.profit), 0),
+                totalLoss: Math.abs(allLosses.reduce((sum, t) => sum + (t.netPL || t.profit), 0)),
+                avgWin: allWins.length > 0 ? (allWins.reduce((sum, t) => sum + (t.netPL || t.profit), 0) / allWins.length) : 0,
+                avgLoss: allLosses.length > 0 ? (Math.abs(allLosses.reduce((sum, t) => sum + (t.netPL || t.profit), 0)) / allLosses.length) : 0,
+                profitFactor: 0,
+                riskRewardRatio: 0,
+                maxDrawdown: appState.statistics?.maxDrawdown || 0
+            };
+
+            totalStats.profitFactor = totalStats.totalLoss > 0 ? (totalStats.totalProfit / totalStats.totalLoss) : 0;
+            totalStats.riskRewardRatio = totalStats.avgLoss > 0 ? (totalStats.avgWin / totalStats.avgLoss) : 0;
+
+            // Render the monthly stats with TOTAL at the top
+            const renderMonthCard = (stats, isTotal = false) => `
+                <div class="breakdown-item ${isTotal ? 'total-row' : ''}" style="${isTotal ? 'background: linear-gradient(135deg, #2a2a3e 0%, #1a1a2e 100%); border: 2px solid #4a9eff; box-shadow: 0 4px 12px rgba(74, 158, 255, 0.3);' : ''}">
+                    <div class="breakdown-header" style="${isTotal ? 'font-size: 1.2em; font-weight: bold; color: #4a9eff;' : ''}">${stats.month}</div>
+                    <div class="breakdown-stats" style="font-size: 0.9em;">
+                        <strong>Trades:</strong> ${stats.totalTrades} (${stats.winCount}W / ${stats.lossCount}L)<br>
+                        <strong>Win Rate:</strong> ${stats.winRate.toFixed(1)}%<br>
+                        <strong>Net P&L:</strong> <span class="${stats.netPL >= 0 ? 'positive' : 'negative'}">${formatCurrency(stats.netPL)}</span><br>
+                        <strong>Profit Factor:</strong> ${stats.profitFactor.toFixed(2)}<br>
+                        <strong>Avg Win:</strong> <span class="positive">${formatCurrency(stats.avgWin)}</span><br>
+                        <strong>Avg Loss:</strong> <span class="negative">${formatCurrency(stats.avgLoss)}</span><br>
+                        <strong>R:R Ratio:</strong> ${stats.riskRewardRatio.toFixed(2)}<br>
+                        <strong>Max DD:</strong> <span class="negative">${formatCurrency(stats.maxDrawdown)}</span>
+                    </div>
+                </div>
+            `;
+
             container.innerHTML = `
                 <div class="breakdown-grid">
-                    ${Object.entries(monthlyData).map(([month, data]) => `
-                        <div class="breakdown-item">
-                            <div class="breakdown-header">${month}</div>
-                            <div class="breakdown-stats">
-                                Trades: ${data.trades}<br>
-                                Win Rate: ${((data.wins / data.trades) * 100).toFixed(1)}%<br>
-                                P&L: <span class="${data.profit >= 0 ? 'positive' : 'negative'}">${formatCurrency(data.profit)}</span>
-                            </div>
-                        </div>
-                    `).join('')}
+                    ${renderMonthCard(totalStats, true)}
+                    ${monthlyStats.map(stats => renderMonthCard(stats, false)).join('')}
                 </div>
             `;
         }
