@@ -1584,7 +1584,14 @@ select.form-control {
                             onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'"
                             onmouseout="this.style.backgroundColor='transparent'">▼</button>
                     </div>
-                    <button class="toggle-button" onclick="toggleStatsConfig(); event.stopPropagation();" title="Configure Statistics">⚙️</button>
+                    <div style="display: flex; align-items: center; gap: var(--space-8);">
+                        <div style="display: flex; align-items: center; gap: var(--space-8); padding: var(--space-4) var(--space-12); background: rgba(var(--color-surface), 0.3); border-radius: var(--radius-base);">
+                            <button class="btn btn-secondary" onclick="changeAnalyticsMonth(-1); event.stopPropagation();" style="padding: var(--space-4) var(--space-8); font-size: var(--font-size-xs);">‹</button>
+                            <span id="analyticsStatsMonthDisplay" style="font-weight: bold; min-width: 120px; text-align: center; font-size: var(--font-size-sm);"></span>
+                            <button class="btn btn-secondary" onclick="changeAnalyticsMonth(1); event.stopPropagation();" style="padding: var(--space-4) var(--space-8); font-size: var(--font-size-xs);">›</button>
+                        </div>
+                        <button class="toggle-button" onclick="toggleStatsConfig(); event.stopPropagation();" title="Configure Statistics">⚙️</button>
+                    </div>
                 </div>
                 <div class="section-content">
                     <div id="statsConfigPanel" style="display: none; margin-bottom: 1rem; padding: 1rem; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-base);">
@@ -3794,67 +3801,299 @@ select.form-control {
             appState.currentBalance = currentBalance;
         }
 
+        // Calculate statistics for a specific month
+        function calculateStatisticsForMonth(year, month) {
+            // Filter trades for the selected month
+            const selectedMonthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
+            const monthTrades = appState.trades.filter(trade => {
+                const tradeDate = new Date(trade.date);
+                const tradeMonthKey = `${tradeDate.getFullYear()}-${String(tradeDate.getMonth() + 1).padStart(2, '0')}`;
+                return tradeMonthKey === selectedMonthKey;
+            });
 
+            if (monthTrades.length === 0) {
+                return {
+                    totalTrades: 0,
+                    winningTrades: 0,
+                    losingTrades: 0,
+                    winRate: 0,
+                    rulesWinRate: 0,
+                    netPL: 0,
+                    totalFees: 0,
+                    totalProfit: 0,
+                    totalLoss: 0,
+                    profitFactor: 0,
+                    avgWin: 0,
+                    avgLoss: 0,
+                    largestWin: 0,
+                    largestLoss: 0,
+                    expectancy: 0,
+                    accountGrowth: 0,
+                    currentBalance: appState.startingBalance,
+                    startingBalance: appState.startingBalance,
+                    maxDrawdown: 0,
+                    maxDrawdownPercent: 0,
+                    recoveryFactor: 0,
+                    currentStreak: 0,
+                    longestWinStreak: 0,
+                    longestLossStreak: 0,
+                    riskRewardRatio: 0,
+                    avgTradeDuration: 0
+                };
+            }
+
+            // Use same calculation logic as calculateStatistics but with filtered trades
+            const trades = monthTrades;
+            const wins = trades.filter(t => (t.netPL || t.profit) > 0);
+            const losses = trades.filter(t => (t.netPL || t.profit) < 0);
+            const totalProfit = wins.reduce((sum, t) => sum + (t.netPL || t.profit), 0);
+            const totalLoss = Math.abs(losses.reduce((sum, t) => sum + (t.netPL || t.profit), 0));
+            const netPL = trades.reduce((sum, t) => sum + (t.netPL || t.profit), 0);
+            const totalFees = trades.reduce((sum, t) => sum + t.commission + t.swap, 0);
+
+            // Rule adherence statistics
+            const tradesWithRules = trades.filter(t => t.rulesFollowed && t.rulesFollowed.length > 0);
+            const rulesWins = tradesWithRules.filter(t => (t.netPL || t.profit) > 0);
+            const rulesWinRate = tradesWithRules.length > 0 ? (rulesWins.length / tradesWithRules.length * 100) : 0;
+
+            const currentBalance = appState.startingBalance + netPL;
+            const accountGrowth = ((currentBalance - appState.startingBalance) / appState.startingBalance * 100);
+            const expectancy = trades.length > 0 ? netPL / trades.length : 0;
+
+            // Calculate Max Drawdown and Recovery Factor
+            const sortedTrades = [...trades].sort((a, b) => {
+                const dateA = new Date(a.closeTime || `${a.date}T${a.time}:00`);
+                const dateB = new Date(b.closeTime || `${b.date}T${b.time}:00`);
+                return dateA - dateB;
+            });
+
+            let runningBalance = appState.startingBalance;
+            let peak = appState.startingBalance;
+            let maxDrawdown = 0;
+            let maxDrawdownPercent = 0;
+
+            sortedTrades.forEach(trade => {
+                const tradePL = parseFloat(trade.netPL) || parseFloat(trade.profit) || 0;
+                runningBalance += tradePL;
+
+                if (runningBalance > peak) {
+                    peak = runningBalance;
+                }
+
+                const drawdown = peak - runningBalance;
+                const drawdownPercent = peak > 0 ? (drawdown / peak * 100) : 0;
+
+                if (drawdown > maxDrawdown) {
+                    maxDrawdown = drawdown;
+                    maxDrawdownPercent = drawdownPercent;
+                }
+            });
+
+            const recoveryFactor = maxDrawdown > 0 ? (netPL / maxDrawdown) : 0;
+
+            // Calculate Consecutive Win/Loss Streaks
+            let currentStreak = 0;
+            let longestWinStreak = 0;
+            let longestLossStreak = 0;
+            let currentWinStreak = 0;
+            let currentLossStreak = 0;
+
+            sortedTrades.forEach((trade, index) => {
+                const tradePL = parseFloat(trade.netPL) || parseFloat(trade.profit) || 0;
+                const isWin = tradePL > 0;
+
+                if (isWin) {
+                    currentWinStreak++;
+                    currentLossStreak = 0;
+                    if (currentWinStreak > longestWinStreak) {
+                        longestWinStreak = currentWinStreak;
+                    }
+                } else if (tradePL < 0) {
+                    currentLossStreak++;
+                    currentWinStreak = 0;
+                    if (currentLossStreak > longestLossStreak) {
+                        longestLossStreak = currentLossStreak;
+                    }
+                } else {
+                    currentWinStreak = 0;
+                    currentLossStreak = 0;
+                }
+
+                if (index === sortedTrades.length - 1) {
+                    currentStreak = isWin ? currentWinStreak : (tradePL < 0 ? -currentLossStreak : 0);
+                }
+            });
+
+            // Risk-Reward Ratio
+            const avgWin = wins.length > 0 ? (totalProfit / wins.length) : 0;
+            const avgLoss = losses.length > 0 ? (totalLoss / losses.length) : 0;
+            const riskRewardRatio = avgLoss > 0 ? (avgWin / avgLoss) : 0;
+
+            // Average Trade Duration
+            let totalDuration = 0;
+            let tradesWithDuration = 0;
+
+            trades.forEach(trade => {
+                if (trade.openDate && trade.date) {
+                    const openDateTime = new Date(`${trade.openDate}T${trade.openTime || '00:00:00'}`);
+                    const closeDateTime = new Date(`${trade.date}T${trade.time || '00:00:00'}`);
+
+                    if (!isNaN(openDateTime.getTime()) && !isNaN(closeDateTime.getTime())) {
+                        const durationMs = closeDateTime - openDateTime;
+                        if (durationMs >= 0) {
+                            totalDuration += durationMs;
+                            tradesWithDuration++;
+                        }
+                    }
+                }
+            });
+
+            const avgTradeDuration = tradesWithDuration > 0 ? (totalDuration / tradesWithDuration) : 0;
+
+            return {
+                totalTrades: trades.length,
+                winningTrades: wins.length,
+                losingTrades: losses.length,
+                winRate: trades.length > 0 ? (wins.length / trades.length * 100) : 0,
+                rulesWinRate: rulesWinRate,
+                netPL: netPL,
+                totalFees: Math.abs(totalFees),
+                totalProfit: totalProfit,
+                totalLoss: totalLoss,
+                profitFactor: totalLoss > 0 ? (totalProfit / totalLoss) : 0,
+                avgWin: avgWin,
+                avgLoss: avgLoss,
+                largestWin: wins.length > 0 ? Math.max(...wins.map(t => t.profit)) : 0,
+                largestLoss: losses.length > 0 ? Math.min(...losses.map(t => t.profit)) : 0,
+                expectancy: expectancy,
+                accountGrowth: accountGrowth,
+                currentBalance: currentBalance,
+                startingBalance: appState.startingBalance,
+                maxDrawdown: maxDrawdown,
+                maxDrawdownPercent: maxDrawdownPercent,
+                recoveryFactor: recoveryFactor,
+                currentStreak: currentStreak,
+                longestWinStreak: longestWinStreak,
+                longestLossStreak: longestLossStreak,
+                riskRewardRatio: riskRewardRatio,
+                avgTradeDuration: avgTradeDuration
+            };
+        }
 
         function updateStatisticsDisplay() {
-            const stats = appState.statistics;
-            if (!stats.totalTrades) return;
+            if (appState.trades.length === 0) return;
 
             const statsGrid = document.getElementById('statsGrid');
             const statsConfig = appState.visibleStats;
 
-            const statsData = [
-                { key: 'totalTrades', label: 'Total Trades', value: stats.totalTrades, format: 'number' },
-                { key: 'winningTrades', label: 'Winning Trades', value: stats.winningTrades, format: 'number', class: 'positive' },
-                { key: 'losingTrades', label: 'Losing Trades', value: stats.losingTrades, format: 'number', class: 'negative' },
-                { key: 'winRate', label: 'Win Rate', value: stats.winRate, format: 'percentage' },
-                { key: 'rulesWinRate', label: 'Rules Win Rate', value: stats.rulesWinRate, format: 'percentage' },
-                { key: 'netPL', label: 'Net P&L', value: stats.netPL, format: 'currency', class: stats.netPL >= 0 ? 'positive' : 'negative' },
-                { key: 'totalFees', label: 'Total Fees', value: stats.totalFees, format: 'currency', class: 'negative' },
-                { key: 'profitFactor', label: 'Profit Factor', value: stats.profitFactor, format: 'decimal' },
-                { key: 'avgWin', label: 'Average Win', value: stats.avgWin, format: 'currency', class: 'positive' },
-                { key: 'avgLoss', label: 'Average Loss', value: Math.abs(stats.avgLoss), format: 'currency', class: 'negative' },
-                { key: 'largestWin', label: 'Largest Win', value: stats.largestWin, format: 'currency', class: 'positive' },
-                { key: 'largestLoss', label: 'Largest Loss', value: Math.abs(stats.largestLoss), format: 'currency', class: 'negative' },
-                { key: 'expectancy', label: 'Expectancy', value: stats.expectancy, format: 'currency', class: stats.expectancy >= 0 ? 'positive' : 'negative' },
-                { key: 'accountGrowth', label: 'Account Growth', value: stats.accountGrowth, format: 'percentage', class: stats.accountGrowth >= 0 ? 'positive' : 'negative' },
-                { key: 'currentBalance', label: 'Current Balance', value: stats.currentBalance, format: 'currency' },
-                { key: 'startingBalance', label: 'Starting Balance', value: stats.startingBalance, format: 'currency' },
-                // Phase 1 New Stats
-                { key: 'maxDrawdown', label: 'Max Drawdown', value: stats.maxDrawdown, format: 'currency', class: 'negative' },
-                { key: 'maxDrawdownPercent', label: 'Max Drawdown %', value: stats.maxDrawdownPercent, format: 'percentage', class: 'negative' },
-                { key: 'recoveryFactor', label: 'Recovery Factor', value: stats.recoveryFactor, format: 'decimal', class: stats.recoveryFactor >= 1 ? 'positive' : 'negative' },
-                { key: 'currentStreak', label: 'Current Streak', value: stats.currentStreak, format: 'streak' },
-                { key: 'longestWinStreak', label: 'Longest Win Streak', value: stats.longestWinStreak, format: 'number', class: 'positive' },
-                { key: 'longestLossStreak', label: 'Longest Loss Streak', value: stats.longestLossStreak, format: 'number', class: 'negative' },
-                { key: 'riskRewardRatio', label: 'Risk/Reward Ratio', value: stats.riskRewardRatio, format: 'decimal', class: stats.riskRewardRatio >= 1 ? 'positive' : 'negative' },
-                { key: 'avgTradeDuration', label: 'Avg Trade Duration', value: stats.avgTradeDuration, format: 'duration' }
+            // Calculate both total and monthly statistics
+            const totalStats = appState.statistics;
+            const monthlyStats = calculateStatisticsForMonth(appState.analyticsCurrentYear, appState.analyticsCurrentMonth);
+
+            // Helper function to format a stat value
+            const formatStatValue = (value, format) => {
+                switch (format) {
+                    case 'currency': return formatCurrency(value);
+                    case 'percentage': return formatPercentage(value);
+                    case 'decimal': return value.toFixed(2);
+                    case 'duration': return formatDuration(value);
+                    case 'streak':
+                        return value === 0 ? '0' : (value > 0 ? `+${value}` : value.toString());
+                    default: return value.toString();
+                }
+            };
+
+            // Helper function to get class for a stat
+            const getStatClass = (key, value, format) => {
+                if (format === 'streak') {
+                    return value > 0 ? 'positive' : (value < 0 ? 'negative' : '');
+                }
+                switch (key) {
+                    case 'winningTrades':
+                    case 'avgWin':
+                    case 'largestWin':
+                    case 'longestWinStreak':
+                        return 'positive';
+                    case 'losingTrades':
+                    case 'avgLoss':
+                    case 'largestLoss':
+                    case 'totalFees':
+                    case 'maxDrawdown':
+                    case 'maxDrawdownPercent':
+                    case 'longestLossStreak':
+                        return 'negative';
+                    case 'netPL':
+                    case 'expectancy':
+                    case 'accountGrowth':
+                        return value >= 0 ? 'positive' : 'negative';
+                    case 'recoveryFactor':
+                    case 'riskRewardRatio':
+                        return value >= 1 ? 'positive' : 'negative';
+                    default:
+                        return '';
+                }
+            };
+
+            const statsDefinitions = [
+                { key: 'totalTrades', label: 'Total Trades', format: 'number' },
+                { key: 'winningTrades', label: 'Winning Trades', format: 'number' },
+                { key: 'losingTrades', label: 'Losing Trades', format: 'number' },
+                { key: 'winRate', label: 'Win Rate', format: 'percentage' },
+                { key: 'rulesWinRate', label: 'Rules Win Rate', format: 'percentage' },
+                { key: 'netPL', label: 'Net P&L', format: 'currency' },
+                { key: 'totalFees', label: 'Total Fees', format: 'currency' },
+                { key: 'profitFactor', label: 'Profit Factor', format: 'decimal' },
+                { key: 'avgWin', label: 'Average Win', format: 'currency' },
+                { key: 'avgLoss', label: 'Average Loss', format: 'currency' },
+                { key: 'largestWin', label: 'Largest Win', format: 'currency' },
+                { key: 'largestLoss', label: 'Largest Loss', format: 'currency' },
+                { key: 'expectancy', label: 'Expectancy', format: 'currency' },
+                { key: 'accountGrowth', label: 'Account Growth', format: 'percentage' },
+                { key: 'currentBalance', label: 'Current Balance', format: 'currency' },
+                { key: 'startingBalance', label: 'Starting Balance', format: 'currency' },
+                { key: 'maxDrawdown', label: 'Max Drawdown', format: 'currency' },
+                { key: 'maxDrawdownPercent', label: 'Max Drawdown %', format: 'percentage' },
+                { key: 'recoveryFactor', label: 'Recovery Factor', format: 'decimal' },
+                { key: 'currentStreak', label: 'Current Streak', format: 'streak' },
+                { key: 'longestWinStreak', label: 'Longest Win Streak', format: 'number' },
+                { key: 'longestLossStreak', label: 'Longest Loss Streak', format: 'number' },
+                { key: 'riskRewardRatio', label: 'Risk/Reward Ratio', format: 'decimal' },
+                { key: 'avgTradeDuration', label: 'Avg Trade Duration', format: 'duration' }
             ];
 
             let html = '';
-            statsData.filter(stat => statsConfig[stat.key]).forEach(stat => {
-                let formattedValue = stat.value;
-                switch (stat.format) {
-                    case 'currency': formattedValue = formatCurrency(stat.value); break;
-                    case 'percentage': formattedValue = formatPercentage(stat.value); break;
-                    case 'decimal': formattedValue = stat.value.toFixed(2); break;
-                    case 'duration': formattedValue = formatDuration(stat.value); break;
-                    case 'streak':
-                        formattedValue = stat.value === 0 ? '0' : (stat.value > 0 ? `+${stat.value}` : stat.value.toString());
-                        break;
-                    default: formattedValue = stat.value.toString();
-                }
 
-                // Determine class for streak
-                let itemClass = stat.class || '';
-                if (stat.format === 'streak') {
-                    itemClass = stat.value > 0 ? 'positive' : (stat.value < 0 ? 'negative' : '');
-                }
+            // Generate cards for each visible stat
+            statsDefinitions.filter(stat => statsConfig[stat.key]).forEach(stat => {
+                const totalValue = totalStats[stat.key];
+                const monthValue = monthlyStats[stat.key];
+
+                // Adjust values that need absolute formatting
+                const displayTotalValue = (stat.key === 'avgLoss' || stat.key === 'largestLoss') ? Math.abs(totalValue) : totalValue;
+                const displayMonthValue = (stat.key === 'avgLoss' || stat.key === 'largestLoss') ? Math.abs(monthValue) : monthValue;
+
+                const formattedTotal = formatStatValue(displayTotalValue, stat.format);
+                const formattedMonth = formatStatValue(displayMonthValue, stat.format);
+
+                const totalClass = getStatClass(stat.key, displayTotalValue, stat.format);
+                const monthClass = getStatClass(stat.key, displayMonthValue, stat.format);
+
+                const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                const monthLabel = monthNames[appState.analyticsCurrentMonth];
 
                 html += `
                     <div class="stat-card">
-                        <div class="stat-value ${itemClass}">${formattedValue}</div>
-                        <div class="stat-label">${stat.label}</div>
+                        <div class="stat-label" style="margin-bottom: var(--space-8); font-weight: var(--font-weight-semibold);">${stat.label}</div>
+                        <div style="display: flex; flex-direction: column; gap: var(--space-4);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-4); background: linear-gradient(135deg, rgba(74, 158, 255, 0.15) 0%, rgba(74, 158, 255, 0.05) 100%); border-radius: var(--radius-sm); border: 1px solid rgba(74, 158, 255, 0.3);">
+                                <span style="font-size: var(--font-size-xs); color: var(--color-text-secondary); font-weight: var(--font-weight-medium);">TOTAL</span>
+                                <span class="stat-value ${totalClass}" style="font-size: var(--font-size-base);">${formattedTotal}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-4); background: rgba(var(--color-surface), 0.3); border-radius: var(--radius-sm);">
+                                <span style="font-size: var(--font-size-xs); color: var(--color-text-secondary);">${monthLabel}</span>
+                                <span class="stat-value ${monthClass}" style="font-size: var(--font-size-sm);">${formattedMonth}</span>
+                            </div>
+                        </div>
                     </div>
                 `;
             });
@@ -6233,6 +6472,7 @@ select.form-control {
             updateDailyStats();
             updateOpenHourlyStats();
             updateHourlyStats();
+            updateStatisticsDisplay();
         }
 
         function updateAnalyticsMonthDisplay() {
@@ -6245,7 +6485,8 @@ select.form-control {
                 'analyticsMonthDisplay',
                 'analyticsDailyMonthDisplay',
                 'analyticsOpenHourlyMonthDisplay',
-                'analyticsCloseHourlyMonthDisplay'
+                'analyticsCloseHourlyMonthDisplay',
+                'analyticsStatsMonthDisplay'
             ];
 
             displayElements.forEach(id => {
