@@ -5352,6 +5352,19 @@ select.form-control {
             updateStatisticsDisplay();
             updateCustomRulesDisplay();
             updateRuleCombinationsAnalysis();
+
+            // Debounce table updates to persist changes without interfering with rapid checkbox clicks
+            // Clear any pending update
+            if (toggleTradeRule.updateTimeout) {
+                clearTimeout(toggleTradeRule.updateTimeout);
+            }
+
+            // Schedule table update after user is done clicking checkboxes
+            toggleTradeRule.updateTimeout = setTimeout(() => {
+                // Store active trade to restore after table update
+                appState.activeTradeIndex = tradeIndex;
+                updateTradesTable();
+            }, 500); // 500ms debounce - waits for user to finish clicking
         }
         
         // Lightbox Functions
