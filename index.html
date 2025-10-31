@@ -5346,29 +5346,12 @@ select.form-control {
                 trade.rulesFollowed = trade.rulesFollowed.filter(id => id !== ruleId);
             }
 
-            // Store the active trade index to preserve it during updates
-            appState.activeTradeIndex = tradeIndex;
-
-            // Defer UI updates to allow checkbox interaction to complete
-            // The 50ms delay ensures the checkbox change event finishes before DOM manipulation
-            setTimeout(() => {
-                // Update statistics with new rules data
-                calculateStatistics();
-                updateStatisticsDisplay();
-                updateCustomRulesDisplay();
-                updateRuleCombinationsAnalysis();
-
-                // Update the table body to persist changes to the underlying table
-                updateTableBody();
-
-                // Restore the currently open trade details with updated checkbox states
-                const detailsRow = document.querySelector(`#details_${tradeIndex}`);
-                if (detailsRow) {
-                    const row = detailsRow.parentElement.parentElement;
-                    row.style.display = 'table-row';
-                    renderTradeDetails(tradeIndex);
-                }
-            }, 50);
+            // Update statistics and displays immediately
+            // Don't regenerate the form to avoid visual flickering
+            calculateStatistics();
+            updateStatisticsDisplay();
+            updateCustomRulesDisplay();
+            updateRuleCombinationsAnalysis();
         }
         
         // Lightbox Functions
