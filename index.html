@@ -5345,9 +5345,12 @@ select.form-control {
                 trade.rulesFollowed = trade.rulesFollowed.filter(id => id !== ruleId);
             }
 
-            // Update statistics and UI to persist changes
+            // Update only the statistics displays without regenerating the entire UI
+            // This prevents the form from being destroyed while user is interacting with it
             calculateStatistics();
-            updateUI();
+            updateStatisticsDisplay();
+            updateCustomRulesDisplay();
+            updateRuleCombinationsAnalysis();
         }
         
         // Lightbox Functions
