@@ -1856,6 +1856,11 @@ select.form-control {
                             <span>▼</span>
                         </div>
                         <div class="collapsible-content">
+                            <div style="display: flex; justify-content: center; align-items: center; gap: var(--space-12); margin-bottom: 1rem; padding: 0.5rem; background: rgba(var(--color-surface), 0.3); border-radius: var(--radius-base);">
+                                <button class="btn btn-secondary" onclick="changeAnalyticsMonth(-1); event.stopPropagation();">‹ Prev</button>
+                                <span id="analyticsMonthDisplay" style="font-weight: bold; min-width: 150px; text-align: center;"></span>
+                                <button class="btn btn-secondary" onclick="changeAnalyticsMonth(1); event.stopPropagation();">Next ›</button>
+                            </div>
                             <div id="monthlyStats"></div>
                         </div>
                     </div>
@@ -2242,6 +2247,9 @@ select.form-control {
             },
             currentMonth: new Date().getMonth(),
             currentYear: new Date().getFullYear(),
+            // Monthly analytics navigation state
+            analyticsCurrentMonth: new Date().getMonth(),
+            analyticsCurrentYear: new Date().getFullYear(),
             aiPromptInclusions: {
                 overview: true,
                 setupPerformance: true,
@@ -5740,10 +5748,17 @@ select.form-control {
             totalStats.profitFactor = totalStats.totalLoss > 0 ? (totalStats.totalProfit / totalStats.totalLoss) : 0;
             totalStats.riskRewardRatio = totalStats.avgLoss > 0 ? (totalStats.avgWin / totalStats.avgLoss) : 0;
 
+            // Update the month display
+            updateAnalyticsMonthDisplay();
+
+            // Filter to show only the selected month
+            const selectedMonthKey = `${appState.analyticsCurrentYear}-${String(appState.analyticsCurrentMonth + 1).padStart(2, '0')}`;
+            const selectedMonthStats = monthlyStats.find(stats => stats.month === selectedMonthKey);
+
             // Render the monthly stats with TOTAL at the top
             const renderMonthCard = (stats, isTotal = false) => `
                 <div class="breakdown-item ${isTotal ? 'total-row' : ''}" style="${isTotal ? 'background: linear-gradient(135deg, #2a2a3e 0%, #1a1a2e 100%); border: 2px solid #4a9eff; box-shadow: 0 4px 12px rgba(74, 158, 255, 0.3);' : ''}">
-                    <div class="breakdown-header" style="${isTotal ? 'font-size: 1.2em; font-weight: bold; color: #4a9eff;' : ''}">${stats.month}</div>
+                    <div class="breakdown-header" style="${isTotal ? 'font-size: 1.2em; font-weight: bold; color: #4a9eff;' : ''}">${isTotal ? 'TOTAL MONTH' : stats.month}</div>
                     <div class="breakdown-stats" style="font-size: 0.9em;">
                         <strong>Trades:</strong> ${stats.totalTrades} (${stats.winCount}W / ${stats.lossCount}L)<br>
                         <strong>Win Rate:</strong> ${stats.winRate.toFixed(1)}%<br>
@@ -5760,7 +5775,7 @@ select.form-control {
             container.innerHTML = `
                 <div class="breakdown-grid">
                     ${renderMonthCard(totalStats, true)}
-                    ${monthlyStats.map(stats => renderMonthCard(stats, false)).join('')}
+                    ${selectedMonthStats ? renderMonthCard(selectedMonthStats, false) : '<div style="padding: 2rem; text-align: center; color: var(--color-text-secondary);">No data for this month</div>'}
                 </div>
             `;
         }
@@ -6072,7 +6087,31 @@ select.form-control {
             }
             updateCalendarView();
         }
-        
+
+        // Monthly Analytics Navigation
+        function changeAnalyticsMonth(direction) {
+            appState.analyticsCurrentMonth += direction;
+            if (appState.analyticsCurrentMonth < 0) {
+                appState.analyticsCurrentMonth = 11;
+                appState.analyticsCurrentYear--;
+            } else if (appState.analyticsCurrentMonth > 11) {
+                appState.analyticsCurrentMonth = 0;
+                appState.analyticsCurrentYear++;
+            }
+            updateAnalyticsMonthDisplay();
+            updateMonthlyStats();
+        }
+
+        function updateAnalyticsMonthDisplay() {
+            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                'July', 'August', 'September', 'October', 'November', 'December'];
+            const displayElement = document.getElementById('analyticsMonthDisplay');
+            if (displayElement) {
+                displayElement.textContent =
+                    `${monthNames[appState.analyticsCurrentMonth]} ${appState.analyticsCurrentYear}`;
+            }
+        }
+
         // AI Analysis Functions
         function updateAiPromptInclusion(key, value) {
             appState.aiPromptInclusions[key] = value;
