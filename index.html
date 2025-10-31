@@ -4360,8 +4360,19 @@ select.form-control {
         }
 
         function updateTradesTable() {
+            // Save the currently open trade details index
+            const activeIndex = appState.activeTradeIndex;
+
             updateTableHeader();
             updateTableBody();
+
+            // Restore the open trade details if there was one
+            if (activeIndex !== null && activeIndex < appState.trades.length) {
+                const detailsRow = document.querySelector(`#details_${activeIndex}`).parentElement.parentElement;
+                detailsRow.style.display = 'table-row';
+                renderTradeDetails(activeIndex);
+            }
+
             // Update collapse state display after table updates
             if (appState.trades && appState.trades.length > 0) {
                 updateTradeHistoryCollapseState();
