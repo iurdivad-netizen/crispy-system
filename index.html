@@ -1871,6 +1871,11 @@ select.form-control {
                             <span>▼</span>
                         </div>
                         <div class="collapsible-content">
+                            <div style="display: flex; justify-content: center; align-items: center; gap: var(--space-12); margin-bottom: 1rem; padding: 0.5rem; background: rgba(var(--color-surface), 0.3); border-radius: var(--radius-base);">
+                                <button class="btn btn-secondary" onclick="changeAnalyticsMonth(-1); event.stopPropagation();">‹ Prev</button>
+                                <span id="analyticsDailyMonthDisplay" style="font-weight: bold; min-width: 150px; text-align: center;"></span>
+                                <button class="btn btn-secondary" onclick="changeAnalyticsMonth(1); event.stopPropagation();">Next ›</button>
+                            </div>
                             <div id="dailyStats"></div>
                         </div>
                     </div>
@@ -1881,6 +1886,11 @@ select.form-control {
                             <span>▼</span>
                         </div>
                         <div class="collapsible-content">
+                            <div style="display: flex; justify-content: center; align-items: center; gap: var(--space-12); margin-bottom: 1rem; padding: 0.5rem; background: rgba(var(--color-surface), 0.3); border-radius: var(--radius-base);">
+                                <button class="btn btn-secondary" onclick="changeAnalyticsMonth(-1); event.stopPropagation();">‹ Prev</button>
+                                <span id="analyticsOpenHourlyMonthDisplay" style="font-weight: bold; min-width: 150px; text-align: center;"></span>
+                                <button class="btn btn-secondary" onclick="changeAnalyticsMonth(1); event.stopPropagation();">Next ›</button>
+                            </div>
                             <div id="openHourlyStats"></div>
                         </div>
                     </div>
@@ -1891,6 +1901,11 @@ select.form-control {
                             <span>▼</span>
                         </div>
                         <div class="collapsible-content">
+                            <div style="display: flex; justify-content: center; align-items: center; gap: var(--space-12); margin-bottom: 1rem; padding: 0.5rem; background: rgba(var(--color-surface), 0.3); border-radius: var(--radius-base);">
+                                <button class="btn btn-secondary" onclick="changeAnalyticsMonth(-1); event.stopPropagation();">‹ Prev</button>
+                                <span id="analyticsCloseHourlyMonthDisplay" style="font-weight: bold; min-width: 150px; text-align: center;"></span>
+                                <button class="btn btn-secondary" onclick="changeAnalyticsMonth(1); event.stopPropagation();">Next ›</button>
+                            </div>
                             <div id="hourlyStats"></div>
                         </div>
                     </div>
@@ -5783,105 +5798,220 @@ select.form-control {
         function updateDailyStats() {
             const container = document.getElementById('dailyStats');
             const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-            const dailyData = {};
-            
+
+            // Update the month display
+            updateAnalyticsMonthDisplay();
+
+            // Calculate TOTAL (all trades)
+            const totalDailyData = {};
             daysOfWeek.forEach(day => {
-                dailyData[day] = { trades: 0, profit: 0, wins: 0 };
+                totalDailyData[day] = { trades: 0, profit: 0, wins: 0 };
             });
-            
+
             appState.trades.forEach(trade => {
                 const tradeDate = new Date(trade.closeTime || `${trade.date}T${trade.time}:00`);
                 const dayOfWeek = daysOfWeek[tradeDate.getDay()];
-                dailyData[dayOfWeek].trades++;
-                dailyData[dayOfWeek].profit += (trade.netPL || trade.profit);
-                if ((trade.netPL || trade.profit) > 0) dailyData[dayOfWeek].wins++;
+                totalDailyData[dayOfWeek].trades++;
+                totalDailyData[dayOfWeek].profit += (trade.netPL || trade.profit);
+                if ((trade.netPL || trade.profit) > 0) totalDailyData[dayOfWeek].wins++;
             });
-            
-            container.innerHTML = `
-                <div class="breakdown-grid">
-                    ${Object.entries(dailyData).map(([day, data]) => `
-                        <div class="breakdown-item">
-                            <div class="breakdown-header">${day}</div>
-                            <div class="breakdown-stats">
-                                Trades: ${data.trades}<br>
-                                Win Rate: ${data.trades > 0 ? ((data.wins / data.trades) * 100).toFixed(1) : '0.0'}%<br>
-                                P&L: <span class="${data.profit >= 0 ? 'positive' : 'negative'}">${formatCurrency(data.profit)}</span>
-                            </div>
-                        </div>
-                    `).join('')}
+
+            // Filter trades for selected month
+            const selectedMonthKey = `${appState.analyticsCurrentYear}-${String(appState.analyticsCurrentMonth + 1).padStart(2, '0')}`;
+            const monthlyDailyData = {};
+            daysOfWeek.forEach(day => {
+                monthlyDailyData[day] = { trades: 0, profit: 0, wins: 0 };
+            });
+
+            appState.trades.forEach(trade => {
+                const tradeDate = new Date(trade.closeTime || `${trade.date}T${trade.time}:00`);
+                const tradeMonth = `${tradeDate.getFullYear()}-${String(tradeDate.getMonth() + 1).padStart(2, '0')}`;
+
+                if (tradeMonth === selectedMonthKey) {
+                    const dayOfWeek = daysOfWeek[tradeDate.getDay()];
+                    monthlyDailyData[dayOfWeek].trades++;
+                    monthlyDailyData[dayOfWeek].profit += (trade.netPL || trade.profit);
+                    if ((trade.netPL || trade.profit) > 0) monthlyDailyData[dayOfWeek].wins++;
+                }
+            });
+
+            // Render function
+            const renderDayCard = (day, data, isTotal = false) => `
+                <div class="breakdown-item ${isTotal ? 'total-row' : ''}" style="${isTotal ? 'background: linear-gradient(135deg, #2a2a3e 0%, #1a1a2e 100%); border: 2px solid #4a9eff; box-shadow: 0 4px 12px rgba(74, 158, 255, 0.3);' : ''}">
+                    <div class="breakdown-header" style="${isTotal ? 'font-size: 1.1em; font-weight: bold; color: #4a9eff;' : ''}">${isTotal ? 'TOTAL - ' : ''}${day}</div>
+                    <div class="breakdown-stats">
+                        Trades: ${data.trades}<br>
+                        Win Rate: ${data.trades > 0 ? ((data.wins / data.trades) * 100).toFixed(1) : '0.0'}%<br>
+                        P&L: <span class="${data.profit >= 0 ? 'positive' : 'negative'}">${formatCurrency(data.profit)}</span>
+                    </div>
                 </div>
+            `;
+
+            const hasMonthData = Object.values(monthlyDailyData).some(d => d.trades > 0);
+
+            container.innerHTML = `
+                <div style="margin-bottom: 1.5rem;">
+                    <h4 style="color: #4a9eff; margin-bottom: 0.75rem;">TOTAL (All Time)</h4>
+                    <div class="breakdown-grid">
+                        ${daysOfWeek.map(day => renderDayCard(day, totalDailyData[day], true)).join('')}
+                    </div>
+                </div>
+                ${hasMonthData ? `
+                    <div>
+                        <h4 style="color: var(--color-text-secondary); margin-bottom: 0.75rem;">Selected Month</h4>
+                        <div class="breakdown-grid">
+                            ${daysOfWeek.map(day => renderDayCard(day, monthlyDailyData[day], false)).join('')}
+                        </div>
+                    </div>
+                ` : '<div style="padding: 2rem; text-align: center; color: var(--color-text-secondary);">No data for this month</div>'}
             `;
         }
 
         function updateOpenHourlyStats() {
             const container = document.getElementById('openHourlyStats');
-            const hourlyData = {};
 
-            // Initialize hours 0-23
+            // Update the month display
+            updateAnalyticsMonthDisplay();
+
+            // Calculate TOTAL (all trades)
+            const totalHourlyData = {};
             for (let i = 0; i < 24; i++) {
-                hourlyData[i] = { trades: 0, profit: 0, wins: 0 };
+                totalHourlyData[i] = { trades: 0, profit: 0, wins: 0 };
             }
 
             appState.trades.forEach(trade => {
                 if (trade.openTime) {
                     const hour = parseInt(trade.openTime.split(':')[0]);
-                    hourlyData[hour].trades++;
-                    hourlyData[hour].profit += (trade.netPL || trade.profit);
-                    if ((trade.netPL || trade.profit) > 0) hourlyData[hour].wins++;
+                    totalHourlyData[hour].trades++;
+                    totalHourlyData[hour].profit += (trade.netPL || trade.profit);
+                    if ((trade.netPL || trade.profit) > 0) totalHourlyData[hour].wins++;
                 }
             });
 
+            // Filter trades for selected month
+            const selectedMonthKey = `${appState.analyticsCurrentYear}-${String(appState.analyticsCurrentMonth + 1).padStart(2, '0')}`;
+            const monthlyHourlyData = {};
+            for (let i = 0; i < 24; i++) {
+                monthlyHourlyData[i] = { trades: 0, profit: 0, wins: 0 };
+            }
+
+            appState.trades.forEach(trade => {
+                if (trade.openTime) {
+                    const tradeDate = new Date(trade.closeTime || `${trade.date}T${trade.time}:00`);
+                    const tradeMonth = `${tradeDate.getFullYear()}-${String(tradeDate.getMonth() + 1).padStart(2, '0')}`;
+
+                    if (tradeMonth === selectedMonthKey) {
+                        const hour = parseInt(trade.openTime.split(':')[0]);
+                        monthlyHourlyData[hour].trades++;
+                        monthlyHourlyData[hour].profit += (trade.netPL || trade.profit);
+                        if ((trade.netPL || trade.profit) > 0) monthlyHourlyData[hour].wins++;
+                    }
+                }
+            });
+
+            // Render function
+            const renderHourCard = (hour, data, isTotal = false) => `
+                <div class="breakdown-item ${isTotal ? 'total-row' : ''}" style="${isTotal ? 'background: linear-gradient(135deg, #2a2a3e 0%, #1a1a2e 100%); border: 2px solid #4a9eff; box-shadow: 0 4px 12px rgba(74, 158, 255, 0.3);' : ''}">
+                    <div class="breakdown-header" style="${isTotal ? 'font-size: 1.1em; font-weight: bold; color: #4a9eff;' : ''}">${isTotal ? 'TOTAL - ' : ''}${hour}:00</div>
+                    <div class="breakdown-stats">
+                        Trades: ${data.trades}<br>
+                        Win Rate: ${data.trades > 0 ? ((data.wins / data.trades) * 100).toFixed(1) : '0.0'}%<br>
+                        P&L: <span class="${data.profit >= 0 ? 'positive' : 'negative'}">${formatCurrency(data.profit)}</span>
+                    </div>
+                </div>
+            `;
+
             // Only show hours with trades
-            const activeHours = Object.entries(hourlyData).filter(([hour, data]) => data.trades > 0);
+            const activeTotalHours = Object.entries(totalHourlyData).filter(([hour, data]) => data.trades > 0);
+            const activeMonthHours = Object.entries(monthlyHourlyData).filter(([hour, data]) => data.trades > 0);
 
             container.innerHTML = `
-                <div class="breakdown-grid">
-                    ${activeHours.map(([hour, data]) => `
-                        <div class="breakdown-item">
-                            <div class="breakdown-header">${hour}:00</div>
-                            <div class="breakdown-stats">
-                                Trades: ${data.trades}<br>
-                                Win Rate: ${((data.wins / data.trades) * 100).toFixed(1)}%<br>
-                                P&L: <span class="${data.profit >= 0 ? 'positive' : 'negative'}">${formatCurrency(data.profit)}</span>
-                            </div>
-                        </div>
-                    `).join('')}
+                <div style="margin-bottom: 1.5rem;">
+                    <h4 style="color: #4a9eff; margin-bottom: 0.75rem;">TOTAL (All Time)</h4>
+                    <div class="breakdown-grid">
+                        ${activeTotalHours.map(([hour, data]) => renderHourCard(hour, data, true)).join('')}
+                    </div>
                 </div>
+                ${activeMonthHours.length > 0 ? `
+                    <div>
+                        <h4 style="color: var(--color-text-secondary); margin-bottom: 0.75rem;">Selected Month</h4>
+                        <div class="breakdown-grid">
+                            ${activeMonthHours.map(([hour, data]) => renderHourCard(hour, data, false)).join('')}
+                        </div>
+                    </div>
+                ` : '<div style="padding: 2rem; text-align: center; color: var(--color-text-secondary);">No data for this month</div>'}
             `;
         }
 
         function updateHourlyStats() {
             const container = document.getElementById('hourlyStats');
-            const hourlyData = {};
-            
-            // Initialize hours 0-23
+
+            // Update the month display
+            updateAnalyticsMonthDisplay();
+
+            // Calculate TOTAL (all trades)
+            const totalHourlyData = {};
             for (let i = 0; i < 24; i++) {
-                hourlyData[i] = { trades: 0, profit: 0, wins: 0 };
+                totalHourlyData[i] = { trades: 0, profit: 0, wins: 0 };
             }
-            
+
             appState.trades.forEach(trade => {
                 const hour = parseInt(trade.time.split(':')[0]);
-                hourlyData[hour].trades++;
-                hourlyData[hour].profit += (trade.netPL || trade.profit);
-                if ((trade.netPL || trade.profit) > 0) hourlyData[hour].wins++;
+                totalHourlyData[hour].trades++;
+                totalHourlyData[hour].profit += (trade.netPL || trade.profit);
+                if ((trade.netPL || trade.profit) > 0) totalHourlyData[hour].wins++;
             });
-            
-            // Only show hours with trades
-            const activeHours = Object.entries(hourlyData).filter(([hour, data]) => data.trades > 0);
-            
-            container.innerHTML = `
-                <div class="breakdown-grid">
-                    ${activeHours.map(([hour, data]) => `
-                        <div class="breakdown-item">
-                            <div class="breakdown-header">${hour}:00</div>
-                            <div class="breakdown-stats">
-                                Trades: ${data.trades}<br>
-                                Win Rate: ${((data.wins / data.trades) * 100).toFixed(1)}%<br>
-                                P&L: <span class="${data.profit >= 0 ? 'positive' : 'negative'}">${formatCurrency(data.profit)}</span>
-                            </div>
-                        </div>
-                    `).join('')}
+
+            // Filter trades for selected month
+            const selectedMonthKey = `${appState.analyticsCurrentYear}-${String(appState.analyticsCurrentMonth + 1).padStart(2, '0')}`;
+            const monthlyHourlyData = {};
+            for (let i = 0; i < 24; i++) {
+                monthlyHourlyData[i] = { trades: 0, profit: 0, wins: 0 };
+            }
+
+            appState.trades.forEach(trade => {
+                const tradeDate = new Date(trade.closeTime || `${trade.date}T${trade.time}:00`);
+                const tradeMonth = `${tradeDate.getFullYear()}-${String(tradeDate.getMonth() + 1).padStart(2, '0')}`;
+
+                if (tradeMonth === selectedMonthKey) {
+                    const hour = parseInt(trade.time.split(':')[0]);
+                    monthlyHourlyData[hour].trades++;
+                    monthlyHourlyData[hour].profit += (trade.netPL || trade.profit);
+                    if ((trade.netPL || trade.profit) > 0) monthlyHourlyData[hour].wins++;
+                }
+            });
+
+            // Render function
+            const renderHourCard = (hour, data, isTotal = false) => `
+                <div class="breakdown-item ${isTotal ? 'total-row' : ''}" style="${isTotal ? 'background: linear-gradient(135deg, #2a2a3e 0%, #1a1a2e 100%); border: 2px solid #4a9eff; box-shadow: 0 4px 12px rgba(74, 158, 255, 0.3);' : ''}">
+                    <div class="breakdown-header" style="${isTotal ? 'font-size: 1.1em; font-weight: bold; color: #4a9eff;' : ''}">${isTotal ? 'TOTAL - ' : ''}${hour}:00</div>
+                    <div class="breakdown-stats">
+                        Trades: ${data.trades}<br>
+                        Win Rate: ${data.trades > 0 ? ((data.wins / data.trades) * 100).toFixed(1) : '0.0'}%<br>
+                        P&L: <span class="${data.profit >= 0 ? 'positive' : 'negative'}">${formatCurrency(data.profit)}</span>
+                    </div>
                 </div>
+            `;
+
+            // Only show hours with trades
+            const activeTotalHours = Object.entries(totalHourlyData).filter(([hour, data]) => data.trades > 0);
+            const activeMonthHours = Object.entries(monthlyHourlyData).filter(([hour, data]) => data.trades > 0);
+
+            container.innerHTML = `
+                <div style="margin-bottom: 1.5rem;">
+                    <h4 style="color: #4a9eff; margin-bottom: 0.75rem;">TOTAL (All Time)</h4>
+                    <div class="breakdown-grid">
+                        ${activeTotalHours.map(([hour, data]) => renderHourCard(hour, data, true)).join('')}
+                    </div>
+                </div>
+                ${activeMonthHours.length > 0 ? `
+                    <div>
+                        <h4 style="color: var(--color-text-secondary); margin-bottom: 0.75rem;">Selected Month</h4>
+                        <div class="breakdown-grid">
+                            ${activeMonthHours.map(([hour, data]) => renderHourCard(hour, data, false)).join('')}
+                        </div>
+                    </div>
+                ` : '<div style="padding: 2rem; text-align: center; color: var(--color-text-secondary);">No data for this month</div>'}
             `;
         }
         
@@ -6100,16 +6230,30 @@ select.form-control {
             }
             updateAnalyticsMonthDisplay();
             updateMonthlyStats();
+            updateDailyStats();
+            updateOpenHourlyStats();
+            updateHourlyStats();
         }
 
         function updateAnalyticsMonthDisplay() {
             const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
                 'July', 'August', 'September', 'October', 'November', 'December'];
-            const displayElement = document.getElementById('analyticsMonthDisplay');
-            if (displayElement) {
-                displayElement.textContent =
-                    `${monthNames[appState.analyticsCurrentMonth]} ${appState.analyticsCurrentYear}`;
-            }
+            const displayText = `${monthNames[appState.analyticsCurrentMonth]} ${appState.analyticsCurrentYear}`;
+
+            // Update all analytics month displays
+            const displayElements = [
+                'analyticsMonthDisplay',
+                'analyticsDailyMonthDisplay',
+                'analyticsOpenHourlyMonthDisplay',
+                'analyticsCloseHourlyMonthDisplay'
+            ];
+
+            displayElements.forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.textContent = displayText;
+                }
+            });
         }
 
         // AI Analysis Functions
