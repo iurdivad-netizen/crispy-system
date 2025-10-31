@@ -3568,6 +3568,13 @@ select.form-control {
             const trade = appState.trades[tradeIndex];
             const container = document.getElementById(`details_${tradeIndex}`);
 
+            // Log for debugging
+            console.log('renderTradeDetails - Rendering:', {
+                tradeIndex,
+                tradeId: trade.id,
+                rulesFollowed: trade.rulesFollowed
+            });
+
             container.innerHTML = `
                 <div class="form-grid">
                     <div class="form-group">
@@ -5346,25 +5353,28 @@ select.form-control {
                 trade.rulesFollowed = trade.rulesFollowed.filter(id => id !== ruleId);
             }
 
-            // Update statistics and displays immediately
-            // Don't regenerate the form to avoid visual flickering
-            calculateStatistics();
-            updateStatisticsDisplay();
-            updateCustomRulesDisplay();
-            updateRuleCombinationsAnalysis();
+            // Log for debugging
+            console.log('toggleTradeRule - Updated:', {
+                tradeIndex,
+                ruleId,
+                checked,
+                rulesFollowed: [...trade.rulesFollowed],
+                tradeId: trade.id
+            });
 
-            // Debounce table updates to persist changes without interfering with rapid checkbox clicks
-            // Clear any pending update
-            if (toggleTradeRule.updateTimeout) {
-                clearTimeout(toggleTradeRule.updateTimeout);
-            }
+            // Defer updates slightly to let checkbox state settle
+            setTimeout(() => {
+                // Only recalculate statistics, don't update any displays
+                // This prevents any potential interference with the checkbox DOM
+                calculateStatistics();
 
-            // Schedule table update after user is done clicking checkboxes
-            toggleTradeRule.updateTimeout = setTimeout(() => {
-                // Store active trade to restore after table update
-                appState.activeTradeIndex = tradeIndex;
-                updateTradesTable();
-            }, 500); // 500ms debounce - waits for user to finish clicking
+                // Update displays after a delay to ensure checkbox is stable
+                setTimeout(() => {
+                    updateStatisticsDisplay();
+                    updateCustomRulesDisplay();
+                    updateRuleCombinationsAnalysis();
+                }, 100);
+            }, 0);
         }
         
         // Lightbox Functions
