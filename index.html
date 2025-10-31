@@ -4328,13 +4328,15 @@ select.form-control {
             
             // CSV Headers
             const headers = [
-                'Date', 'Time', 'Symbol', 'Direction', 'Entry Price', 'Exit Price',
+                'Open Date', 'Open Time', 'Close Date', 'Close Time', 'Symbol', 'Direction', 'Entry Price', 'Exit Price',
                 'Volume', 'Pips', 'Gross P/L', 'Net P/L', 'Commission', 'Swap',
                 'Setup Type', 'Market Condition', 'Emotional State', 'Rule Adherence', 'Notes'
             ];
-            
+
             // CSV Rows
             const rows = appState.trades.map(trade => [
+                trade.openDate || '',
+                trade.openTime || '',
                 formatDate(trade.closeTime || trade.date),
                 formatTime(trade.closeTime || trade.time),
                 trade.symbol,
