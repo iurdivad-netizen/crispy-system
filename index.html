@@ -2126,7 +2126,10 @@ select.form-control {
                     <div id="promptCopiedMessage" style="display: none; padding: var(--space-8); background: var(--color-bg-3); color: var(--color-success); border-radius: var(--radius-base); font-size: var(--font-size-sm); margin-bottom: var(--space-16);">✅ Prompt copied to clipboard!</div>
                     
                     <div id="analysisPrompt" style="margin-top: 1rem; display: none;">
-                        <textarea id="promptText" class="form-control" rows="15" readonly></textarea>
+                        <label for="promptText" style="display: block; margin-bottom: var(--space-8); font-size: var(--font-size-sm); color: var(--color-text-secondary);">
+                            💡 Edit the prompt below if needed, then click Copy Prompt
+                        </label>
+                        <textarea id="promptText" class="form-control" rows="15"></textarea>
                     </div>
                 </div>
             </div>
