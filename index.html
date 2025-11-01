@@ -1284,6 +1284,24 @@ select.form-control {
             <h1 class="gradient-header">Z-APP</h1>
             <h2 style="text-align: center; color: #94a3b8; font-size: 1.25rem; margin-top: -1rem; margin-bottom: 2rem; font-weight: 400;">Comprehensive Trading Journal</h2>
 
+            <!-- Save Status Indicator -->
+            <div style="text-align: center; margin-bottom: 1rem; padding: 0.75rem; background: var(--color-bg-1); border: 1px solid var(--color-border); border-radius: var(--radius-base); display: flex; justify-content: center; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                <span id="saveStatusIndicator" style="font-size: var(--font-size-sm); font-weight: var(--font-weight-medium);">
+                    💾 Not saved
+                </span>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button class="btn btn--sm btn--secondary" onclick="saveToLocalStorage(); showMessage('✅ Manual save successful');" title="Save data now">
+                        💾 Save Now
+                    </button>
+                    <button class="btn btn--sm btn--secondary" onclick="showBackupRestoreUI()" title="View and restore backups">
+                        📦 Backups
+                    </button>
+                    <button class="btn btn--sm btn--secondary" onclick="showStorageInfo()" title="View storage information">
+                        📊 Storage Info
+                    </button>
+                </div>
+            </div>
+
             <!-- Controls -->
             <div class="controls">
                 <input type="file" id="csvInput" class="file-input" accept=".csv" />
@@ -1302,12 +1320,12 @@ select.form-control {
                     <option value="append">Append</option>
                     <option value="update-open-datetime">Update Open Date/Time</option>
                 </select>
-                
+
                 <input type="file" id="jsonInput" class="file-input" accept=".json" />
                 <button class="btn btn-secondary" onclick="document.getElementById('jsonInput').click()">
                     📁 Import Data
                 </button>
-                
+
                 <button class="btn btn-secondary" onclick="printTrades()" id="printBtn" disabled>
                     🖨️ Print
                 </button>
@@ -2406,12 +2424,581 @@ select.form-control {
         const emotionalStates = ['Confident', 'Uncertain', 'Fearful', 'Greedy', 'Disciplined', 'Impulsive'];
         const ruleAdherence = ['Perfect', 'Custom', 'Partial', 'None'];
 
+        // ============================================================================
+        // DATA PERSISTENCE & AUTO-BACKUP SYSTEM
+        // ============================================================================
+
+        const STORAGE_KEYS = {
+            APP_STATE: 'tradingJournal_appState',
+            BACKUP_PREFIX: 'tradingJournal_backup_',
+            LAST_SAVE: 'tradingJournal_lastSave',
+            VERSION: 'tradingJournal_version'
+        };
+
+        const APP_VERSION = '1.0.0';
+        const AUTO_SAVE_INTERVAL = 30000; // 30 seconds
+        const MAX_BACKUPS = 10; // Keep last 10 backups
+
+        let autoSaveTimer = null;
+        let lastSaveTimestamp = null;
+        let saveStatusUpdateTimer = null;
+
+        // Save app state to localStorage
+        function saveToLocalStorage() {
+            try {
+                const dataToSave = {
+                    version: APP_VERSION,
+                    timestamp: new Date().toISOString(),
+                    trades: appState.trades,
+                    startingBalance: appState.startingBalance,
+                    customRules: appState.customRules,
+                    strategyContext: appState.strategyContext,
+                    visibleStats: appState.visibleStats,
+                    visibleCharts: appState.visibleCharts,
+                    visibleColumns: appState.visibleColumns,
+                    aiPromptInclusions: appState.aiPromptInclusions,
+                    showTradeHistory: appState.showTradeHistory,
+                    showAccountSettings: appState.showAccountSettings
+                };
+
+                const jsonString = JSON.stringify(dataToSave);
+
+                // Check storage size (localStorage has ~5-10MB limit)
+                const sizeInBytes = new Blob([jsonString]).size;
+                const sizeInMB = (sizeInBytes / (1024 * 1024)).toFixed(2);
+
+                if (sizeInBytes > 5 * 1024 * 1024) { // 5MB warning
+                    console.warn(`Data size (${sizeInMB}MB) is approaching localStorage limit. Consider exporting and clearing old data.`);
+                }
+
+                localStorage.setItem(STORAGE_KEYS.APP_STATE, jsonString);
+                localStorage.setItem(STORAGE_KEYS.LAST_SAVE, new Date().toISOString());
+                localStorage.setItem(STORAGE_KEYS.VERSION, APP_VERSION);
+
+                lastSaveTimestamp = new Date();
+                updateSaveStatusIndicator();
+
+                return true;
+            } catch (error) {
+                if (error.name === 'QuotaExceededError') {
+                    showMessage('⚠️ Storage limit exceeded! Export your data and clear old trades.', 'error');
+                    console.error('LocalStorage quota exceeded:', error);
+                } else {
+                    console.error('Error saving to localStorage:', error);
+                    showMessage('Failed to save data: ' + error.message, 'error');
+                }
+                return false;
+            }
+        }
+
+        // Load app state from localStorage
+        function loadFromLocalStorage() {
+            try {
+                const savedData = localStorage.getItem(STORAGE_KEYS.APP_STATE);
+                const lastSave = localStorage.getItem(STORAGE_KEYS.LAST_SAVE);
+
+                if (!savedData) {
+                    console.log('No saved data found in localStorage');
+                    return false;
+                }
+
+                const data = JSON.parse(savedData);
+
+                // Version check
+                if (data.version && data.version !== APP_VERSION) {
+                    console.warn(`Data version mismatch: ${data.version} vs ${APP_VERSION}`);
+                    // Could implement migration logic here if needed
+                }
+
+                // Restore data
+                if (data.trades && Array.isArray(data.trades)) {
+                    appState.trades = data.trades;
+                }
+                if (data.startingBalance !== undefined) {
+                    appState.startingBalance = data.startingBalance;
+                }
+                if (data.customRules && Array.isArray(data.customRules)) {
+                    appState.customRules = data.customRules;
+                }
+                if (data.strategyContext) {
+                    appState.strategyContext = data.strategyContext;
+                }
+                if (data.visibleStats) {
+                    Object.assign(appState.visibleStats, data.visibleStats);
+                }
+                if (data.visibleCharts) {
+                    Object.assign(appState.visibleCharts, data.visibleCharts);
+                }
+                if (data.visibleColumns) {
+                    Object.assign(appState.visibleColumns, data.visibleColumns);
+                }
+                if (data.aiPromptInclusions) {
+                    Object.assign(appState.aiPromptInclusions, data.aiPromptInclusions);
+                }
+                if (data.showTradeHistory !== undefined) {
+                    appState.showTradeHistory = data.showTradeHistory;
+                }
+                if (data.showAccountSettings !== undefined) {
+                    appState.showAccountSettings = data.showAccountSettings;
+                }
+
+                lastSaveTimestamp = lastSave ? new Date(lastSave) : new Date();
+
+                const tradeCount = appState.trades.length;
+                const timeAgo = getTimeAgo(lastSaveTimestamp);
+                showMessage(`✅ Loaded ${tradeCount} trade${tradeCount !== 1 ? 's' : ''} from last session (${timeAgo})`, 'success');
+
+                return true;
+            } catch (error) {
+                console.error('Error loading from localStorage:', error);
+                showMessage('Failed to load saved data: ' + error.message, 'error');
+                return false;
+            }
+        }
+
+        // Create a backup version
+        function createBackup() {
+            try {
+                const timestamp = new Date().toISOString();
+                const backupKey = STORAGE_KEYS.BACKUP_PREFIX + timestamp;
+
+                const dataToBackup = {
+                    version: APP_VERSION,
+                    timestamp: timestamp,
+                    trades: appState.trades,
+                    startingBalance: appState.startingBalance,
+                    customRules: appState.customRules,
+                    strategyContext: appState.strategyContext,
+                    tradeCount: appState.trades.length
+                };
+
+                localStorage.setItem(backupKey, JSON.stringify(dataToBackup));
+
+                // Clean up old backups (keep only MAX_BACKUPS)
+                cleanupOldBackups();
+
+                return true;
+            } catch (error) {
+                console.error('Error creating backup:', error);
+                return false;
+            }
+        }
+
+        // Get all available backups
+        function getAvailableBackups() {
+            const backups = [];
+
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith(STORAGE_KEYS.BACKUP_PREFIX)) {
+                    try {
+                        const data = JSON.parse(localStorage.getItem(key));
+                        backups.push({
+                            key: key,
+                            timestamp: data.timestamp,
+                            tradeCount: data.tradeCount || 0,
+                            version: data.version || 'unknown'
+                        });
+                    } catch (error) {
+                        console.error('Error parsing backup:', key, error);
+                    }
+                }
+            }
+
+            // Sort by timestamp (newest first)
+            backups.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+            return backups;
+        }
+
+        // Restore from a specific backup
+        function restoreFromBackup(backupKey) {
+            try {
+                const backupData = localStorage.getItem(backupKey);
+                if (!backupData) {
+                    showMessage('Backup not found', 'error');
+                    return false;
+                }
+
+                const data = JSON.parse(backupData);
+
+                // Confirm with user
+                const confirmed = confirm(
+                    `Restore backup from ${new Date(data.timestamp).toLocaleString()}?\n` +
+                    `This will replace your current data with ${data.tradeCount} trades.\n\n` +
+                    `Current data will be backed up before restore.`
+                );
+
+                if (!confirmed) return false;
+
+                // Create backup of current state before restoring
+                createBackup();
+
+                // Restore the backup
+                if (data.trades) appState.trades = data.trades;
+                if (data.startingBalance !== undefined) appState.startingBalance = data.startingBalance;
+                if (data.customRules) appState.customRules = data.customRules;
+                if (data.strategyContext) appState.strategyContext = data.strategyContext;
+
+                // Save to current storage
+                saveToLocalStorage();
+
+                // Update UI
+                updateUI();
+
+                showMessage(`✅ Restored backup from ${new Date(data.timestamp).toLocaleString()}`, 'success');
+                return true;
+            } catch (error) {
+                console.error('Error restoring backup:', error);
+                showMessage('Failed to restore backup: ' + error.message, 'error');
+                return false;
+            }
+        }
+
+        // Clean up old backups
+        function cleanupOldBackups() {
+            const backups = getAvailableBackups();
+
+            // Remove backups beyond MAX_BACKUPS
+            if (backups.length > MAX_BACKUPS) {
+                const toDelete = backups.slice(MAX_BACKUPS);
+                toDelete.forEach(backup => {
+                    localStorage.removeItem(backup.key);
+                });
+                console.log(`Cleaned up ${toDelete.length} old backup(s)`);
+            }
+        }
+
+        // Start auto-save timer
+        function startAutoSave() {
+            if (autoSaveTimer) {
+                clearInterval(autoSaveTimer);
+            }
+
+            autoSaveTimer = setInterval(() => {
+                if (appState.trades.length > 0) {
+                    saveToLocalStorage();
+                    console.log('Auto-save completed');
+                }
+            }, AUTO_SAVE_INTERVAL);
+
+            console.log(`Auto-save started (every ${AUTO_SAVE_INTERVAL / 1000} seconds)`);
+        }
+
+        // Stop auto-save timer
+        function stopAutoSave() {
+            if (autoSaveTimer) {
+                clearInterval(autoSaveTimer);
+                autoSaveTimer = null;
+                console.log('Auto-save stopped');
+            }
+        }
+
+        // Update save status indicator
+        function updateSaveStatusIndicator() {
+            const indicator = document.getElementById('saveStatusIndicator');
+            if (!indicator) return;
+
+            if (!lastSaveTimestamp) {
+                indicator.innerHTML = '💾 Not saved';
+                indicator.style.color = 'var(--color-warning)';
+                return;
+            }
+
+            const timeAgo = getTimeAgo(lastSaveTimestamp);
+            indicator.innerHTML = `✅ Saved ${timeAgo}`;
+            indicator.style.color = 'var(--color-success)';
+        }
+
+        // Start periodic save status updates
+        function startSaveStatusUpdates() {
+            if (saveStatusUpdateTimer) {
+                clearInterval(saveStatusUpdateTimer);
+            }
+
+            saveStatusUpdateTimer = setInterval(() => {
+                updateSaveStatusIndicator();
+            }, 10000); // Update every 10 seconds
+        }
+
+        // Get human-readable time ago
+        function getTimeAgo(timestamp) {
+            const now = new Date();
+            const diff = now - new Date(timestamp);
+            const seconds = Math.floor(diff / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const hours = Math.floor(minutes / 60);
+            const days = Math.floor(hours / 24);
+
+            if (days > 0) return `${days} day${days !== 1 ? 's' : ''} ago`;
+            if (hours > 0) return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
+            if (minutes > 0) return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`;
+            return 'just now';
+        }
+
+        // Clear all data (including backups)
+        function clearAllStoredData() {
+            const confirmed = confirm(
+                '⚠️ WARNING: This will delete ALL data including backups!\n\n' +
+                'This action cannot be undone. Are you absolutely sure?'
+            );
+
+            if (!confirmed) return false;
+
+            try {
+                // Remove all trading journal keys
+                const keysToRemove = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith('tradingJournal_')) {
+                        keysToRemove.push(key);
+                    }
+                }
+
+                keysToRemove.forEach(key => localStorage.removeItem(key));
+
+                showMessage(`✅ Cleared all stored data (${keysToRemove.length} items)`, 'success');
+                return true;
+            } catch (error) {
+                console.error('Error clearing storage:', error);
+                showMessage('Failed to clear storage: ' + error.message, 'error');
+                return false;
+            }
+        }
+
+        // Show backup/restore UI
+        function showBackupRestoreUI() {
+            const backups = getAvailableBackups();
+
+            let html = '<div style="max-width: 600px; margin: 2rem auto; padding: 1.5rem; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg);">';
+            html += '<h3 style="margin-top: 0;">📦 Backup & Restore</h3>';
+
+            if (backups.length === 0) {
+                html += '<p style="color: var(--color-text-secondary);">No backups available yet. Backups are created automatically when you restore data or can be created manually.</p>';
+            } else {
+                html += `<p style="color: var(--color-text-secondary); margin-bottom: 1rem;">Found ${backups.length} backup${backups.length !== 1 ? 's' : ''} (keeping last ${MAX_BACKUPS}):</p>`;
+                html += '<div style="max-height: 400px; overflow-y: auto;">';
+
+                backups.forEach((backup, index) => {
+                    const date = new Date(backup.timestamp);
+                    const timeAgo = getTimeAgo(date);
+                    html += `
+                        <div style="padding: 1rem; margin-bottom: 0.5rem; background: var(--color-secondary); border-radius: var(--radius-base); display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div style="font-weight: var(--font-weight-semibold);">${date.toLocaleString()}</div>
+                                <div style="font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-top: 0.25rem;">
+                                    ${backup.tradeCount} trades • ${timeAgo} • v${backup.version}
+                                </div>
+                            </div>
+                            <button onclick="restoreFromBackup('${backup.key}')" class="btn btn--sm" style="white-space: nowrap;">
+                                🔄 Restore
+                            </button>
+                        </div>
+                    `;
+                });
+
+                html += '</div>';
+            }
+
+            html += '<div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--color-border); display: flex; gap: 0.5rem; flex-wrap: wrap;">';
+            html += '<button onclick="createBackup(); showBackupRestoreUI();" class="btn btn--sm">📥 Create Backup Now</button>';
+            html += '<button onclick="document.getElementById(\'backupRestorePanel\').remove();" class="btn btn--secondary btn--sm">Close</button>';
+            html += '</div>';
+
+            html += '</div>';
+
+            // Remove existing panel if any
+            const existingPanel = document.getElementById('backupRestorePanel');
+            if (existingPanel) existingPanel.remove();
+
+            // Create and show panel
+            const panel = document.createElement('div');
+            panel.id = 'backupRestorePanel';
+            panel.innerHTML = html;
+            document.body.appendChild(panel);
+        }
+
+        // Show storage information
+        function showStorageInfo() {
+            try {
+                const savedData = localStorage.getItem(STORAGE_KEYS.APP_STATE);
+                const backups = getAvailableBackups();
+
+                let totalSize = 0;
+                let breakdown = [];
+
+                // Calculate main app state size
+                if (savedData) {
+                    const appStateSize = new Blob([savedData]).size;
+                    totalSize += appStateSize;
+                    breakdown.push({
+                        name: 'Current Data',
+                        size: appStateSize,
+                        percentage: 0  // Will calculate after total
+                    });
+                }
+
+                // Calculate backup sizes
+                let backupsTotalSize = 0;
+                backups.forEach(backup => {
+                    const data = localStorage.getItem(backup.key);
+                    if (data) {
+                        const size = new Blob([data]).size;
+                        backupsTotalSize += size;
+                        totalSize += size;
+                    }
+                });
+
+                if (backupsTotalSize > 0) {
+                    breakdown.push({
+                        name: `Backups (${backups.length})`,
+                        size: backupsTotalSize,
+                        percentage: 0
+                    });
+                }
+
+                // Calculate percentages
+                breakdown.forEach(item => {
+                    item.percentage = totalSize > 0 ? ((item.size / totalSize) * 100).toFixed(1) : 0;
+                });
+
+                const totalSizeMB = (totalSize / (1024 * 1024)).toFixed(2);
+                const limitMB = 5; // Typical localStorage limit is ~5-10MB
+                const usagePercent = ((totalSize / (limitMB * 1024 * 1024)) * 100).toFixed(1);
+
+                let html = '<div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: 500px; width: 90%; padding: 1.5rem; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); z-index: 10000;">';
+                html += '<h3 style="margin-top: 0;">📊 Storage Information</h3>';
+
+                // Total usage
+                html += '<div style="margin-bottom: 1.5rem;">';
+                html += `<div style="font-size: var(--font-size-lg); font-weight: var(--font-weight-semibold); margin-bottom: 0.5rem;">`;
+                html += `Total: ${totalSizeMB} MB / ~${limitMB} MB`;
+                html += '</div>';
+
+                // Progress bar
+                const progressColor = usagePercent < 70 ? 'var(--color-success)' : usagePercent < 90 ? 'var(--color-warning)' : 'var(--color-error)';
+                html += `<div style="width: 100%; height: 24px; background: var(--color-secondary); border-radius: var(--radius-full); overflow: hidden; position: relative;">`;
+                html += `<div style="width: ${Math.min(usagePercent, 100)}%; height: 100%; background: ${progressColor}; transition: width 0.3s ease;"></div>`;
+                html += `<span style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); color: var(--color-text);">${usagePercent}%</span>`;
+                html += '</div>';
+                html += '</div>';
+
+                // Breakdown
+                if (breakdown.length > 0) {
+                    html += '<div style="margin-bottom: 1.5rem;">';
+                    html += '<h4 style="font-size: var(--font-size-sm); margin-bottom: 0.75rem;">Storage Breakdown:</h4>';
+                    breakdown.forEach(item => {
+                        const sizeMB = (item.size / (1024 * 1024)).toFixed(2);
+                        html += '<div style="display: flex; justify-content: space-between; padding: 0.5rem; background: var(--color-secondary); border-radius: var(--radius-sm); margin-bottom: 0.5rem;">';
+                        html += `<span style="font-size: var(--font-size-sm);">${item.name}</span>`;
+                        html += `<span style="font-size: var(--font-size-sm); color: var(--color-text-secondary);">${sizeMB} MB (${item.percentage}%)</span>`;
+                        html += '</div>';
+                    });
+                    html += '</div>';
+                }
+
+                // Trade statistics
+                html += '<div style="padding: 1rem; background: var(--color-bg-8); border-radius: var(--radius-base); margin-bottom: 1rem;">';
+                html += `<div style="font-size: var(--font-size-sm);"><strong>Total Trades:</strong> ${appState.trades.length}</div>`;
+                html += `<div style="font-size: var(--font-size-sm); margin-top: 0.25rem;"><strong>Total Backups:</strong> ${backups.length} / ${MAX_BACKUPS}</div>`;
+                if (lastSaveTimestamp) {
+                    html += `<div style="font-size: var(--font-size-sm); margin-top: 0.25rem;"><strong>Last Saved:</strong> ${getTimeAgo(lastSaveTimestamp)}</div>`;
+                }
+                html += '</div>';
+
+                // Warnings/tips
+                if (usagePercent > 80) {
+                    html += '<div style="padding: 1rem; background: rgba(var(--color-error-rgb), 0.1); border: 1px solid var(--color-error); border-radius: var(--radius-base); margin-bottom: 1rem; font-size: var(--font-size-sm);">';
+                    html += '<strong>⚠️ Storage Almost Full!</strong><br>';
+                    html += 'Consider exporting your data and clearing old trades to free up space.';
+                    html += '</div>';
+                } else if (appState.trades.length > 500) {
+                    html += '<div style="padding: 1rem; background: rgba(var(--color-warning-rgb), 0.1); border: 1px solid var(--color-warning); border-radius: var(--radius-base); margin-bottom: 1rem; font-size: var(--font-size-sm);">';
+                    html += '<strong>💡 Tip:</strong> You have many trades. Consider exporting periodically to keep backups safe.';
+                    html += '</div>';
+                }
+
+                html += '<div style="display: flex; gap: 0.5rem; justify-content: flex-end;">';
+                html += '<button onclick="document.getElementById(\'storageInfoPanel\').remove();" class="btn btn--sm">Close</button>';
+                html += '</div>';
+
+                html += '</div>';
+
+                // Add backdrop
+                html = `<div onclick="document.getElementById('storageInfoPanel').remove();" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999;"></div>` + html;
+
+                // Remove existing panel if any
+                const existingPanel = document.getElementById('storageInfoPanel');
+                if (existingPanel) existingPanel.remove();
+
+                // Create and show panel
+                const panel = document.createElement('div');
+                panel.id = 'storageInfoPanel';
+                panel.innerHTML = html;
+                document.body.appendChild(panel);
+            } catch (error) {
+                console.error('Error showing storage info:', error);
+                showMessage('Failed to load storage information', 'error');
+            }
+        }
+
+        // Check if user should be reminded to export/backup
+        function checkBackupReminder() {
+            try {
+                const lastExportKey = 'tradingJournal_lastExport';
+                const lastExport = localStorage.getItem(lastExportKey);
+
+                if (!lastExport && appState.trades.length > 20) {
+                    // Never exported and has significant trades
+                    setTimeout(() => {
+                        showMessage('💡 Tip: Export your data regularly to keep safe backups!', 'info');
+                    }, 3000);
+                    return;
+                }
+
+                if (lastExport) {
+                    const daysSinceExport = (new Date() - new Date(lastExport)) / (1000 * 60 * 60 * 24);
+                    if (daysSinceExport > 7 && appState.trades.length > 10) {
+                        setTimeout(() => {
+                            showMessage(`📅 Reminder: It's been ${Math.floor(daysSinceExport)} days since your last export. Consider backing up your data!`, 'info');
+                        }, 5000);
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking backup reminder:', error);
+            }
+        }
+
+        // Mark when user exports data (to track for reminders)
+        function markExportTimestamp() {
+            try {
+                localStorage.setItem('tradingJournal_lastExport', new Date().toISOString());
+            } catch (error) {
+                console.error('Error marking export timestamp:', error);
+            }
+        }
+
+        // ============================================================================
+        // END DATA PERSISTENCE & AUTO-BACKUP SYSTEM
+        // ============================================================================
+
         // Initialize app
         document.addEventListener('DOMContentLoaded', function() {
+            // Load saved data first
+            loadFromLocalStorage();
+
             setupEventListeners();
             initializeDefaultRules();
             initializeUIStates();
             updateUI();
+
+            // Start auto-save and status updates
+            startAutoSave();
+            startSaveStatusUpdates();
+            updateSaveStatusIndicator();
+
+            // Show reminder to export data if not done in a while
+            checkBackupReminder();
         });
         
         function initializeUIStates() {
@@ -2691,18 +3278,21 @@ select.form-control {
                     }
 
                     updateUI();
-                    
+
                     // Auto-expand trade history after successful import
                     if (result.trades.length > 0) {
                         appState.showTradeHistory = true;
                         updateTradeHistoryCollapseState();
                     }
+
+                    // Save to localStorage after successful import
+                    saveToLocalStorage();
                 } catch (error) {
                     console.error('CSV parsing error:', error);
                     showMessage('❌ Error: ' + error.message, 'error');
                 }
             };
-            
+
             reader.readAsText(file);
         }
         
@@ -4623,7 +5213,10 @@ select.form-control {
                     type: exportType,
                     timestamp: new Date().toLocaleTimeString()
                 });
-                
+
+                // Mark export timestamp for backup reminders
+                markExportTimestamp();
+
                 showMessage(`✅ Exported successfully!\nFile: ${filename}\nType: ${exportType}`);
             } catch (error) {
                 console.error('Export error:', error);
@@ -4881,8 +5474,9 @@ select.form-control {
                                 importedCount++;
                             }
                         });
-                        
+
                         updateUI();
+                        saveToLocalStorage();
                         showMessage(`✅ Imported screenshots for ${importedCount} trades\n\nScreenshots have been added to your existing trades.`);
                         return;
                     }
@@ -5071,6 +5665,9 @@ select.form-control {
                             appState.showTradeHistory = true;
                             updateTradeHistoryCollapseState();
                         }
+
+                        // Save to localStorage after successful import
+                        saveToLocalStorage();
                     } else if (data.trades && Array.isArray(data.trades)) {
                         // Filter out trades with invalid symbols
                         const validTrades = data.trades.filter(trade => {
@@ -5229,6 +5826,9 @@ select.form-control {
                             appState.showTradeHistory = true;
                             updateTradeHistoryCollapseState();
                         }
+
+                        // Save to localStorage after successful import
+                        saveToLocalStorage();
                     } else {
                         throw new Error('Invalid file format - expected trades array or journal export');
                     }
@@ -8037,6 +8637,10 @@ select.form-control {
                 appState.strategyContext = '';
                 document.getElementById('strategyContextTextarea').value = '';
                 updateStrategyContextCounter();
+
+                // Also clear localStorage data
+                clearAllStoredData();
+
                 updateUI();
                 showMessage('✅ All data cleared successfully');
             }
