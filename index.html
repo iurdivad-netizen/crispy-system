@@ -1385,6 +1385,10 @@ select.form-control {
                     📁 Import Data
                 </button>
 
+                <button class="btn" onclick="toggleAPIImportModal()" title="Import trades from API">
+                    🔌 Import from API
+                </button>
+
                 <button class="btn btn-secondary" onclick="printTrades()" id="printBtn" disabled>
                     🖨️ Print
                 </button>
@@ -1648,7 +1652,108 @@ select.form-control {
                 </div>
             </div>
 
+            <!-- API SETTINGS SECTION -->
+            <div class="section" style="margin-bottom: 1.5rem;">
+                <button
+                    onclick="toggleAPISettings()"
+                    class="btn btn--outline"
+                    style="width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-base); margin-bottom: 0; font-weight: var(--font-weight-medium);">
+                    <div style="display: flex; align-items: center; gap: var(--space-12);">
+                        <span style="font-size: var(--font-size-lg);">🔌</span>
+                        <span>API Settings</span>
+                        <span style="font-size: var(--font-size-xs); color: var(--color-text-secondary);">(Import Historic Trades)</span>
+                    </div>
+                    <span id="apiSettingsArrow" style="font-size: var(--font-size-xl); transition: transform var(--duration-normal) var(--ease-standard);">▶</span>
+                </button>
 
+                <div id="apiSettingsSection" style="display: none; padding: 1rem; background: var(--color-surface); border: 1px solid var(--color-border); border-top: none; border-radius: 0 0 var(--radius-base) var(--radius-base);">
+                    <!-- MetaTrader API Settings -->
+                    <div style="margin-bottom: 1.5rem; padding: 1rem; background: var(--color-bg-1); border-radius: var(--radius-base);">
+                        <label class="form-label" style="display: flex; align-items: center; gap: var(--space-8); margin-bottom: var(--space-12); font-weight: var(--font-weight-medium);">
+                            <span>📊</span>
+                            <span>MetaTrader API (MetaApi)</span>
+                        </label>
+
+                        <div style="margin-bottom: var(--space-8);">
+                            <label style="display: flex; align-items: center; gap: var(--space-8); margin-bottom: var(--space-4);">
+                                <input
+                                    type="checkbox"
+                                    id="mtEnabled"
+                                    onchange="apiCredentials.metatrader.enabled = this.checked"
+                                    style="accent-color: var(--color-primary);">
+                                <span style="font-size: var(--font-size-sm);">Enable MetaTrader API</span>
+                            </label>
+                        </div>
+
+                        <div style="margin-bottom: var(--space-8);">
+                            <label class="form-label" style="font-size: var(--font-size-xs); margin-bottom: var(--space-4);">Auth Token</label>
+                            <input
+                                type="password"
+                                id="mtAuthToken"
+                                class="form-control"
+                                placeholder="Your MetaApi auth token"
+                                onchange="apiCredentials.metatrader.authToken = this.value"
+                                style="font-size: var(--font-size-sm);">
+                            <p style="font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-top: var(--space-4); margin-bottom: 0;">
+                                Get your token at <a href="https://app.metaapi.cloud/token" target="_blank" rel="noopener noreferrer" style="color: var(--color-primary);">app.metaapi.cloud/token</a>
+                            </p>
+                        </div>
+
+                        <div style="margin-bottom: var(--space-8);">
+                            <label class="form-label" style="font-size: var(--font-size-xs); margin-bottom: var(--space-4);">Account ID</label>
+                            <input
+                                type="text"
+                                id="mtAccountId"
+                                class="form-control"
+                                placeholder="Your MetaApi account ID"
+                                onchange="apiCredentials.metatrader.accountId = this.value"
+                                style="font-size: var(--font-size-sm);">
+                        </div>
+                    </div>
+
+                    <!-- cTrader API Settings -->
+                    <div style="margin-bottom: 1.5rem; padding: 1rem; background: var(--color-bg-3); border-radius: var(--radius-base);">
+                        <label class="form-label" style="display: flex; align-items: center; gap: var(--space-8); margin-bottom: var(--space-12); font-weight: var(--font-weight-medium);">
+                            <span>🔷</span>
+                            <span>cTrader API</span>
+                            <span style="font-size: var(--font-size-xs); padding: 2px 8px; background: var(--color-orange-400); color: white; border-radius: var(--radius-sm);">Advanced</span>
+                        </label>
+
+                        <div style="padding: var(--space-12); background: rgba(var(--color-orange-500-rgb), 0.1); border-left: 3px solid var(--color-orange-400); border-radius: var(--radius-sm); margin-bottom: var(--space-12);">
+                            <p style="font-size: var(--font-size-xs); color: var(--color-text); margin: 0;">
+                                ⚠️ cTrader API requires WebSocket connection with Protocol Buffers. This requires additional JavaScript libraries and is not yet implemented in this version. Please use CSV import for cTrader data.
+                            </p>
+                        </div>
+
+                        <div style="margin-bottom: var(--space-8);">
+                            <label style="display: flex; align-items: center; gap: var(--space-8); margin-bottom: var(--space-4);">
+                                <input
+                                    type="checkbox"
+                                    id="ctEnabled"
+                                    disabled
+                                    style="accent-color: var(--color-primary);">
+                                <span style="font-size: var(--font-size-sm); opacity: 0.6;">Enable cTrader API (Coming Soon)</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Save Button -->
+                    <div style="display: flex; gap: var(--space-8);">
+                        <button
+                            onclick="saveAPICredentials()"
+                            class="btn btn--primary"
+                            style="flex: 1;">
+                            💾 Save API Settings
+                        </button>
+                        <button
+                            onclick="toggleAPIImportModal()"
+                            class="btn btn--secondary"
+                            style="flex: 1;">
+                            📥 Import from API
+                        </button>
+                    </div>
+                </div>
+            </div>
 
             <!-- Statistics Dashboard -->
             <div class="section" id="statisticsSection" style="display: none;">
@@ -2239,6 +2344,56 @@ select.form-control {
         <img id="lightboxImage" alt="Trade Screenshot">
     </div>
 
+    <!-- API Import Modal -->
+    <div id="apiImportModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); z-index: 10000; justify-content: center; align-items: center;">
+        <div style="background: var(--color-surface); padding: 2rem; border-radius: var(--radius-lg); max-width: 500px; width: 90%; box-shadow: var(--shadow-xl);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h3 style="margin: 0; color: var(--color-text); display: flex; align-items: center; gap: var(--space-8);">
+                    <span>📥</span>
+                    <span>Import from API</span>
+                </h3>
+                <button onclick="toggleAPIImportModal()" style="background: none; border: none; font-size: 2rem; color: var(--color-text-secondary); cursor: pointer; line-height: 1; padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;" onmouseover="this.style.color='var(--color-text)'" onmouseout="this.style.color='var(--color-text-secondary)'">×</button>
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+                <label class="form-label" style="display: block; margin-bottom: var(--space-8); font-weight: var(--font-weight-medium);">Platform</label>
+                <select id="apiPlatform" class="form-control">
+                    <option value="metatrader">MetaTrader (via MetaApi)</option>
+                    <option value="ctrader" disabled>cTrader (Coming Soon)</option>
+                </select>
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+                <label class="form-label" style="display: block; margin-bottom: var(--space-8); font-weight: var(--font-weight-medium);">Start Date</label>
+                <input type="date" id="apiStartDate" class="form-control">
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+                <label class="form-label" style="display: block; margin-bottom: var(--space-8); font-weight: var(--font-weight-medium);">End Date</label>
+                <input type="date" id="apiEndDate" class="form-control">
+            </div>
+
+            <div style="margin-bottom: 1.5rem;">
+                <label class="form-label" style="display: block; margin-bottom: var(--space-8); font-weight: var(--font-weight-medium);">Import Mode</label>
+                <select id="apiImportMode" class="form-control">
+                    <option value="append">Append (Add to existing trades)</option>
+                    <option value="overwrite">Overwrite (Replace all trades)</option>
+                </select>
+            </div>
+
+            <div style="padding: var(--space-12); background: var(--color-bg-1); border-radius: var(--radius-base); margin-bottom: 1.5rem;">
+                <p style="font-size: var(--font-size-xs); color: var(--color-text); margin: 0;">
+                    💡 Make sure you've configured your API credentials in the <strong>API Settings</strong> section before importing.
+                </p>
+            </div>
+
+            <div style="display: flex; gap: var(--space-8);">
+                <button onclick="toggleAPIImportModal()" class="btn btn--secondary" style="flex: 1;">Cancel</button>
+                <button onclick="handleAPIImport()" class="btn btn--primary" style="flex: 1;">Import Trades</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // ============================================================================
         // SECURITY FUNCTIONS - Added for XSS and injection protection
@@ -2491,7 +2646,8 @@ select.form-control {
             APP_STATE: 'tradingJournal_appState',
             BACKUP_PREFIX: 'tradingJournal_backup_',
             LAST_SAVE: 'tradingJournal_lastSave',
-            VERSION: 'tradingJournal_version'
+            VERSION: 'tradingJournal_version',
+            API_CONFIG: 'tradingJournal_apiConfig'
         };
 
         const APP_VERSION = '1.0.0';
@@ -2658,6 +2814,338 @@ select.form-control {
 
         // ============================================================================
         // END INDEXEDDB IMPLEMENTATION
+        // ============================================================================
+
+        // ============================================================================
+        // API INTEGRATION FOR HISTORIC TRADES
+        // ============================================================================
+
+        // API Configuration
+        const API_CONFIG = {
+            ctrader: {
+                name: 'cTrader Open API',
+                type: 'websocket', // cTrader uses WebSocket + Protocol Buffers
+                demoEndpoint: 'demo.ctraderapi.com:5035',
+                liveEndpoint: 'live.ctraderapi.com:5035',
+                rateLimit: 5, // 5 requests per second for historical data
+                maxTimeRangeMs: 604800000, // 1 week max per request
+                requiresWebSocket: true
+            },
+            metatrader: {
+                name: 'MetaTrader (via MetaApi)',
+                type: 'rest',
+                endpoint: 'https://metastats-api-v1.new-york.agiliumtrade.ai',
+                rateLimit: 10, // Configurable based on API plan
+                requiresWebSocket: false
+            }
+        };
+
+        // API credentials storage
+        let apiCredentials = {
+            ctrader: {
+                enabled: false,
+                clientId: '',
+                clientSecret: '',
+                accessToken: '',
+                accountId: '',
+                environment: 'demo' // 'demo' or 'live'
+            },
+            metatrader: {
+                enabled: false,
+                authToken: '',
+                accountId: ''
+            }
+        };
+
+        // Rate limiting for API calls
+        const apiRateLimiter = {
+            metatrader: {
+                lastCallTime: 0,
+                minInterval: 100 // 100ms between calls (10 calls per second)
+            },
+            ctrader: {
+                lastCallTime: 0,
+                minInterval: 200 // 200ms between calls (5 calls per second)
+            }
+        };
+
+        // Rate limiter helper
+        async function enforceRateLimit(platform) {
+            const limiter = apiRateLimiter[platform];
+            if (!limiter) return;
+
+            const now = Date.now();
+            const timeSinceLastCall = now - limiter.lastCallTime;
+
+            if (timeSinceLastCall < limiter.minInterval) {
+                const waitTime = limiter.minInterval - timeSinceLastCall;
+                await new Promise(resolve => setTimeout(resolve, waitTime));
+            }
+
+            limiter.lastCallTime = Date.now();
+        }
+
+        // Load API credentials from localStorage
+        function loadAPICredentials() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEYS.API_CONFIG);
+                if (saved) {
+                    apiCredentials = JSON.parse(saved);
+                }
+            } catch (error) {
+                console.error('Error loading API credentials:', error);
+            }
+        }
+
+        // Save API credentials to localStorage
+        function saveAPICredentials() {
+            try {
+                localStorage.setItem(STORAGE_KEYS.API_CONFIG, JSON.stringify(apiCredentials));
+                showMessage('✅ API credentials saved successfully');
+            } catch (error) {
+                console.error('Error saving API credentials:', error);
+                showMessage('❌ Error saving API credentials', 'error');
+            }
+        }
+
+        // Populate API credentials UI from loaded data
+        function populateAPICredentialsUI() {
+            try {
+                // MetaTrader fields
+                const mtEnabled = document.getElementById('mtEnabled');
+                const mtAuthToken = document.getElementById('mtAuthToken');
+                const mtAccountId = document.getElementById('mtAccountId');
+
+                if (mtEnabled) mtEnabled.checked = apiCredentials.metatrader.enabled || false;
+                if (mtAuthToken) mtAuthToken.value = apiCredentials.metatrader.authToken || '';
+                if (mtAccountId) mtAccountId.value = apiCredentials.metatrader.accountId || '';
+            } catch (error) {
+                console.error('Error populating API credentials UI:', error);
+            }
+        }
+
+        // Fetch historic trades from MetaTrader via MetaApi
+        async function fetchMetaTraderTrades(startDate, endDate) {
+            if (!apiCredentials.metatrader.enabled || !apiCredentials.metatrader.authToken) {
+                throw new Error('MetaTrader API not configured. Please set up your API credentials.');
+            }
+
+            const { authToken, accountId } = apiCredentials.metatrader;
+
+            if (!accountId) {
+                throw new Error('MetaTrader Account ID is required. Please configure it in API Settings.');
+            }
+
+            const endpoint = `${API_CONFIG.metatrader.endpoint}/users/current/accounts/${accountId}/historical-trades/${startDate}/${endDate}`;
+
+            try {
+                // Enforce rate limiting
+                await enforceRateLimit('metatrader');
+
+                showMessage('🔄 Fetching trades from MetaTrader API...');
+
+                const response = await fetch(endpoint, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'auth-token': authToken
+                    }
+                });
+
+                if (!response.ok) {
+                    let errorMessage = `HTTP ${response.status}`;
+                    try {
+                        const errorData = await response.json();
+                        errorMessage = errorData.message || errorData.error || errorMessage;
+                    } catch (e) {
+                        // If response is not JSON, try text
+                        try {
+                            errorMessage = await response.text();
+                        } catch (e2) {
+                            // Use default error message
+                        }
+                    }
+                    throw new Error(`MetaTrader API error (${response.status}): ${errorMessage}`);
+                }
+
+                const data = await response.json();
+                console.log('Received trades from MetaTrader API:', data);
+                return transformMetaTraderTrades(data);
+            } catch (error) {
+                console.error('MetaTrader API fetch error:', error);
+
+                // Provide user-friendly error messages
+                if (error.message.includes('Failed to fetch')) {
+                    throw new Error('Network error: Unable to connect to MetaTrader API. Please check your internet connection.');
+                } else if (error.message.includes('401')) {
+                    throw new Error('Authentication failed: Invalid auth token. Please check your API credentials.');
+                } else if (error.message.includes('404')) {
+                    throw new Error('Account not found: Please verify your Account ID in API Settings.');
+                } else {
+                    throw error;
+                }
+            }
+        }
+
+        // Transform MetaTrader API response to app trade format
+        function transformMetaTraderTrades(apiResponse) {
+            if (!Array.isArray(apiResponse)) {
+                console.warn('Unexpected MetaTrader API response format:', apiResponse);
+                return [];
+            }
+
+            return apiResponse.map(trade => {
+                // Parse opening and closing timestamps
+                const openDate = new Date(trade.openTime);
+                const closeDate = new Date(trade.closeTime);
+
+                return {
+                    id: trade.positionId || trade._id || `mt-${Date.now()}-${Math.random()}`,
+                    symbol: trade.symbol || '',
+                    direction: trade.type === 'DEAL_TYPE_BUY' || trade.type === 'buy' ? 'Buy' : 'Sell',
+                    openDate: openDate.toISOString().split('T')[0],
+                    openTime: openDate.toTimeString().split(' ')[0],
+                    date: closeDate.toISOString().split('T')[0],
+                    time: closeDate.toTimeString().split(' ')[0],
+                    closeTime: trade.closeTime,
+                    entryPrice: parseFloat(trade.openPrice) || 0,
+                    exitPrice: parseFloat(trade.closePrice) || 0,
+                    volume: parseFloat(trade.volume) || 0,
+                    pips: parseFloat(trade.pips) || 0,
+                    grossProfit: parseFloat(trade.profit) || 0,
+                    netProfit: parseFloat(trade.profit) || 0,
+                    netPL: parseFloat(trade.profit) || 0,
+                    profit: parseFloat(trade.profit) || 0,
+                    commission: parseFloat(trade.commission) || 0,
+                    swap: parseFloat(trade.swap) || 0,
+                    balance: parseFloat(trade.balance) || 0,
+                    setupType: '',
+                    marketCondition: '',
+                    emotionalState: '',
+                    ruleAdherence: '',
+                    notes: '',
+                    entryScreenshot: null,
+                    exitScreenshot: null,
+                    tradingViewEntry: '',
+                    tradingViewExit: '',
+                    rulesFollowed: []
+                };
+            }).filter(trade => validateTrade(trade));
+        }
+
+        // Note: cTrader WebSocket implementation requires additional libraries
+        // For now, we provide the configuration structure
+        async function fetchCTraderTrades(startDate, endDate) {
+            showMessage('⚠️ cTrader API requires WebSocket connection. This feature requires additional setup.', 'error');
+            throw new Error('cTrader WebSocket API not yet implemented. Please use CSV import or implement WebSocket client.');
+
+            // TODO: Implement WebSocket connection with Protocol Buffers
+            // Requirements:
+            // 1. Establish WebSocket connection to cTrader API endpoint
+            // 2. Authenticate using OAuth2 flow (clientId, clientSecret, accessToken)
+            // 3. Send ProtoOADealListReq message with:
+            //    - ctidTraderAccountId
+            //    - fromTimestamp (milliseconds since epoch)
+            //    - toTimestamp (milliseconds since epoch)
+            //    - maxRows (optional)
+            // 4. Receive ProtoOADealListRes response
+            // 5. Transform deals to app trade format
+            // 6. Handle rate limiting (5 requests/second for historical data)
+        }
+
+        // Import trades from API
+        async function importFromAPI(platform, startDate, endDate, mode = 'append') {
+            try {
+                let trades = [];
+
+                // Fetch trades based on platform
+                if (platform === 'metatrader') {
+                    trades = await fetchMetaTraderTrades(startDate, endDate);
+                } else if (platform === 'ctrader') {
+                    trades = await fetchCTraderTrades(startDate, endDate);
+                } else {
+                    throw new Error('Invalid platform selected');
+                }
+
+                if (trades.length === 0) {
+                    showMessage('ℹ️ No trades found in the specified date range');
+                    return;
+                }
+
+                // Import trades using existing logic
+                if (mode === 'overwrite') {
+                    appState.trades = trades;
+                    showMessage(`✅ Imported ${trades.length} trades from ${platform} API`);
+                } else if (mode === 'append') {
+                    // Append with duplicate detection
+                    const existingFingerprints = new Set(appState.trades.map(t => getTradeFingerprint(t)));
+                    const newTrades = trades.filter(t => !existingFingerprints.has(getTradeFingerprint(t)));
+                    appState.trades = [...appState.trades, ...newTrades];
+                    showMessage(`✅ Added ${newTrades.length} new trades from ${platform} API (${trades.length - newTrades.length} duplicates skipped)`);
+                } else {
+                    throw new Error('Invalid import mode');
+                }
+
+                // Refresh the display
+                displayTrades();
+                updateStats();
+                updateCharts();
+                await saveToLocalStorage();
+
+            } catch (error) {
+                console.error('API import error:', error);
+                showMessage(`❌ ${error.message}`, 'error');
+            }
+        }
+
+        // Toggle API settings section
+        function toggleAPISettings() {
+            const section = document.getElementById('apiSettingsSection');
+            const arrow = document.getElementById('apiSettingsArrow');
+            const isHidden = section.style.display === 'none';
+
+            section.style.display = isHidden ? 'block' : 'none';
+            arrow.style.transform = isHidden ? 'rotate(90deg)' : 'rotate(0deg)';
+        }
+
+        // Toggle API import modal
+        function toggleAPIImportModal() {
+            const modal = document.getElementById('apiImportModal');
+            modal.style.display = modal.style.display === 'none' ? 'flex' : 'none';
+        }
+
+        // Handle API import form submission
+        async function handleAPIImport() {
+            const platform = document.getElementById('apiPlatform').value;
+            const startDate = document.getElementById('apiStartDate').value;
+            const endDate = document.getElementById('apiEndDate').value;
+            const mode = document.getElementById('apiImportMode').value;
+
+            if (!startDate || !endDate) {
+                showMessage('❌ Please select both start and end dates', 'error');
+                return;
+            }
+
+            // Validate date range
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            if (start > end) {
+                showMessage('❌ Start date must be before end date', 'error');
+                return;
+            }
+
+            // Format dates for API (YYYY-MM-DD HH:MM:SS.SSS)
+            const formattedStart = `${startDate} 00:00:00.000`;
+            const formattedEnd = `${endDate} 23:59:59.999`;
+
+            // Close modal and start import
+            toggleAPIImportModal();
+            await importFromAPI(platform, formattedStart, formattedEnd, mode);
+        }
+
+        // ============================================================================
+        // END API INTEGRATION
         // ============================================================================
 
         // Save app state (using IndexedDB for larger capacity)
@@ -3276,6 +3764,10 @@ select.form-control {
 
             // Load saved data
             await loadFromLocalStorage();
+
+            // Load API credentials
+            loadAPICredentials();
+            populateAPICredentialsUI();
 
             setupEventListeners();
             initializeDefaultRules();
