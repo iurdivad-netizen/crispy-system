@@ -2071,6 +2071,10 @@ select.form-control {
                                 <span>Monthly Performance</span>
                             </label>
                             <label style="display: flex; align-items: center; gap: var(--space-8); font-size: var(--font-size-sm); color: var(--color-text);">
+                                <input type="checkbox" id="includeMonthOverMonth" checked onchange="updateAiPromptInclusion('monthOverMonthAnalysis', this.checked)" style="border-radius: var(--radius-sm);">
+                                <span>Month-over-Month Evolution</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: var(--space-8); font-size: var(--font-size-sm); color: var(--color-text);">
                                 <input type="checkbox" id="includeDailyPerformance" checked onchange="updateAiPromptInclusion('dailyPerformance', this.checked)" style="border-radius: var(--radius-sm);">
                                 <span>Daily Performance</span>
                             </label>
@@ -2319,6 +2323,7 @@ select.form-control {
                 emotionalState: true,
                 ruleAdherence: true,
                 monthlyPerformance: true,
+                monthOverMonthAnalysis: true,
                 dailyPerformance: true,
                 openHourlyPerformance: true,
                 closeHourlyPerformance: true,
@@ -7039,7 +7044,15 @@ select.form-control {
                     analysisData.closeHourlyPerformance = timeStats.closeHourly;
                 }
             }
-            
+
+            // Calculate month-over-month analysis if selected
+            if (inclusions.monthOverMonthAnalysis) {
+                const momAnalysis = calculateMonthOverMonthAnalysis();
+                if (momAnalysis.available) {
+                    analysisData.monthOverMonthAnalysis = momAnalysis;
+                }
+            }
+
             if (inclusions.customRules && appState.customRules.length > 0) {
                 analysisData.customRules = {
                     totalRules: appState.customRules.length,
@@ -7140,6 +7153,27 @@ select.form-control {
                 Object.entries(data.monthlyPerformance).forEach(([month, perf]) => {
                     const winRate = perf.trades > 0 ? (perf.wins / perf.trades * 100).toFixed(1) : '0.0';
                     prompt += `• ${month}: ${perf.trades} trades, ${winRate}% win rate, ${formatCurrency(perf.profit)} P&L\n`;
+                });
+                prompt += `\n`;
+            }
+
+            if (data.monthOverMonthAnalysis) {
+                const mom = data.monthOverMonthAnalysis;
+                prompt += `📈 MONTH-OVER-MONTH EVOLUTION ANALYSIS:\n`;
+                prompt += `• Total Months Analyzed: ${mom.summary.totalMonths}\n`;
+                prompt += `• Monthly Comparisons: ${mom.summary.comparisons}\n`;
+                prompt += `• Recent Trend (Last 3 Months): Win Rate ${mom.summary.recentTrend.winRate.toUpperCase()}, Profitability ${mom.summary.recentTrend.profitability.toUpperCase()}\n\n`;
+
+                prompt += `Monthly Comparisons:\n`;
+                mom.monthlyComparisons.forEach((comparison, index) => {
+                    const changeSymbol = (value) => value > 0 ? '↑' : value < 0 ? '↓' : '→';
+                    const trendEmoji = (trend) => trend === 'improving' ? '📈' : trend === 'declining' ? '📉' : '➡️';
+
+                    prompt += `\n${index + 1}. ${comparison.previousMonth} → ${comparison.currentMonth}:\n`;
+                    prompt += `   • Trades: ${comparison.previous.trades} → ${comparison.current.trades} (${changeSymbol(comparison.changes.trades)} ${comparison.changes.trades >= 0 ? '+' : ''}${comparison.changes.trades}, ${comparison.changes.tradesPercent.toFixed(1)}%) ${trendEmoji(comparison.trends.activity)}\n`;
+                    prompt += `   • Win Rate: ${comparison.previous.winRate.toFixed(1)}% → ${comparison.current.winRate.toFixed(1)}% (${changeSymbol(comparison.changes.winRate)} ${comparison.changes.winRate >= 0 ? '+' : ''}${comparison.changes.winRate.toFixed(1)}%) ${trendEmoji(comparison.trends.winRate)}\n`;
+                    prompt += `   • Total P&L: ${formatCurrency(comparison.previous.profit)} → ${formatCurrency(comparison.current.profit)} (${changeSymbol(comparison.changes.profit)} ${formatCurrency(comparison.changes.profit)}, ${comparison.changes.profitPercent.toFixed(1)}%) ${trendEmoji(comparison.trends.profitability)}\n`;
+                    prompt += `   • Avg P&L per Trade: ${formatCurrency(comparison.previous.avgProfit)} → ${formatCurrency(comparison.current.avgProfit)} (${changeSymbol(comparison.changes.avgProfit)} ${formatCurrency(comparison.changes.avgProfit)})\n`;
                 });
                 prompt += `\n`;
             }
@@ -7437,7 +7471,111 @@ select.form-control {
                 closeHourly: closeHourlyStats
             };
         }
-        
+
+        function calculateMonthOverMonthAnalysis() {
+            // Get monthly stats first
+            const timeStats = calculateTimeBasedStats();
+            const monthlyStats = timeStats.monthly;
+
+            // Sort months chronologically
+            const sortedMonths = Object.keys(monthlyStats).sort();
+
+            if (sortedMonths.length < 2) {
+                return {
+                    available: false,
+                    message: 'Not enough monthly data for comparison (need at least 2 months)'
+                };
+            }
+
+            // Calculate month-over-month changes
+            const momChanges = [];
+
+            for (let i = 1; i < sortedMonths.length; i++) {
+                const currentMonth = sortedMonths[i];
+                const previousMonth = sortedMonths[i - 1];
+
+                const currentStats = monthlyStats[currentMonth];
+                const previousStats = monthlyStats[previousMonth];
+
+                // Calculate metrics for both months
+                const currentWinRate = currentStats.trades > 0 ? (currentStats.wins / currentStats.trades * 100) : 0;
+                const previousWinRate = previousStats.trades > 0 ? (previousStats.wins / previousStats.trades * 100) : 0;
+
+                // Calculate average win/loss for each month
+                const currentAvgProfit = currentStats.trades > 0 ? currentStats.profit / currentStats.trades : 0;
+                const previousAvgProfit = previousStats.trades > 0 ? previousStats.profit / previousStats.trades : 0;
+
+                // Calculate changes
+                const tradesChange = currentStats.trades - previousStats.trades;
+                const tradesChangePercent = previousStats.trades > 0 ? ((tradesChange / previousStats.trades) * 100) : 0;
+
+                const winRateChange = currentWinRate - previousWinRate;
+
+                const profitChange = currentStats.profit - previousStats.profit;
+                const profitChangePercent = previousStats.profit !== 0 ? ((profitChange / Math.abs(previousStats.profit)) * 100) : 0;
+
+                const avgProfitChange = currentAvgProfit - previousAvgProfit;
+                const avgProfitChangePercent = previousAvgProfit !== 0 ? ((avgProfitChange / Math.abs(previousAvgProfit)) * 100) : 0;
+
+                // Determine trend indicators
+                const determineTrend = (value) => {
+                    if (Math.abs(value) < 5) return 'stable';
+                    return value > 0 ? 'improving' : 'declining';
+                };
+
+                momChanges.push({
+                    currentMonth,
+                    previousMonth,
+                    current: {
+                        trades: currentStats.trades,
+                        wins: currentStats.wins,
+                        winRate: currentWinRate,
+                        profit: currentStats.profit,
+                        avgProfit: currentAvgProfit
+                    },
+                    previous: {
+                        trades: previousStats.trades,
+                        wins: previousStats.wins,
+                        winRate: previousWinRate,
+                        profit: previousStats.profit,
+                        avgProfit: previousAvgProfit
+                    },
+                    changes: {
+                        trades: tradesChange,
+                        tradesPercent: tradesChangePercent,
+                        winRate: winRateChange,
+                        profit: profitChange,
+                        profitPercent: profitChangePercent,
+                        avgProfit: avgProfitChange,
+                        avgProfitPercent: avgProfitChangePercent
+                    },
+                    trends: {
+                        activity: determineTrend(tradesChangePercent),
+                        winRate: determineTrend(winRateChange),
+                        profitability: determineTrend(profitChangePercent)
+                    }
+                });
+            }
+
+            // Calculate overall trend (last 3 months if available)
+            const recentMonths = momChanges.slice(-3);
+            const avgWinRateChange = recentMonths.reduce((sum, m) => sum + m.changes.winRate, 0) / recentMonths.length;
+            const avgProfitChange = recentMonths.reduce((sum, m) => sum + m.changes.profitPercent, 0) / recentMonths.length;
+
+            return {
+                available: true,
+                monthlyComparisons: momChanges,
+                summary: {
+                    totalMonths: sortedMonths.length,
+                    comparisons: momChanges.length,
+                    recentTrend: {
+                        winRate: avgWinRateChange > 5 ? 'improving' : avgWinRateChange < -5 ? 'declining' : 'stable',
+                        profitability: avgProfitChange > 5 ? 'improving' : avgProfitChange < -5 ? 'declining' : 'stable'
+                    }
+                }
+            };
+        }
+
         function calculateCustomRuleAdherence() {
             const tradesWithRules = appState.trades.filter(t => t.rulesFollowed && t.rulesFollowed.length > 0);
             const rulesWins = tradesWithRules.filter(t => (t.netPL || t.profit) > 0);
