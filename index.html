@@ -1274,7 +1274,57 @@ select.form-control {
             background: #DC2626;
             transform: translateY(-1px);
         }
-    
+
+        /* Toggle Switch Styles */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+            cursor: pointer;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--color-border);
+            transition: 0.3s;
+            border-radius: 24px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.3s;
+            border-radius: 50%;
+        }
+
+        .toggle-switch input:checked + .toggle-slider {
+            background-color: var(--color-primary);
+        }
+
+        .toggle-switch input:checked + .toggle-slider:before {
+            transform: translateX(20px);
+        }
+
+        .toggle-switch:hover .toggle-slider {
+            opacity: 0.9;
+        }
+
     </style>
 </head>
 <body>
@@ -1286,9 +1336,18 @@ select.form-control {
 
             <!-- Save Status Indicator -->
             <div style="text-align: center; margin-bottom: 1rem; padding: 0.75rem; background: var(--color-bg-1); border: 1px solid var(--color-border); border-radius: var(--radius-base); display: flex; justify-content: center; align-items: center; gap: 1rem; flex-wrap: wrap;">
-                <span id="saveStatusIndicator" style="font-size: var(--font-size-sm); font-weight: var(--font-weight-medium);">
-                    💾 Not saved
-                </span>
+                <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                    <span id="saveStatusIndicator" style="font-size: var(--font-size-sm); font-weight: var(--font-weight-medium);">
+                        💾 Not saved
+                    </span>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0.75rem; background: var(--color-secondary); border-radius: var(--radius-base);">
+                        <span id="autoSaveStatus" style="font-size: var(--font-size-xs); font-weight: var(--font-weight-medium);">Auto-save: ON</span>
+                        <label class="toggle-switch" title="Toggle auto-save every 30 seconds">
+                            <input type="checkbox" id="autoSaveToggle" onchange="toggleAutoSave()" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
                 <div style="display: flex; gap: 0.5rem;">
                     <button class="btn btn--sm btn--secondary" onclick="saveToLocalStorage(); showMessage('✅ Manual save successful');" title="Save data now">
                         💾 Save Now
@@ -1297,7 +1356,7 @@ select.form-control {
                         📦 Backups
                     </button>
                     <button class="btn btn--sm btn--secondary" onclick="showStorageInfo()" title="View storage information">
-                        📊 Storage Info
+                        📊 Storage Info (100MB)
                     </button>
                 </div>
             </div>
@@ -2438,13 +2497,171 @@ select.form-control {
         const APP_VERSION = '1.0.0';
         const AUTO_SAVE_INTERVAL = 30000; // 30 seconds
         const MAX_BACKUPS = 10; // Keep last 10 backups
+        const STORAGE_LIMIT_MB = 100; // 100MB storage limit for IndexedDB
+        const DB_NAME = 'TradingJournalDB';
+        const DB_VERSION = 1;
+        const STORE_NAME = 'journalData';
 
         let autoSaveTimer = null;
         let lastSaveTimestamp = null;
         let saveStatusUpdateTimer = null;
+        let autoSaveEnabled = localStorage.getItem('tradingJournal_autoSaveEnabled') !== 'false'; // Enabled by default
+        let db = null; // IndexedDB connection
 
-        // Save app state to localStorage
-        function saveToLocalStorage() {
+        // ============================================================================
+        // INDEXEDDB IMPLEMENTATION FOR LARGER STORAGE (100MB)
+        // ============================================================================
+
+        // Initialize IndexedDB
+        async function initIndexedDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+                request.onerror = () => {
+                    console.error('IndexedDB failed to open:', request.error);
+                    reject(request.error);
+                };
+
+                request.onsuccess = () => {
+                    db = request.result;
+                    console.log('IndexedDB initialized successfully');
+                    resolve(db);
+                };
+
+                request.onupgradeneeded = (event) => {
+                    db = event.target.result;
+
+                    // Create object store if it doesn't exist
+                    if (!db.objectStoreNames.contains(STORE_NAME)) {
+                        const objectStore = db.createObjectStore(STORE_NAME, { keyPath: 'key' });
+                        objectStore.createIndex('timestamp', 'timestamp', { unique: false });
+                        console.log('IndexedDB object store created');
+                    }
+                };
+            });
+        }
+
+        // Save to IndexedDB
+        async function saveToIndexedDB(key, data) {
+            try {
+                if (!db) {
+                    await initIndexedDB();
+                }
+
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction([STORE_NAME], 'readwrite');
+                    const objectStore = transaction.objectStore(STORE_NAME);
+
+                    const record = {
+                        key: key,
+                        data: data,
+                        timestamp: new Date().toISOString()
+                    };
+
+                    const request = objectStore.put(record);
+
+                    request.onsuccess = () => resolve(true);
+                    request.onerror = () => reject(request.error);
+                });
+            } catch (error) {
+                console.error('IndexedDB save error:', error);
+                throw error;
+            }
+        }
+
+        // Load from IndexedDB
+        async function loadFromIndexedDB(key) {
+            try {
+                if (!db) {
+                    await initIndexedDB();
+                }
+
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction([STORE_NAME], 'readonly');
+                    const objectStore = transaction.objectStore(STORE_NAME);
+                    const request = objectStore.get(key);
+
+                    request.onsuccess = () => {
+                        if (request.result) {
+                            resolve(request.result.data);
+                        } else {
+                            resolve(null);
+                        }
+                    };
+
+                    request.onerror = () => reject(request.error);
+                });
+            } catch (error) {
+                console.error('IndexedDB load error:', error);
+                return null;
+            }
+        }
+
+        // Get all keys from IndexedDB
+        async function getAllKeysFromIndexedDB() {
+            try {
+                if (!db) {
+                    await initIndexedDB();
+                }
+
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction([STORE_NAME], 'readonly');
+                    const objectStore = transaction.objectStore(STORE_NAME);
+                    const request = objectStore.getAllKeys();
+
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            } catch (error) {
+                console.error('IndexedDB getAllKeys error:', error);
+                return [];
+            }
+        }
+
+        // Delete from IndexedDB
+        async function deleteFromIndexedDB(key) {
+            try {
+                if (!db) {
+                    await initIndexedDB();
+                }
+
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction([STORE_NAME], 'readwrite');
+                    const objectStore = transaction.objectStore(STORE_NAME);
+                    const request = objectStore.delete(key);
+
+                    request.onsuccess = () => resolve(true);
+                    request.onerror = () => reject(request.error);
+                });
+            } catch (error) {
+                console.error('IndexedDB delete error:', error);
+                return false;
+            }
+        }
+
+        // Get IndexedDB storage size estimate
+        async function getIndexedDBSize() {
+            try {
+                if (navigator.storage && navigator.storage.estimate) {
+                    const estimate = await navigator.storage.estimate();
+                    return {
+                        usage: estimate.usage || 0,
+                        quota: estimate.quota || 0
+                    };
+                }
+                return { usage: 0, quota: 0 };
+            } catch (error) {
+                console.error('Error getting storage estimate:', error);
+                return { usage: 0, quota: 0 };
+            }
+        }
+
+        // ============================================================================
+        // END INDEXEDDB IMPLEMENTATION
+        // ============================================================================
+
+        // Save app state (using IndexedDB for larger capacity)
+        async function saveToLocalStorage() {
             try {
                 const dataToSave = {
                     version: APP_VERSION,
@@ -2463,15 +2680,25 @@ select.form-control {
 
                 const jsonString = JSON.stringify(dataToSave);
 
-                // Check storage size (localStorage has ~5-10MB limit)
+                // Check storage size (now 100MB limit with IndexedDB)
                 const sizeInBytes = new Blob([jsonString]).size;
                 const sizeInMB = (sizeInBytes / (1024 * 1024)).toFixed(2);
 
-                if (sizeInBytes > 5 * 1024 * 1024) { // 5MB warning
-                    console.warn(`Data size (${sizeInMB}MB) is approaching localStorage limit. Consider exporting and clearing old data.`);
+                if (sizeInBytes > STORAGE_LIMIT_MB * 1024 * 1024) { // 100MB warning
+                    console.warn(`Data size (${sizeInMB}MB) exceeds ${STORAGE_LIMIT_MB}MB limit. Consider exporting and clearing old data.`);
+                    showMessage(`⚠️ Data size (${sizeInMB}MB) is very large! Consider exporting and archiving old trades.`, 'error');
                 }
 
-                localStorage.setItem(STORAGE_KEYS.APP_STATE, jsonString);
+                // Try IndexedDB first (supports larger data), fallback to localStorage
+                try {
+                    await saveToIndexedDB(STORAGE_KEYS.APP_STATE, dataToSave);
+                    console.log(`Saved ${sizeInMB}MB to IndexedDB`);
+                } catch (idbError) {
+                    console.warn('IndexedDB save failed, falling back to localStorage:', idbError);
+                    // Fallback to localStorage
+                    localStorage.setItem(STORAGE_KEYS.APP_STATE, jsonString);
+                }
+
                 localStorage.setItem(STORAGE_KEYS.LAST_SAVE, new Date().toISOString());
                 localStorage.setItem(STORAGE_KEYS.VERSION, APP_VERSION);
 
@@ -2482,27 +2709,41 @@ select.form-control {
             } catch (error) {
                 if (error.name === 'QuotaExceededError') {
                     showMessage('⚠️ Storage limit exceeded! Export your data and clear old trades.', 'error');
-                    console.error('LocalStorage quota exceeded:', error);
+                    console.error('Storage quota exceeded:', error);
                 } else {
-                    console.error('Error saving to localStorage:', error);
+                    console.error('Error saving data:', error);
                     showMessage('Failed to save data: ' + error.message, 'error');
                 }
                 return false;
             }
         }
 
-        // Load app state from localStorage
-        function loadFromLocalStorage() {
+        // Load app state from storage (IndexedDB first, fallback to localStorage)
+        async function loadFromLocalStorage() {
             try {
-                const savedData = localStorage.getItem(STORAGE_KEYS.APP_STATE);
-                const lastSave = localStorage.getItem(STORAGE_KEYS.LAST_SAVE);
-
-                if (!savedData) {
-                    console.log('No saved data found in localStorage');
-                    return false;
+                // Try IndexedDB first
+                let data = null;
+                try {
+                    data = await loadFromIndexedDB(STORAGE_KEYS.APP_STATE);
+                    if (data) {
+                        console.log('Loaded data from IndexedDB');
+                    }
+                } catch (idbError) {
+                    console.warn('IndexedDB load failed, trying localStorage:', idbError);
                 }
 
-                const data = JSON.parse(savedData);
+                // Fallback to localStorage if IndexedDB didn't work
+                if (!data) {
+                    const savedData = localStorage.getItem(STORAGE_KEYS.APP_STATE);
+                    if (!savedData) {
+                        console.log('No saved data found');
+                        return false;
+                    }
+                    data = JSON.parse(savedData);
+                    console.log('Loaded data from localStorage');
+                }
+
+                const lastSave = localStorage.getItem(STORAGE_KEYS.LAST_SAVE);
 
                 // Version check
                 if (data.version && data.version !== APP_VERSION) {
@@ -2671,12 +2912,17 @@ select.form-control {
 
         // Start auto-save timer
         function startAutoSave() {
+            if (!autoSaveEnabled) {
+                console.log('Auto-save is disabled');
+                return;
+            }
+
             if (autoSaveTimer) {
                 clearInterval(autoSaveTimer);
             }
 
             autoSaveTimer = setInterval(() => {
-                if (appState.trades.length > 0) {
+                if (appState.trades.length > 0 && autoSaveEnabled) {
                     saveToLocalStorage();
                     console.log('Auto-save completed');
                 }
@@ -2691,6 +2937,41 @@ select.form-control {
                 clearInterval(autoSaveTimer);
                 autoSaveTimer = null;
                 console.log('Auto-save stopped');
+            }
+        }
+
+        // Toggle auto-save on/off
+        function toggleAutoSave() {
+            autoSaveEnabled = !autoSaveEnabled;
+            localStorage.setItem('tradingJournal_autoSaveEnabled', autoSaveEnabled.toString());
+
+            const toggle = document.getElementById('autoSaveToggle');
+            if (toggle) {
+                toggle.checked = autoSaveEnabled;
+            }
+
+            if (autoSaveEnabled) {
+                startAutoSave();
+                showMessage('✅ Auto-save enabled (every 30 seconds)', 'success');
+            } else {
+                stopAutoSave();
+                showMessage('⚠️ Auto-save disabled - remember to save manually!', 'info');
+            }
+
+            updateAutoSaveStatus();
+        }
+
+        // Update auto-save status indicator
+        function updateAutoSaveStatus() {
+            const statusText = document.getElementById('autoSaveStatus');
+            if (statusText) {
+                if (autoSaveEnabled) {
+                    statusText.textContent = 'Auto-save: ON';
+                    statusText.style.color = 'var(--color-success)';
+                } else {
+                    statusText.textContent = 'Auto-save: OFF';
+                    statusText.style.color = 'var(--color-warning)';
+                }
             }
         }
 
@@ -2863,16 +3144,17 @@ select.form-control {
                 });
 
                 const totalSizeMB = (totalSize / (1024 * 1024)).toFixed(2);
-                const limitMB = 5; // Typical localStorage limit is ~5-10MB
+                const limitMB = STORAGE_LIMIT_MB; // 100MB limit with IndexedDB
                 const usagePercent = ((totalSize / (limitMB * 1024 * 1024)) * 100).toFixed(1);
 
                 let html = '<div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: 500px; width: 90%; padding: 1.5rem; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); z-index: 10000;">';
                 html += '<h3 style="margin-top: 0;">📊 Storage Information</h3>';
+                html += '<p style="color: var(--color-text-secondary); font-size: var(--font-size-xs); margin-bottom: 1rem;">Using IndexedDB for expanded storage capacity</p>';
 
                 // Total usage
                 html += '<div style="margin-bottom: 1.5rem;">';
                 html += `<div style="font-size: var(--font-size-lg); font-weight: var(--font-weight-semibold); margin-bottom: 0.5rem;">`;
-                html += `Total: ${totalSizeMB} MB / ~${limitMB} MB`;
+                html += `Total: ${totalSizeMB} MB / ${limitMB} MB`;
                 html += '</div>';
 
                 // Progress bar
@@ -2983,14 +3265,29 @@ select.form-control {
         // ============================================================================
 
         // Initialize app
-        document.addEventListener('DOMContentLoaded', function() {
-            // Load saved data first
-            loadFromLocalStorage();
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Initialize IndexedDB first
+            try {
+                await initIndexedDB();
+                console.log('✅ IndexedDB initialized (100MB capacity)');
+            } catch (error) {
+                console.warn('⚠️ IndexedDB initialization failed, using localStorage fallback:', error);
+            }
+
+            // Load saved data
+            await loadFromLocalStorage();
 
             setupEventListeners();
             initializeDefaultRules();
             initializeUIStates();
             updateUI();
+
+            // Set toggle switch initial state
+            const toggle = document.getElementById('autoSaveToggle');
+            if (toggle) {
+                toggle.checked = autoSaveEnabled;
+            }
+            updateAutoSaveStatus();
 
             // Start auto-save and status updates
             startAutoSave();
