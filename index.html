@@ -1351,16 +1351,16 @@ select.form-control {
         }
 
         .section-info-tooltip {
-            position: absolute;
-            top: calc(100% + 8px);
-            left: 50%;
-            transform: translateX(-50%);
+            position: fixed;
+            top: auto;
+            left: auto;
+            transform: none;
             background: var(--color-surface);
             border: 1px solid var(--color-border);
             border-radius: var(--radius-base);
             padding: var(--space-12);
             box-shadow: var(--shadow-lg);
-            z-index: 10000;
+            z-index: 99999;
             opacity: 0;
             visibility: hidden;
             transition: all var(--duration-normal) var(--ease-standard);
@@ -2856,6 +2856,38 @@ select.form-control {
 
         // ============================================================================
         // END SECURITY FUNCTIONS
+        // ============================================================================
+
+        // ============================================================================
+        // INFO TOOLTIP POSITIONING - Fixed positioning to appear on top of everything
+        // ============================================================================
+        document.addEventListener('DOMContentLoaded', function() {
+            const infoIcons = document.querySelectorAll('.section-info-icon');
+
+            infoIcons.forEach(icon => {
+                const tooltip = icon.querySelector('.section-info-tooltip');
+                if (!tooltip) return;
+
+                icon.addEventListener('mouseenter', function() {
+                    const iconRect = icon.getBoundingClientRect();
+                    const tooltipRect = tooltip.getBoundingClientRect();
+
+                    // Position tooltip below the icon, centered horizontally
+                    const left = iconRect.left + (iconRect.width / 2) - (tooltipRect.width / 2);
+                    const top = iconRect.bottom + 8;
+
+                    // Adjust if tooltip would go off the right edge of the screen
+                    const adjustedLeft = Math.min(left, window.innerWidth - tooltipRect.width - 16);
+                    // Adjust if tooltip would go off the left edge of the screen
+                    const finalLeft = Math.max(16, adjustedLeft);
+
+                    tooltip.style.left = finalLeft + 'px';
+                    tooltip.style.top = top + 'px';
+                });
+            });
+        });
+        // ============================================================================
+        // END INFO TOOLTIP POSITIONING
         // ============================================================================
 
         // Symbol Validation Function
