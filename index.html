@@ -7377,35 +7377,38 @@ select.form-control {
                 showMessage('Maximum 10 custom rules allowed', 'error');
                 return;
             }
-            
+
             const newId = Math.max(...appState.customRules.map(r => r.id), 0) + 1;
             appState.customRules.push({
                 id: newId,
                 text: 'New Rule',
                 enabled: true
             });
-            
+
             updateCustomRulesDisplay();
+            saveToLocalStorage();
         }
         
         function updateCustomRule(ruleId, newText) {
             const rule = appState.customRules.find(r => r.id === ruleId);
             if (rule) {
                 rule.text = newText;
+                saveToLocalStorage();
             }
         }
         
         function removeCustomRule(ruleId) {
             appState.customRules = appState.customRules.filter(r => r.id !== ruleId);
-            
+
             // Remove rule from all trades
             appState.trades.forEach(trade => {
                 if (trade.rulesFollowed) {
                     trade.rulesFollowed = trade.rulesFollowed.filter(id => id !== ruleId);
                 }
             });
-            
+
             updateCustomRulesDisplay();
+            saveToLocalStorage();
         }
         
         function getRuleFollowedCount(ruleId) {
