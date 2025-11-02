@@ -3560,8 +3560,18 @@ select.form-control {
                     visibleCharts: appState.visibleCharts,
                     visibleColumns: appState.visibleColumns,
                     aiPromptInclusions: appState.aiPromptInclusions,
+                    // Section collapse states
                     showTradeHistory: appState.showTradeHistory,
-                    showAccountSettings: appState.showAccountSettings
+                    showAccountSettings: appState.showAccountSettings,
+                    showRuleCombinations: appState.showRuleCombinations,
+                    showStatistics: appState.showStatistics,
+                    showCharts: appState.showCharts,
+                    showRules: appState.showRules,
+                    showBreakdowns: appState.showBreakdowns,
+                    showTimeAnalytics: appState.showTimeAnalytics,
+                    showCalendar: appState.showCalendar,
+                    showMonteCarlo: appState.showMonteCarlo,
+                    showAI: appState.showAI
                 };
 
                 const jsonString = JSON.stringify(dataToSave);
@@ -3662,11 +3672,39 @@ select.form-control {
                 if (data.aiPromptInclusions) {
                     Object.assign(appState.aiPromptInclusions, data.aiPromptInclusions);
                 }
+                // Restore section collapse states
                 if (data.showTradeHistory !== undefined) {
                     appState.showTradeHistory = data.showTradeHistory;
                 }
                 if (data.showAccountSettings !== undefined) {
                     appState.showAccountSettings = data.showAccountSettings;
+                }
+                if (data.showRuleCombinations !== undefined) {
+                    appState.showRuleCombinations = data.showRuleCombinations;
+                }
+                if (data.showStatistics !== undefined) {
+                    appState.showStatistics = data.showStatistics;
+                }
+                if (data.showCharts !== undefined) {
+                    appState.showCharts = data.showCharts;
+                }
+                if (data.showRules !== undefined) {
+                    appState.showRules = data.showRules;
+                }
+                if (data.showBreakdowns !== undefined) {
+                    appState.showBreakdowns = data.showBreakdowns;
+                }
+                if (data.showTimeAnalytics !== undefined) {
+                    appState.showTimeAnalytics = data.showTimeAnalytics;
+                }
+                if (data.showCalendar !== undefined) {
+                    appState.showCalendar = data.showCalendar;
+                }
+                if (data.showMonteCarlo !== undefined) {
+                    appState.showMonteCarlo = data.showMonteCarlo;
+                }
+                if (data.showAI !== undefined) {
+                    appState.showAI = data.showAI;
                 }
 
                 lastSaveTimestamp = lastSave ? new Date(lastSave) : new Date();
@@ -4203,13 +4241,16 @@ select.form-control {
         function initializeUIStates() {
             // Initialize account settings collapse state
             updateAccountSettingsCollapseState();
-            
+
             // Initialize trade history collapse state
             updateTradeHistoryCollapseState();
-            
+
+            // Initialize all section collapse states
+            applySectionCollapseStates();
+
             // Initialize starting balance display
             updateStartingBalanceDisplay();
-            
+
             // Sync import mode selector with radio buttons
             const importModeValue = document.getElementById('importMode').value;
             const radioButton = document.querySelector(`input[name="importModeRadio"][value="${importModeValue}"]`);
@@ -7549,6 +7590,7 @@ select.form-control {
         function toggleRuleCombinations() {
             appState.showRuleCombinations = !appState.showRuleCombinations;
             updateRuleCombinationsDisplay();
+            saveToLocalStorage();
         }
         
         function updateRuleCombinationsDisplay() {
@@ -7576,6 +7618,7 @@ select.form-control {
                 content.style.display = 'none';
                 toggleButton.textContent = '▶';
             }
+            saveToLocalStorage();
         }
 
         function toggleCharts() {
@@ -7589,6 +7632,7 @@ select.form-control {
                 content.style.display = 'none';
                 toggleButton.textContent = '▶';
             }
+            saveToLocalStorage();
         }
 
         function toggleRules() {
@@ -7602,6 +7646,7 @@ select.form-control {
                 content.style.display = 'none';
                 toggleButton.textContent = '▶';
             }
+            saveToLocalStorage();
         }
 
         function toggleBreakdowns() {
@@ -7615,6 +7660,7 @@ select.form-control {
                 content.style.display = 'none';
                 toggleButton.textContent = '▶';
             }
+            saveToLocalStorage();
         }
 
         function toggleTimeAnalytics() {
@@ -7628,6 +7674,7 @@ select.form-control {
                 content.style.display = 'none';
                 toggleButton.textContent = '▶';
             }
+            saveToLocalStorage();
         }
 
         function toggleCalendar() {
@@ -7641,6 +7688,7 @@ select.form-control {
                 content.style.display = 'none';
                 toggleButton.textContent = '▶';
             }
+            saveToLocalStorage();
         }
 
         function toggleAI() {
@@ -7654,6 +7702,7 @@ select.form-control {
                 content.style.display = 'none';
                 toggleButton.textContent = '▶';
             }
+            saveToLocalStorage();
         }
 
         function toggleMonteCarlo() {
@@ -7666,6 +7715,82 @@ select.form-control {
             } else {
                 content.style.display = 'none';
                 toggleButton.textContent = '▶';
+            }
+            saveToLocalStorage();
+        }
+
+        // Apply all section collapse states to the UI
+        function applySectionCollapseStates() {
+            // Statistics Section
+            const statisticsContent = document.querySelector('#statisticsSection .section-content');
+            const statisticsToggle = document.getElementById('statisticsToggle');
+            if (statisticsContent && statisticsToggle) {
+                statisticsContent.style.display = appState.showStatistics ? 'block' : 'none';
+                statisticsToggle.textContent = appState.showStatistics ? '▼' : '▶';
+            }
+
+            // Charts Section
+            const chartsContent = document.querySelector('#chartsSection .section-content');
+            const chartsToggle = document.getElementById('chartsToggle');
+            if (chartsContent && chartsToggle) {
+                chartsContent.style.display = appState.showCharts ? 'block' : 'none';
+                chartsToggle.textContent = appState.showCharts ? '▼' : '▶';
+            }
+
+            // Rules Section
+            const rulesContent = document.querySelector('#rulesSection .section-content');
+            const rulesToggle = document.getElementById('rulesToggle');
+            if (rulesContent && rulesToggle) {
+                rulesContent.style.display = appState.showRules ? 'block' : 'none';
+                rulesToggle.textContent = appState.showRules ? '▼' : '▶';
+            }
+
+            // Breakdowns Section
+            const breakdownsContent = document.querySelector('#breakdownsSection .section-content');
+            const breakdownsToggle = document.getElementById('breakdownsToggle');
+            if (breakdownsContent && breakdownsToggle) {
+                breakdownsContent.style.display = appState.showBreakdowns ? 'block' : 'none';
+                breakdownsToggle.textContent = appState.showBreakdowns ? '▼' : '▶';
+            }
+
+            // Time Analytics Section
+            const timeAnalyticsContent = document.querySelector('#timeAnalyticsSection .section-content');
+            const timeAnalyticsToggle = document.getElementById('timeAnalyticsToggle');
+            if (timeAnalyticsContent && timeAnalyticsToggle) {
+                timeAnalyticsContent.style.display = appState.showTimeAnalytics ? 'block' : 'none';
+                timeAnalyticsToggle.textContent = appState.showTimeAnalytics ? '▼' : '▶';
+            }
+
+            // Calendar Section
+            const calendarContent = document.querySelector('#calendarSection .section-content');
+            const calendarToggle = document.getElementById('calendarToggle');
+            if (calendarContent && calendarToggle) {
+                calendarContent.style.display = appState.showCalendar ? 'block' : 'none';
+                calendarToggle.textContent = appState.showCalendar ? '▼' : '▶';
+            }
+
+            // AI Section
+            const aiContent = document.querySelector('#aiSection .section-content');
+            const aiToggle = document.getElementById('aiToggle');
+            if (aiContent && aiToggle) {
+                aiContent.style.display = appState.showAI ? 'block' : 'none';
+                aiToggle.textContent = appState.showAI ? '▼' : '▶';
+            }
+
+            // Monte Carlo Section
+            const monteCarloContent = document.querySelector('#monteCarloSection .section-content');
+            const monteCarloToggle = document.getElementById('monteCarloToggle');
+            if (monteCarloContent && monteCarloToggle) {
+                monteCarloContent.style.display = appState.showMonteCarlo ? 'block' : 'none';
+                monteCarloToggle.textContent = appState.showMonteCarlo ? '▼' : '▶';
+            }
+
+            // Rule Combinations Section
+            const ruleCombinationsContent = document.querySelector('#ruleCombinationsSection .section-content');
+            const ruleCombinationsToggle = document.getElementById('ruleCombinationsToggle');
+            if (ruleCombinationsContent && ruleCombinationsToggle) {
+                ruleCombinationsContent.style.display = appState.showRuleCombinations ? 'block' : 'none';
+                ruleCombinationsToggle.textContent = appState.showRuleCombinations ? '▼' : '▶';
             }
         }
 
@@ -10156,6 +10281,7 @@ select.form-control {
         function toggleAccountSettings() {
             appState.showAccountSettings = !appState.showAccountSettings;
             updateAccountSettingsCollapseState();
+            saveToLocalStorage();
         }
         
         function updateAccountSettingsCollapseState() {
@@ -10185,6 +10311,7 @@ select.form-control {
         function toggleTradeHistory() {
             appState.showTradeHistory = !appState.showTradeHistory;
             updateTradeHistoryCollapseState();
+            saveToLocalStorage();
         }
         
         function updateTradeHistoryCollapseState() {
