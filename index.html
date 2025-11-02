@@ -1325,6 +1325,101 @@ select.form-control {
             opacity: 0.9;
         }
 
+        /* Section Info Tooltip Styles */
+        .section-info-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: help;
+            transition: all var(--duration-fast) var(--ease-standard);
+            position: relative;
+            margin-left: var(--space-8);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .section-info-icon:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
+
+        .section-info-tooltip {
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-base);
+            padding: var(--space-12);
+            box-shadow: var(--shadow-lg);
+            z-index: 10000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all var(--duration-normal) var(--ease-standard);
+            pointer-events: none;
+            min-width: 280px;
+            max-width: 400px;
+        }
+
+        .section-info-icon:hover .section-info-tooltip {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .section-info-tooltip-title {
+            font-size: var(--font-size-sm);
+            font-weight: var(--font-weight-semibold);
+            color: var(--color-text);
+            margin-bottom: var(--space-8);
+            display: flex;
+            align-items: center;
+            gap: var(--space-6);
+        }
+
+        .section-info-tooltip-content {
+            font-size: var(--font-size-xs);
+            color: var(--color-text-secondary);
+            line-height: var(--line-height-normal);
+        }
+
+        .section-info-tooltip-content ul {
+            margin: var(--space-8) 0 0 0;
+            padding-left: var(--space-16);
+        }
+
+        .section-info-tooltip-content li {
+            margin-bottom: var(--space-4);
+        }
+
+        /* Arrow for tooltip */
+        .section-info-tooltip::before {
+            content: '';
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 6px solid transparent;
+            border-bottom-color: var(--color-border);
+        }
+
+        .section-info-tooltip::after {
+            content: '';
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 5px solid transparent;
+            border-bottom-color: var(--color-surface);
+            margin-bottom: -1px;
+        }
+
     </style>
 </head>
 <body>
@@ -1509,6 +1604,21 @@ select.form-control {
                     <div style="display: flex; align-items: center; gap: var(--space-12);">
                         <span style="font-size: var(--font-size-lg);">⚙️</span>
                         <span>Account Settings</span>
+                        <span class="section-info-icon" onclick="event.stopPropagation();">
+                            i
+                            <div class="section-info-tooltip">
+                                <div class="section-info-tooltip-title">⚙️ Account Settings</div>
+                                <div class="section-info-tooltip-content">
+                                    Configure your trading account preferences and data management.
+                                    <ul>
+                                        <li><strong>Starting Balance:</strong> Set your initial account equity</li>
+                                        <li><strong>Platform:</strong> Choose between cTrader, MT4, or MT5</li>
+                                        <li><strong>Import Mode:</strong> Control how imported data is handled</li>
+                                        <li><strong>Clear Data:</strong> Reset your trading history</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </span>
                     </div>
                     <span id="accountSettingsArrow" style="font-size: var(--font-size-xl); transition: transform var(--duration-normal) var(--ease-standard);">▶</span>
                 </button>
@@ -1662,6 +1772,21 @@ select.form-control {
                         <span style="font-size: var(--font-size-lg);">🔌</span>
                         <span>API Settings</span>
                         <span style="font-size: var(--font-size-xs); color: var(--color-text-secondary);">(Import Historic Trades)</span>
+                        <span class="section-info-icon" onclick="event.stopPropagation();">
+                            i
+                            <div class="section-info-tooltip">
+                                <div class="section-info-tooltip-title">🔌 API Settings</div>
+                                <div class="section-info-tooltip-content">
+                                    Connect your trading platform to automatically import historical trade data.
+                                    <ul>
+                                        <li><strong>MetaTrader API:</strong> Import trades from MT4/MT5 using API tokens</li>
+                                        <li><strong>Account ID:</strong> Your unique trading account identifier</li>
+                                        <li><strong>Date Range:</strong> Select which trades to import</li>
+                                        <li><strong>Auto-sync:</strong> Keep your journal updated automatically</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </span>
                     </div>
                     <span id="apiSettingsArrow" style="font-size: var(--font-size-xl); transition: transform var(--duration-normal) var(--ease-standard);">▶</span>
                 </button>
@@ -1759,7 +1884,26 @@ select.form-control {
             <div class="section" id="statisticsSection" style="display: none;">
                 <div class="section-header" style="cursor: pointer;" onclick="toggleStatistics()">
                     <div style="display: flex; align-items: center; gap: var(--space-12);">
-                        <h3 style="margin: 0; display: flex; align-items: center; gap: var(--space-8);">📊 Performance Statistics</h3>
+                        <h3 style="margin: 0; display: flex; align-items: center; gap: var(--space-8);">
+                            📊 Performance Statistics
+                            <span class="section-info-icon" onclick="event.stopPropagation();">
+                                i
+                                <div class="section-info-tooltip">
+                                    <div class="section-info-tooltip-title">📊 Performance Statistics</div>
+                                    <div class="section-info-tooltip-content">
+                                        Comprehensive metrics analyzing your trading performance and profitability.
+                                        <ul>
+                                            <li><strong>Win Rate:</strong> Percentage of profitable trades</li>
+                                            <li><strong>Profit Factor:</strong> Gross profit divided by gross loss</li>
+                                            <li><strong>Expectancy:</strong> Average profit/loss per trade</li>
+                                            <li><strong>Sharpe Ratio:</strong> Risk-adjusted returns</li>
+                                            <li><strong>Max Drawdown:</strong> Largest peak-to-trough decline</li>
+                                        </ul>
+                                        Use the gear icon to customize which stats to display.
+                                    </div>
+                                </div>
+                            </span>
+                        </h3>
                         <button
                             id="statisticsToggle"
                             style="background: none; border: none; color: white; font-size: var(--font-size-xl); cursor: pointer; padding: var(--space-4); border-radius: var(--radius-sm); transition: background-color var(--duration-fast) var(--ease-standard);"
@@ -1799,7 +1943,25 @@ select.form-control {
             <div class="section" id="chartsSection" style="display: none;">
                 <div class="section-header" style="cursor: pointer;" onclick="toggleCharts()">
                     <div style="display: flex; align-items: center; gap: var(--space-12);">
-                        <h3 style="margin: 0; display: flex; align-items: center; gap: var(--space-8);">📈 Performance Charts</h3>
+                        <h3 style="margin: 0; display: flex; align-items: center; gap: var(--space-8);">
+                            📈 Performance Charts
+                            <span class="section-info-icon" onclick="event.stopPropagation();">
+                                i
+                                <div class="section-info-tooltip">
+                                    <div class="section-info-tooltip-title">📈 Performance Charts</div>
+                                    <div class="section-info-tooltip-content">
+                                        Visual representations of your trading performance over time.
+                                        <ul>
+                                            <li><strong>Equity Curve:</strong> Account balance progression</li>
+                                            <li><strong>Daily P&L:</strong> Profit/loss by day</li>
+                                            <li><strong>Win/Loss Distribution:</strong> Trade outcome patterns</li>
+                                            <li><strong>Monthly Performance:</strong> Returns by month</li>
+                                        </ul>
+                                        Adjust zoom level and configure which charts to display.
+                                    </div>
+                                </div>
+                            </span>
+                        </h3>
                         <button
                             id="chartsToggle"
                             style="background: none; border: none; color: white; font-size: var(--font-size-xl); cursor: pointer; padding: var(--space-4); border-radius: var(--radius-sm); transition: background-color var(--duration-fast) var(--ease-standard);"
@@ -1866,7 +2028,25 @@ select.form-control {
             <div class="section" id="tradeHistorySection" style="display: none;">
                 <div class="section-header" style="cursor: pointer;" onclick="toggleTradeHistory()">
                     <div style="display: flex; align-items: center; gap: var(--space-12);">
-                        <h3 style="margin: 0; display: flex; align-items: center; gap: var(--space-8);">📋 Trade History</h3>
+                        <h3 style="margin: 0; display: flex; align-items: center; gap: var(--space-8);">
+                            📋 Trade History
+                            <span class="section-info-icon" onclick="event.stopPropagation();">
+                                i
+                                <div class="section-info-tooltip">
+                                    <div class="section-info-tooltip-title">📋 Trade History</div>
+                                    <div class="section-info-tooltip-content">
+                                        Detailed table of all your trades with customizable columns and sorting.
+                                        <ul>
+                                            <li><strong>View All Trades:</strong> Complete trade history in one table</li>
+                                            <li><strong>Customize Columns:</strong> Show/hide specific trade details</li>
+                                            <li><strong>Edit Trades:</strong> Click any trade to view and modify details</li>
+                                            <li><strong>Sort & Filter:</strong> Click column headers to sort</li>
+                                        </ul>
+                                        Use the gear icon to configure which columns to display.
+                                    </div>
+                                </div>
+                            </span>
+                        </h3>
                         <button
                             id="tradeHistoryToggle"
                             style="background: none; border: none; color: white; font-size: var(--font-size-xl); cursor: pointer; padding: var(--space-4); border-radius: var(--radius-sm); transition: background-color var(--duration-fast) var(--ease-standard);"
@@ -1920,7 +2100,25 @@ select.form-control {
             <div class="section" style="display: none;" id="ruleCombinationsSection">
                 <div class="section-header" style="cursor: pointer;" onclick="toggleRuleCombinations()">
                     <div style="display: flex; align-items: center; gap: var(--space-12);">
-                        <h3 style="margin: 0; display: flex; align-items: center; gap: var(--space-8);">🔬 Rule Combinations Analysis</h3>
+                        <h3 style="margin: 0; display: flex; align-items: center; gap: var(--space-8);">
+                            🔬 Rule Combinations Analysis
+                            <span class="section-info-icon" onclick="event.stopPropagation();">
+                                i
+                                <div class="section-info-tooltip">
+                                    <div class="section-info-tooltip-title">🔬 Rule Combinations Analysis</div>
+                                    <div class="section-info-tooltip-content">
+                                        Discover which combinations of custom trading rules perform best together.
+                                        <ul>
+                                            <li><strong>Performance Metrics:</strong> Win rate, P&L for each combination</li>
+                                            <li><strong>Trade Count:</strong> Number of trades per combination</li>
+                                            <li><strong>Best Combinations:</strong> Identify winning rule patterns</li>
+                                            <li><strong>Month Navigation:</strong> Analyze combinations by time period</li>
+                                        </ul>
+                                        Requires custom trading rules to be defined first.
+                                    </div>
+                                </div>
+                            </span>
+                        </h3>
                         <button
                             id="ruleCombinationsToggle"
                             style="background: none; border: none; color: white; font-size: var(--font-size-xl); cursor: pointer; padding: var(--space-4); border-radius: var(--radius-sm); transition: background-color var(--duration-fast) var(--ease-standard);"
@@ -1958,7 +2156,25 @@ select.form-control {
             <div class="section" id="rulesSection" style="display: none;">
                 <div class="section-header" style="cursor: pointer;" onclick="toggleRules()">
                     <div style="display: flex; align-items: center; gap: var(--space-12);">
-                        <h3 style="margin: 0; display: flex; align-items: center; gap: var(--space-8);">Custom Trading Rules</h3>
+                        <h3 style="margin: 0; display: flex; align-items: center; gap: var(--space-8);">
+                            Custom Trading Rules
+                            <span class="section-info-icon" onclick="event.stopPropagation();">
+                                i
+                                <div class="section-info-tooltip">
+                                    <div class="section-info-tooltip-title">📝 Custom Trading Rules</div>
+                                    <div class="section-info-tooltip-content">
+                                        Define up to 10 custom rules to categorize and analyze your trades.
+                                        <ul>
+                                            <li><strong>Create Rules:</strong> Name and define custom trading criteria</li>
+                                            <li><strong>Tag Trades:</strong> Apply rules to individual trades</li>
+                                            <li><strong>Track Performance:</strong> See win rate and P&L per rule</li>
+                                            <li><strong>Combination Analysis:</strong> Find best rule combinations</li>
+                                        </ul>
+                                        Examples: "Trend Following", "Support/Resistance", "Morning Trades"
+                                    </div>
+                                </div>
+                            </span>
+                        </h3>
                         <button
                             id="rulesToggle"
                             style="background: none; border: none; color: white; font-size: var(--font-size-xl); cursor: pointer; padding: var(--space-4); border-radius: var(--radius-sm); transition: background-color var(--duration-fast) var(--ease-standard);"
@@ -1983,7 +2199,25 @@ select.form-control {
             <div class="section" id="breakdownsSection" style="display: none;">
                 <div class="section-header" style="cursor: pointer;" onclick="toggleBreakdowns()">
                     <div style="display: flex; align-items: center; gap: var(--space-12);">
-                        <h3 style="margin: 0; display: flex; align-items: center; gap: var(--space-8);">Performance Breakdowns</h3>
+                        <h3 style="margin: 0; display: flex; align-items: center; gap: var(--space-8);">
+                            Performance Breakdowns
+                            <span class="section-info-icon" onclick="event.stopPropagation();">
+                                i
+                                <div class="section-info-tooltip">
+                                    <div class="section-info-tooltip-title">📊 Performance Breakdowns</div>
+                                    <div class="section-info-tooltip-content">
+                                        Analyze performance across different trading categories and conditions.
+                                        <ul>
+                                            <li><strong>Setup Type:</strong> Performance by trade setup patterns</li>
+                                            <li><strong>Market Condition:</strong> Trending vs ranging markets</li>
+                                            <li><strong>Emotional State:</strong> Confident, uncertain, FOMO, revenge</li>
+                                            <li><strong>Rule Adherence:</strong> Followed vs violated trading rules</li>
+                                        </ul>
+                                        Add these tags to trades for deeper insights.
+                                    </div>
+                                </div>
+                            </span>
+                        </h3>
                         <button
                             id="breakdownsToggle"
                             style="background: none; border: none; color: white; font-size: var(--font-size-xl); cursor: pointer; padding: var(--space-4); border-radius: var(--radius-sm); transition: background-color var(--duration-fast) var(--ease-standard);"
@@ -2063,7 +2297,25 @@ select.form-control {
             <div class="section" id="timeAnalyticsSection" style="display: none;">
                 <div class="section-header" style="cursor: pointer;" onclick="toggleTimeAnalytics()">
                     <div style="display: flex; align-items: center; gap: var(--space-12);">
-                        <h3 style="margin: 0; display: flex; align-items: center; gap: var(--space-8);">Time-based Analytics</h3>
+                        <h3 style="margin: 0; display: flex; align-items: center; gap: var(--space-8);">
+                            Time-based Analytics
+                            <span class="section-info-icon" onclick="event.stopPropagation();">
+                                i
+                                <div class="section-info-tooltip">
+                                    <div class="section-info-tooltip-title">📅 Time-based Analytics</div>
+                                    <div class="section-info-tooltip-content">
+                                        Discover when you trade most profitably throughout different time periods.
+                                        <ul>
+                                            <li><strong>Monthly Performance:</strong> P&L trends by month</li>
+                                            <li><strong>Daily Analysis:</strong> Best and worst days of the week</li>
+                                            <li><strong>Hourly Performance:</strong> Optimal trading hours</li>
+                                            <li><strong>Open vs Close:</strong> Entry vs exit time patterns</li>
+                                        </ul>
+                                        Identify your most profitable trading times.
+                                    </div>
+                                </div>
+                            </span>
+                        </h3>
                         <button
                             id="timeAnalyticsToggle"
                             style="background: none; border: none; color: white; font-size: var(--font-size-xl); cursor: pointer; padding: var(--space-4); border-radius: var(--radius-sm); transition: background-color var(--duration-fast) var(--ease-standard);"
@@ -2139,7 +2391,25 @@ select.form-control {
             <div class="section" id="calendarSection" style="display: none;">
                 <div class="section-header" style="cursor: pointer;" onclick="toggleCalendar()">
                     <div style="display: flex; align-items: center; gap: var(--space-12);">
-                        <h3 style="margin: 0; display: flex; align-items: center; gap: var(--space-8);">Calendar View</h3>
+                        <h3 style="margin: 0; display: flex; align-items: center; gap: var(--space-8);">
+                            Calendar View
+                            <span class="section-info-icon" onclick="event.stopPropagation();">
+                                i
+                                <div class="section-info-tooltip">
+                                    <div class="section-info-tooltip-title">📅 Calendar View</div>
+                                    <div class="section-info-tooltip-content">
+                                        Visual calendar showing trading activity and performance by day.
+                                        <ul>
+                                            <li><strong>Trading Days:</strong> Days with trades highlighted</li>
+                                            <li><strong>Daily P&L:</strong> Profit/loss shown for each day</li>
+                                            <li><strong>Color Coding:</strong> Green for profits, red for losses</li>
+                                            <li><strong>Monthly Navigation:</strong> Browse through trading history</li>
+                                        </ul>
+                                        Quickly identify patterns in your trading schedule.
+                                    </div>
+                                </div>
+                            </span>
+                        </h3>
                         <button
                             id="calendarToggle"
                             style="background: none; border: none; color: white; font-size: var(--font-size-xl); cursor: pointer; padding: var(--space-4); border-radius: var(--radius-sm); transition: background-color var(--duration-fast) var(--ease-standard);"
@@ -2162,7 +2432,25 @@ select.form-control {
             <div class="section" id="monteCarloSection" style="display: none;">
                 <div class="section-header" style="cursor: pointer;" onclick="toggleMonteCarlo()">
                     <div style="display: flex; align-items: center; gap: var(--space-12);">
-                        <h3 style="margin: 0; display: flex; align-items: center; gap: var(--space-8);">🎲 Monte Carlo Simulation</h3>
+                        <h3 style="margin: 0; display: flex; align-items: center; gap: var(--space-8);">
+                            🎲 Monte Carlo Simulation
+                            <span class="section-info-icon" onclick="event.stopPropagation();">
+                                i
+                                <div class="section-info-tooltip">
+                                    <div class="section-info-tooltip-title">🎲 Monte Carlo Simulation</div>
+                                    <div class="section-info-tooltip-content">
+                                        Run thousands of simulations to assess risk and potential outcomes.
+                                        <ul>
+                                            <li><strong>Risk Analysis:</strong> Probability of drawdowns and profits</li>
+                                            <li><strong>Simulations:</strong> Randomize trade order 10,000 times</li>
+                                            <li><strong>Percentiles:</strong> Best/worst case scenarios (5th, 50th, 95th)</li>
+                                            <li><strong>Visualizations:</strong> Distribution charts and equity curves</li>
+                                        </ul>
+                                        Understand the range of possible outcomes from your trading strategy.
+                                    </div>
+                                </div>
+                            </span>
+                        </h3>
                         <button
                             id="monteCarloToggle"
                             style="background: none; border: none; color: white; font-size: var(--font-size-xl); cursor: pointer; padding: var(--space-4); border-radius: var(--radius-sm); transition: background-color var(--duration-fast) var(--ease-standard);"
@@ -2253,7 +2541,25 @@ select.form-control {
             <div class="section" id="aiSection" style="display: none;">
                 <div class="section-header" style="cursor: pointer;" onclick="toggleAI()">
                     <div style="display: flex; align-items: center; gap: var(--space-12);">
-                        <h3 style="margin: 0; display: flex; align-items: center; gap: var(--space-8);">🤖 AI Analysis</h3>
+                        <h3 style="margin: 0; display: flex; align-items: center; gap: var(--space-8);">
+                            🤖 AI Analysis
+                            <span class="section-info-icon" onclick="event.stopPropagation();">
+                                i
+                                <div class="section-info-tooltip">
+                                    <div class="section-info-tooltip-title">🤖 AI Analysis</div>
+                                    <div class="section-info-tooltip-content">
+                                        Generate AI-powered insights from your trading data using ChatGPT or Claude.
+                                        <ul>
+                                            <li><strong>Auto-Generated Prompts:</strong> Pre-formatted analysis requests</li>
+                                            <li><strong>Custom Context:</strong> Include stats, trades, rules, and more</li>
+                                            <li><strong>Trade Selection:</strong> Analyze all trades or specific ones</li>
+                                            <li><strong>Copy & Paste:</strong> Easy export to AI platforms</li>
+                                        </ul>
+                                        Get personalized trading insights and improvement suggestions.
+                                    </div>
+                                </div>
+                            </span>
+                        </h3>
                         <button
                             id="aiToggle"
                             style="background: none; border: none; color: white; font-size: var(--font-size-xl); cursor: pointer; padding: var(--space-4); border-radius: var(--radius-sm); transition: background-color var(--duration-fast) var(--ease-standard);"
