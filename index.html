@@ -4241,11 +4241,14 @@ select.form-control {
         }
 
         function initializeDefaultRules() {
-            appState.customRules = [
-                { id: 1, text: 'Wait for confirmation candle', enabled: true },
-                { id: 2, text: 'Risk no more than 2% per trade', enabled: true },
-                { id: 3, text: 'Check higher timeframe trend', enabled: true }
-            ];
+            // Only initialize if no rules exist (e.g., first-time user)
+            if (!appState.customRules || appState.customRules.length === 0) {
+                appState.customRules = [
+                    { id: 1, text: 'Wait for confirmation candle', enabled: true },
+                    { id: 2, text: 'Risk no more than 2% per trade', enabled: true },
+                    { id: 3, text: 'Check higher timeframe trend', enabled: true }
+                ];
+            }
         }
 
 
