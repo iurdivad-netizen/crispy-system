@@ -2158,6 +2158,97 @@ select.form-control {
                 </div>
             </div>
 
+            <!-- Monte Carlo Simulation -->
+            <div class="section" id="monteCarloSection" style="display: none;">
+                <div class="section-header" style="cursor: pointer;" onclick="toggleMonteCarlo()">
+                    <div style="display: flex; align-items: center; gap: var(--space-12);">
+                        <h3 style="margin: 0; display: flex; align-items: center; gap: var(--space-8);">🎲 Monte Carlo Simulation</h3>
+                        <button
+                            id="monteCarloToggle"
+                            style="background: none; border: none; color: white; font-size: var(--font-size-xl); cursor: pointer; padding: var(--space-4); border-radius: var(--radius-sm); transition: background-color var(--duration-fast) var(--ease-standard);"
+                            title="Collapse/Expand"
+                            onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'"
+                            onmouseout="this.style.backgroundColor='transparent'">▼</button>
+                    </div>
+                    <div>
+                        <button class="btn btn-primary" onclick="runMonteCarloSimulation(); event.stopPropagation();">Run Simulation</button>
+                    </div>
+                </div>
+                <div class="section-content">
+                    <!-- Configuration Panel -->
+                    <div style="margin-bottom: 1.5rem; padding: 1rem; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-base);">
+                        <h4 style="font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); margin-bottom: var(--space-12); color: var(--color-text);">⚙️ Simulation Settings</h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+                            <div>
+                                <label style="display: block; font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: var(--space-8);">Number of Simulations</label>
+                                <input type="number" id="mcNumSimulations" value="1000" min="100" max="10000" step="100"
+                                    style="width: 100%; padding: var(--space-8); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-background); color: var(--color-text);">
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: var(--space-8);">Number of Trades to Simulate</label>
+                                <input type="number" id="mcNumTrades" value="100" min="10" max="1000" step="10"
+                                    style="width: 100%; padding: var(--space-8); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-background); color: var(--color-text);">
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: var(--space-8);">Position Size (% of Account)</label>
+                                <input type="number" id="mcPositionSize" value="2" min="0.1" max="100" step="0.1"
+                                    style="width: 100%; padding: var(--space-8); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-background); color: var(--color-text);">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Results Summary -->
+                    <div id="monteCarloResults" style="display: none;">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                            <div class="stat-card">
+                                <div class="stat-label">Expected Final Balance</div>
+                                <div class="stat-value" id="mcExpectedBalance">$0</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">95% Confidence Interval</div>
+                                <div class="stat-value" id="mcConfidenceInterval">$0 - $0</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">Probability of Profit</div>
+                                <div class="stat-value" id="mcProfitProb">0%</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">Risk of Ruin (50% Loss)</div>
+                                <div class="stat-value" id="mcRiskOfRuin">0%</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">Best Case (95th %ile)</div>
+                                <div class="stat-value" id="mcBestCase">$0</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">Worst Case (5th %ile)</div>
+                                <div class="stat-value" id="mcWorstCase">$0</div>
+                            </div>
+                        </div>
+
+                        <!-- Charts -->
+                        <div style="display: grid; grid-template-columns: 1fr; gap: 1.5rem;">
+                            <div style="background: var(--color-surface); padding: 1rem; border-radius: var(--radius-base); border: 1px solid var(--color-border);">
+                                <h4 style="margin: 0 0 1rem 0; font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold);">Distribution of Final Account Balance</h4>
+                                <canvas id="mcDistributionChart"></canvas>
+                            </div>
+                            <div style="background: var(--color-surface); padding: 1rem; border-radius: var(--radius-base); border: 1px solid var(--color-border);">
+                                <h4 style="margin: 0 0 1rem 0; font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold);">Sample Equity Curves (100 simulations)</h4>
+                                <canvas id="mcEquityChart"></canvas>
+                            </div>
+                            <div style="background: var(--color-surface); padding: 1rem; border-radius: var(--radius-base); border: 1px solid var(--color-border);">
+                                <h4 style="margin: 0 0 1rem 0; font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold);">Drawdown Distribution</h4>
+                                <canvas id="mcDrawdownChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="monteCarloPlaceholder" style="text-align: center; padding: 3rem; color: var(--color-text-secondary);">
+                        <p style="font-size: var(--font-size-base); margin: 0;">Configure settings above and click "Run Simulation" to analyze your trading strategy's risk profile.</p>
+                    </div>
+                </div>
+            </div>
+
             <!-- AI Analysis -->
             <div class="section" id="aiSection" style="display: none;">
                 <div class="section-header" style="cursor: pointer;" onclick="toggleAI()">
@@ -2584,6 +2675,7 @@ select.form-control {
             showBreakdowns: true,
             showTimeAnalytics: true,
             showCalendar: true,
+            showMonteCarlo: true,
             showAI: true,
             visibleStats: {
                 startingBalance: true,
@@ -3910,6 +4002,7 @@ select.form-control {
             document.getElementById('breakdownsSection').style.display = hasData ? 'block' : 'none';
             document.getElementById('timeAnalyticsSection').style.display = hasData ? 'block' : 'none';
             document.getElementById('calendarSection').style.display = hasData ? 'block' : 'none';
+            document.getElementById('monteCarloSection').style.display = hasData ? 'block' : 'none';
             document.getElementById('aiSection').style.display = hasData ? 'block' : 'none';
             
             // Enable buttons
@@ -7249,6 +7342,439 @@ select.form-control {
                 content.style.display = 'none';
                 toggleButton.textContent = '▶';
             }
+        }
+
+        function toggleMonteCarlo() {
+            appState.showMonteCarlo = !appState.showMonteCarlo;
+            const content = document.querySelector('#monteCarloSection .section-content');
+            const toggleButton = document.getElementById('monteCarloToggle');
+            if (appState.showMonteCarlo) {
+                content.style.display = 'block';
+                toggleButton.textContent = '▼';
+            } else {
+                content.style.display = 'none';
+                toggleButton.textContent = '▶';
+            }
+        }
+
+        // Monte Carlo Simulation Functions
+        function runMonteCarloSimulation() {
+            if (appState.trades.length === 0) {
+                showMessage('Please import some trades first.', 'error');
+                return;
+            }
+
+            // Get simulation parameters
+            const numSimulations = parseInt(document.getElementById('mcNumSimulations').value);
+            const numTrades = parseInt(document.getElementById('mcNumTrades').value);
+            const positionSize = parseFloat(document.getElementById('mcPositionSize').value) / 100;
+
+            // Validate parameters
+            if (numSimulations < 100 || numSimulations > 10000) {
+                showMessage('Number of simulations must be between 100 and 10000.', 'error');
+                return;
+            }
+            if (numTrades < 10 || numTrades > 1000) {
+                showMessage('Number of trades must be between 10 and 1000.', 'error');
+                return;
+            }
+            if (positionSize <= 0 || positionSize > 1) {
+                showMessage('Position size must be between 0.1% and 100%.', 'error');
+                return;
+            }
+
+            showMessage('Running Monte Carlo simulation...', 'info');
+
+            // Run simulation with a slight delay to allow UI update
+            setTimeout(() => {
+                const results = calculateMonteCarloSimulation(numSimulations, numTrades, positionSize);
+                displayMonteCarloResults(results);
+                drawMonteCarloCharts(results);
+                showMessage('Simulation completed successfully!', 'success');
+            }, 100);
+        }
+
+        function calculateMonteCarloSimulation(numSimulations, numTrades, positionSize) {
+            const trades = appState.trades;
+            const startingBalance = appState.startingBalance;
+
+            // Extract returns from historical trades (as percentage of account)
+            const returns = trades.map(trade => {
+                const pl = trade.netPL || trade.profit || 0;
+                return pl / startingBalance;
+            });
+
+            // Run simulations
+            const finalBalances = [];
+            const maxDrawdowns = [];
+            const equityCurves = []; // Store first 100 for visualization
+
+            for (let sim = 0; sim < numSimulations; sim++) {
+                let balance = startingBalance;
+                let peak = balance;
+                let maxDrawdown = 0;
+                const equityCurve = [balance];
+
+                // Randomly sample from historical returns with replacement (bootstrap)
+                for (let i = 0; i < numTrades; i++) {
+                    const randomIndex = Math.floor(Math.random() * returns.length);
+                    const returnPct = returns[randomIndex];
+
+                    // Apply position sizing
+                    const tradeReturn = returnPct * positionSize * balance;
+                    balance += tradeReturn;
+
+                    // Track peak and drawdown
+                    if (balance > peak) {
+                        peak = balance;
+                    }
+                    const drawdown = (peak - balance) / peak;
+                    if (drawdown > maxDrawdown) {
+                        maxDrawdown = drawdown;
+                    }
+
+                    equityCurve.push(balance);
+                }
+
+                finalBalances.push(balance);
+                maxDrawdowns.push(maxDrawdown);
+
+                // Store first 100 equity curves for visualization
+                if (sim < 100) {
+                    equityCurves.push(equityCurve);
+                }
+            }
+
+            // Sort final balances for percentile calculations
+            const sortedBalances = [...finalBalances].sort((a, b) => a - b);
+
+            // Calculate statistics
+            const mean = finalBalances.reduce((a, b) => a + b, 0) / finalBalances.length;
+            const median = sortedBalances[Math.floor(sortedBalances.length / 2)];
+            const percentile5 = sortedBalances[Math.floor(sortedBalances.length * 0.05)];
+            const percentile95 = sortedBalances[Math.floor(sortedBalances.length * 0.95)];
+            const percentile2_5 = sortedBalances[Math.floor(sortedBalances.length * 0.025)];
+            const percentile97_5 = sortedBalances[Math.floor(sortedBalances.length * 0.975)];
+
+            // Calculate probabilities
+            const profitableSimulations = finalBalances.filter(b => b > startingBalance).length;
+            const probabilityOfProfit = (profitableSimulations / numSimulations) * 100;
+
+            const ruinedSimulations = finalBalances.filter(b => b <= startingBalance * 0.5).length;
+            const riskOfRuin = (ruinedSimulations / numSimulations) * 100;
+
+            // Create distribution histogram
+            const numBins = 50;
+            const minBalance = Math.min(...sortedBalances);
+            const maxBalance = Math.max(...sortedBalances);
+            const binSize = (maxBalance - minBalance) / numBins;
+
+            const histogram = new Array(numBins).fill(0);
+            const binLabels = [];
+
+            for (let i = 0; i < numBins; i++) {
+                binLabels.push(minBalance + (i + 0.5) * binSize);
+            }
+
+            for (const balance of finalBalances) {
+                const binIndex = Math.min(Math.floor((balance - minBalance) / binSize), numBins - 1);
+                histogram[binIndex]++;
+            }
+
+            // Create drawdown histogram
+            const sortedDrawdowns = [...maxDrawdowns].sort((a, b) => a - b);
+            const ddNumBins = 30;
+            const ddHistogram = new Array(ddNumBins).fill(0);
+            const ddBinLabels = [];
+            const maxDD = Math.max(...sortedDrawdowns);
+            const ddBinSize = maxDD / ddNumBins;
+
+            for (let i = 0; i < ddNumBins; i++) {
+                ddBinLabels.push((i + 0.5) * ddBinSize * 100); // Convert to percentage
+            }
+
+            for (const dd of maxDrawdowns) {
+                const binIndex = Math.min(Math.floor(dd / ddBinSize), ddNumBins - 1);
+                ddHistogram[binIndex]++;
+            }
+
+            return {
+                finalBalances,
+                maxDrawdowns,
+                equityCurves,
+                mean,
+                median,
+                percentile5,
+                percentile95,
+                percentile2_5,
+                percentile97_5,
+                probabilityOfProfit,
+                riskOfRuin,
+                histogram,
+                binLabels,
+                ddHistogram,
+                ddBinLabels,
+                startingBalance
+            };
+        }
+
+        function displayMonteCarloResults(results) {
+            // Show results section
+            document.getElementById('monteCarloResults').style.display = 'block';
+            document.getElementById('monteCarloPlaceholder').style.display = 'none';
+
+            // Format currency
+            const fmt = (val) => `$${val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+            // Update statistics
+            document.getElementById('mcExpectedBalance').textContent = fmt(results.mean);
+            document.getElementById('mcConfidenceInterval').textContent =
+                `${fmt(results.percentile2_5)} - ${fmt(results.percentile97_5)}`;
+            document.getElementById('mcProfitProb').textContent =
+                `${results.probabilityOfProfit.toFixed(1)}%`;
+            document.getElementById('mcRiskOfRuin').textContent =
+                `${results.riskOfRuin.toFixed(1)}%`;
+            document.getElementById('mcBestCase').textContent = fmt(results.percentile95);
+            document.getElementById('mcWorstCase').textContent = fmt(results.percentile5);
+
+            // Color code based on profitability
+            const expectedBalanceEl = document.getElementById('mcExpectedBalance');
+            if (results.mean > results.startingBalance) {
+                expectedBalanceEl.style.color = 'var(--color-positive)';
+            } else {
+                expectedBalanceEl.style.color = 'var(--color-negative)';
+            }
+
+            const profitProbEl = document.getElementById('mcProfitProb');
+            if (results.probabilityOfProfit > 50) {
+                profitProbEl.style.color = 'var(--color-positive)';
+            } else {
+                profitProbEl.style.color = 'var(--color-negative)';
+            }
+
+            const riskEl = document.getElementById('mcRiskOfRuin');
+            if (results.riskOfRuin > 10) {
+                riskEl.style.color = 'var(--color-negative)';
+            } else if (results.riskOfRuin > 5) {
+                riskEl.style.color = 'var(--color-orange-400)';
+            } else {
+                riskEl.style.color = 'var(--color-positive)';
+            }
+        }
+
+        function drawMonteCarloCharts(results) {
+            // Destroy existing charts
+            if (appState.chartInstances.mcDistribution) {
+                appState.chartInstances.mcDistribution.destroy();
+            }
+            if (appState.chartInstances.mcEquity) {
+                appState.chartInstances.mcEquity.destroy();
+            }
+            if (appState.chartInstances.mcDrawdown) {
+                appState.chartInstances.mcDrawdown.destroy();
+            }
+
+            const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const textColor = isDarkMode ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.8)';
+            const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+
+            // 1. Distribution Chart
+            const ctxDist = document.getElementById('mcDistributionChart').getContext('2d');
+            appState.chartInstances.mcDistribution = new Chart(ctxDist, {
+                type: 'bar',
+                data: {
+                    labels: results.binLabels.map(val => `$${Math.round(val).toLocaleString()}`),
+                    datasets: [{
+                        label: 'Frequency',
+                        data: results.histogram,
+                        backgroundColor: 'rgba(33, 128, 141, 0.6)',
+                        borderColor: 'rgba(33, 128, 141, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    aspectRatio: 2,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                title: (items) => `Balance: ${items[0].label}`,
+                                label: (item) => `Simulations: ${item.parsed.y}`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                color: textColor,
+                                maxRotation: 45,
+                                minRotation: 45,
+                                autoSkip: true,
+                                maxTicksLimit: 10
+                            },
+                            grid: {
+                                color: gridColor
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                color: textColor
+                            },
+                            grid: {
+                                color: gridColor
+                            },
+                            title: {
+                                display: true,
+                                text: 'Number of Simulations',
+                                color: textColor
+                            }
+                        }
+                    }
+                }
+            });
+
+            // 2. Equity Curves Chart
+            const ctxEquity = document.getElementById('mcEquityChart').getContext('2d');
+            const datasets = results.equityCurves.map((curve, index) => ({
+                label: `Simulation ${index + 1}`,
+                data: curve,
+                borderColor: `rgba(33, 128, 141, ${0.05 + (0.15 * Math.random())})`,
+                borderWidth: 1,
+                fill: false,
+                pointRadius: 0,
+                tension: 0.1
+            }));
+
+            // Add starting balance line
+            datasets.push({
+                label: 'Starting Balance',
+                data: new Array(results.equityCurves[0].length).fill(results.startingBalance),
+                borderColor: 'rgba(255, 255, 255, 0.5)',
+                borderWidth: 2,
+                borderDash: [5, 5],
+                fill: false,
+                pointRadius: 0
+            });
+
+            appState.chartInstances.mcEquity = new Chart(ctxEquity, {
+                type: 'line',
+                data: {
+                    labels: Array.from({ length: results.equityCurves[0].length }, (_, i) => i),
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    aspectRatio: 2,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            enabled: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                color: textColor
+                            },
+                            grid: {
+                                color: gridColor
+                            },
+                            title: {
+                                display: true,
+                                text: 'Trade Number',
+                                color: textColor
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                color: textColor,
+                                callback: function(value) {
+                                    return '$' + value.toLocaleString();
+                                }
+                            },
+                            grid: {
+                                color: gridColor
+                            },
+                            title: {
+                                display: true,
+                                text: 'Account Balance',
+                                color: textColor
+                            }
+                        }
+                    }
+                }
+            });
+
+            // 3. Drawdown Distribution Chart
+            const ctxDD = document.getElementById('mcDrawdownChart').getContext('2d');
+            appState.chartInstances.mcDrawdown = new Chart(ctxDD, {
+                type: 'bar',
+                data: {
+                    labels: results.ddBinLabels.map(val => `${val.toFixed(1)}%`),
+                    datasets: [{
+                        label: 'Frequency',
+                        data: results.ddHistogram,
+                        backgroundColor: 'rgba(192, 21, 47, 0.6)',
+                        borderColor: 'rgba(192, 21, 47, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    aspectRatio: 2,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                title: (items) => `Max Drawdown: ${items[0].label}`,
+                                label: (item) => `Simulations: ${item.parsed.y}`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                color: textColor,
+                                maxRotation: 45,
+                                minRotation: 45,
+                                autoSkip: true,
+                                maxTicksLimit: 10
+                            },
+                            grid: {
+                                color: gridColor
+                            },
+                            title: {
+                                display: true,
+                                text: 'Maximum Drawdown (%)',
+                                color: textColor
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                color: textColor
+                            },
+                            grid: {
+                                color: gridColor
+                            },
+                            title: {
+                                display: true,
+                                text: 'Number of Simulations',
+                                color: textColor
+                            }
+                        }
+                    }
+                }
+            });
         }
 
         // Performance Breakdowns
