@@ -9992,6 +9992,40 @@ select.form-control {
         }
         
         // Print Functions
+        // Helper function to generate screenshot HTML with error handling
+        function generateScreenshotHtml(label, screenshotData) {
+            if (!screenshotData) return '';
+
+            const src = getScreenshotSrc(screenshotData);
+            const sanitizedUrl = sanitizeScreenshotUrl(src);
+
+            if (!sanitizedUrl) return '';
+
+            // Check if it's a TradingView URL
+            const isTradingViewUrl = sanitizedUrl.includes('tradingview.com');
+
+            if (isTradingViewUrl) {
+                // For TradingView URLs, show image with fallback to link
+                const uniqueId = `tv-${Math.random().toString(36).substr(2, 9)}`;
+                return `
+                    <div>
+                        <strong>${escapeHtml(label)}:</strong><br>
+                        <img id="${uniqueId}"
+                             src="${sanitizedUrl}"
+                             alt="${escapeHtml(label)} Screenshot"
+                             style="max-width: 400px; margin: 10px 0; border: 1px solid #ccc;"
+                             onerror="this.style.display='none'; document.getElementById('${uniqueId}-fallback').style.display='block';">
+                        <div id="${uniqueId}-fallback" style="display: none; padding: 10px; background: #f5f5f5; border: 1px solid #ddd; border-radius: 4px; margin: 10px 0;">
+                            <p style="margin: 0 0 5px 0; color: #666; font-size: 14px;">📊 TradingView Chart (Click to open)</p>
+                            <a href="${sanitizedUrl}" target="_blank" style="color: #2962ff; text-decoration: none; word-break: break-all;">${sanitizedUrl}</a>
+                        </div>
+                    </div>`;
+            } else {
+                // For data URIs and regular images
+                return `<div><strong>${escapeHtml(label)}:</strong><br><img src="${sanitizedUrl}" alt="${escapeHtml(label)} Screenshot" style="max-width: 400px; margin: 10px 0; border: 1px solid #ccc;"></div>`;
+            }
+        }
+
         // Helper function to generate HTML for a single trade
         function generateTradeHtml(trade, isLast = false) {
             const pipClass = trade.pips >= 0 ? 'positive' : 'negative';
@@ -10003,21 +10037,11 @@ select.form-control {
                 screenshotsHtml = '<div class="section"><h3>Screenshots</h3>';
 
                 if (trade.entryScreenshot) {
-                    // Get the screenshot source (handles base64 conversion if needed)
-                    const entrySrc = getScreenshotSrc(trade.entryScreenshot);
-                    const entryUrl = sanitizeScreenshotUrl(entrySrc);
-                    if (entryUrl) {
-                        screenshotsHtml += `<div><strong>Entry:</strong><br><img src="${entryUrl}" alt="Entry Screenshot" style="max-width: 400px; margin: 10px 0;"></div>`;
-                    }
+                    screenshotsHtml += generateScreenshotHtml('Entry', trade.entryScreenshot);
                 }
 
                 if (trade.exitScreenshot) {
-                    // Get the screenshot source (handles base64 conversion if needed)
-                    const exitSrc = getScreenshotSrc(trade.exitScreenshot);
-                    const exitUrl = sanitizeScreenshotUrl(exitSrc);
-                    if (exitUrl) {
-                        screenshotsHtml += `<div><strong>Exit:</strong><br><img src="${exitUrl}" alt="Exit Screenshot" style="max-width: 400px; margin: 10px 0;"></div>`;
-                    }
+                    screenshotsHtml += generateScreenshotHtml('Exit', trade.exitScreenshot);
                 }
 
                 screenshotsHtml += '</div>';
