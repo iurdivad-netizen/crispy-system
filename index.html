@@ -9973,23 +9973,24 @@ select.form-control {
         function printTrade(tradeIndex) {
             const trade = appState.trades[tradeIndex];
             const printWindow = window.open('', '', 'width=800,height=600,noopener,noreferrer');
-            
+
             if (!printWindow) {
                 showMessage('Unable to open print window. Please check pop-up blocker settings.', 'error');
                 return;
             }
-            
+
             // Security: Build DOM safely without document.write
             const doc = printWindow.document;
-            doc.open();
-            
-            // Create HTML structure safely
-            const html = doc.createElement('html');
-            const head = doc.createElement('head');
+
+            // Access existing document structure
+            const head = doc.head;
+            const body = doc.body;
+
+            // Set title
             const title = doc.createElement('title');
             title.textContent = `Trade Report - ${trade.symbol} ${trade.date}`;
             head.appendChild(title);
-            
+
             // Add styles safely
             const style = doc.createElement('style');
             style.textContent = `
@@ -10003,11 +10004,7 @@ select.form-control {
                 @media print { @page { size: landscape; } }
             `;
             head.appendChild(style);
-            html.appendChild(head);
-            
-            // Create body
-            const body = doc.createElement('body');
-            
+
             // Header section
             const headerDiv = doc.createElement('div');
             headerDiv.className = 'header';
@@ -10018,11 +10015,11 @@ select.form-control {
             headerDiv.appendChild(h1);
             headerDiv.appendChild(h2);
             body.appendChild(headerDiv);
-            
+
             // Trade info section
             const tradeInfoDiv = doc.createElement('div');
             tradeInfoDiv.className = 'trade-info';
-            
+
             const leftDiv = doc.createElement('div');
             leftDiv.innerHTML = `
                 <strong>Entry Price:</strong> ${escapeHtml(trade.entryPrice.toFixed(5))}<br>
@@ -10030,7 +10027,7 @@ select.form-control {
                 <strong>Direction:</strong> ${escapeHtml(trade.direction)}<br>
                 <strong>Volume:</strong> ${escapeHtml(String(trade.volume))}
             `;
-            
+
             const rightDiv = doc.createElement('div');
             const pipClass = trade.pips >= 0 ? 'positive' : 'negative';
             const plClass = (trade.netPL || trade.profit) >= 0 ? 'positive' : 'negative';
@@ -10040,11 +10037,11 @@ select.form-control {
                 <strong>Commission:</strong> ${escapeHtml(formatCurrency(trade.commission))}<br>
                 <strong>Swap:</strong> ${escapeHtml(formatCurrency(trade.swap))}
             `;
-            
+
             tradeInfoDiv.appendChild(leftDiv);
             tradeInfoDiv.appendChild(rightDiv);
             body.appendChild(tradeInfoDiv);
-            
+
             // Trade analysis section
             const analysisSection = doc.createElement('div');
             analysisSection.className = 'section';
@@ -10058,7 +10055,7 @@ select.form-control {
                 <strong>Rule Adherence:</strong> ${escapeHtml(trade.ruleAdherence || 'Not specified')}
             `;
             body.appendChild(analysisSection);
-            
+
             // Notes section (if exists)
             if (trade.notes) {
                 const notesSection = doc.createElement('div');
@@ -10071,7 +10068,7 @@ select.form-control {
                 notesSection.appendChild(notesP);
                 body.appendChild(notesSection);
             }
-            
+
             // Screenshots section (if exists)
             if (trade.entryScreenshot || trade.exitScreenshot) {
                 const screenshotsSection = doc.createElement('div');
@@ -10079,7 +10076,7 @@ select.form-control {
                 const h3Screenshots = doc.createElement('h3');
                 h3Screenshots.textContent = 'Screenshots';
                 screenshotsSection.appendChild(h3Screenshots);
-                
+
                 if (trade.entryScreenshot) {
                     const entryDiv = doc.createElement('div');
                     const entryStrong = doc.createElement('strong');
@@ -10092,7 +10089,7 @@ select.form-control {
                     entryDiv.appendChild(entryImg);
                     screenshotsSection.appendChild(entryDiv);
                 }
-                
+
                 if (trade.exitScreenshot) {
                     const exitDiv = doc.createElement('div');
                     const exitStrong = doc.createElement('strong');
@@ -10105,14 +10102,10 @@ select.form-control {
                     exitDiv.appendChild(exitImg);
                     screenshotsSection.appendChild(exitDiv);
                 }
-                
+
                 body.appendChild(screenshotsSection);
             }
-            
-            html.appendChild(body);
-            doc.appendChild(html);
-            doc.close();
-            
+
             // Wait for content to load before printing
             setTimeout(() => {
                 printWindow.print();
