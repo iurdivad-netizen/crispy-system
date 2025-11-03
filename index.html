@@ -5351,9 +5351,12 @@ select.form-control {
                     <div class="form-group">
                         <label>TradingView Entry Link</label>
                         <div style="display: flex; gap: var(--space-8); align-items: center;">
-                            <input type="url" class="form-control" style="flex: 1;" placeholder="https://tradingview.com/..." value="${trade.tradingViewEntry || ''}" onchange="updateTradeField(${tradeIndex}, 'tradingViewEntry', this.value)" id="tvEntry_${tradeIndex}">
+                            <input type="url" class="form-control" style="flex: 1;" placeholder="https://tradingview.com/x/ABC123/" value="${trade.tradingViewEntry || ''}" onchange="updateTradeField(${tradeIndex}, 'tradingViewEntry', this.value)" id="tvEntry_${tradeIndex}">
                             <button class="btn btn-tradingview" onclick="openTradingViewLink(${tradeIndex}, 'entry')" ${!trade.tradingViewEntry ? 'disabled' : ''} title="Open TradingView Entry Link">
                                 🔗 Open
+                            </button>
+                            <button class="btn btn-secondary" onclick="convertTradingViewToImage(${tradeIndex}, 'entry')" ${!trade.tradingViewEntry ? 'disabled' : ''} title="Convert TradingView chart to screenshot image">
+                                📸 Convert to Image
                             </button>
                         </div>
                     </div>
@@ -5361,9 +5364,12 @@ select.form-control {
                     <div class="form-group">
                         <label>TradingView Exit Link</label>
                         <div style="display: flex; gap: var(--space-8); align-items: center;">
-                            <input type="url" class="form-control" style="flex: 1;" placeholder="https://tradingview.com/..." value="${trade.tradingViewExit || ''}" onchange="updateTradeField(${tradeIndex}, 'tradingViewExit', this.value)" id="tvExit_${tradeIndex}">
+                            <input type="url" class="form-control" style="flex: 1;" placeholder="https://tradingview.com/x/ABC123/" value="${trade.tradingViewExit || ''}" onchange="updateTradeField(${tradeIndex}, 'tradingViewExit', this.value)" id="tvExit_${tradeIndex}">
                             <button class="btn btn-tradingview" onclick="openTradingViewLink(${tradeIndex}, 'exit')" ${!trade.tradingViewExit ? 'disabled' : ''} title="Open TradingView Exit Link">
                                 🔗 Open
+                            </button>
+                            <button class="btn btn-secondary" onclick="convertTradingViewToImage(${tradeIndex}, 'exit')" ${!trade.tradingViewExit ? 'disabled' : ''} title="Convert TradingView chart to screenshot image">
+                                📸 Convert to Image
                             </button>
                         </div>
                     </div>
@@ -7019,6 +7025,73 @@ select.form-control {
                 safeOpenURL(url);
             } else {
                 showMessage('Please enter a TradingView URL first', 'error');
+            }
+        }
+
+        // Convert TradingView URL to base64 image and save as screenshot
+        async function convertTradingViewToImage(tradeIndex, type) {
+            const trade = appState.trades[tradeIndex];
+            const url = type === 'entry' ? trade.tradingViewEntry : trade.tradingViewExit;
+
+            if (!url || !url.trim()) {
+                showMessage('Please enter a TradingView URL first', 'error');
+                return;
+            }
+
+            // Check if it's a TradingView URL
+            if (!url.includes('tradingview.com')) {
+                showMessage('Please enter a valid TradingView URL', 'error');
+                return;
+            }
+
+            // Extract snapshot ID from URL
+            const tvMatch = url.match(/tradingview\.com\/x\/([^\/]+)/);
+            if (!tvMatch || !tvMatch[1]) {
+                showMessage('Invalid TradingView snapshot URL format. Expected format: https://tradingview.com/x/ABC123/', 'error');
+                return;
+            }
+
+            const snapshotId = tvMatch[1];
+            const imageUrl = `https://s.tradingview.com/snapshots/x/${snapshotId}.png`;
+
+            showMessage(`Converting TradingView chart to image...`, 'info');
+
+            try {
+                // Create a proxy image to load and convert to base64
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+
+                const loadPromise = new Promise((resolve, reject) => {
+                    img.onload = () => resolve(img);
+                    img.onerror = () => reject(new Error('Failed to load TradingView snapshot image'));
+
+                    // Set a timeout
+                    setTimeout(() => reject(new Error('Image load timeout')), 10000);
+                });
+
+                img.src = imageUrl;
+                const loadedImg = await loadPromise;
+
+                // Convert to canvas then to base64
+                const canvas = document.createElement('canvas');
+                canvas.width = loadedImg.naturalWidth;
+                canvas.height = loadedImg.naturalHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(loadedImg, 0, 0);
+
+                const base64Data = canvas.toDataURL('image/png');
+
+                // Save to the appropriate screenshot field
+                const field = type === 'entry' ? 'entryScreenshot' : 'exitScreenshot';
+                appState.trades[tradeIndex][field] = base64Data;
+
+                renderTradeDetails(tradeIndex);
+                showMessage(`✅ TradingView chart converted to ${type} screenshot!`, 'success');
+                saveToLocalStorage();
+
+            } catch (error) {
+                console.error('Error converting TradingView to image:', error);
+                showMessage(`❌ Failed to convert TradingView chart. The image may be blocked by CORS restrictions. Try uploading a manual screenshot instead.`, 'error');
             }
         }
 
