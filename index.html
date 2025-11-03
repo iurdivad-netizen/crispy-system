@@ -1486,6 +1486,10 @@ select.form-control {
                     🖨️ Print
                 </button>
 
+                <button class="btn" onclick="toggleFeaturesModal()" title="Learn about all app features">
+                    ℹ️ Features
+                </button>
+
                 <!-- Export with dropdown -->
                 <div class="export-menu-container" style="position: relative; display: inline-block;">
                     <button onclick="toggleExportMenu()" class="btn btn-secondary" id="exportBtn" disabled title="Export options">💾 Export ▾</button>
@@ -2821,6 +2825,141 @@ select.form-control {
         </div>
     </div>
 
+    <!-- Features Modal -->
+    <div id="featuresModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); z-index: 10000; justify-content: center; align-items: center; overflow-y: auto;">
+        <div style="background: var(--color-surface); padding: 2rem; border-radius: var(--radius-lg); max-width: 800px; width: 90%; box-shadow: var(--shadow-xl); margin: 2rem auto; max-height: 90vh; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; position: sticky; top: 0; background: var(--color-surface); z-index: 1; padding-bottom: 1rem;">
+                <h3 style="margin: 0; color: var(--color-text); display: flex; align-items: center; gap: var(--space-8);">
+                    <span>ℹ️</span>
+                    <span>Z-APP Features Guide</span>
+                </h3>
+                <button onclick="toggleFeaturesModal()" style="background: none; border: none; font-size: 2rem; color: var(--color-text-secondary); cursor: pointer; line-height: 1; padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;" onmouseover="this.style.color='var(--color-text)'" onmouseout="this.style.color='var(--color-text-secondary)'">×</button>
+            </div>
+
+            <div style="color: var(--color-text); line-height: 1.6;">
+                <!-- Introduction -->
+                <div style="padding: 1rem; background: var(--color-bg-1); border-radius: var(--radius-base); margin-bottom: 1.5rem; border-left: 4px solid var(--color-primary);">
+                    <p style="margin: 0; font-size: var(--font-size-base);">
+                        <strong>Z-APP</strong> is a comprehensive trading journal designed to help you track, analyze, and optimize your trading performance. Here's everything you can do:
+                    </p>
+                </div>
+
+                <!-- Data Management -->
+                <div style="margin-bottom: 2rem;">
+                    <h4 style="color: var(--color-primary); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <span>💾</span> Data Management
+                    </h4>
+                    <ul style="margin: 0; padding-left: 1.5rem; display: grid; gap: 0.75rem;">
+                        <li><strong>Auto-Save:</strong> Automatically saves your data every 30 seconds (toggle on/off)</li>
+                        <li><strong>Manual Save:</strong> Save your data instantly at any time</li>
+                        <li><strong>Storage Info:</strong> Monitor your data usage (100MB limit with IndexedDB)</li>
+                        <li><strong>Import CSV:</strong> Import trades from CSV files (cTrader, MT4, MT5 formats)</li>
+                        <li><strong>Import Data:</strong> Import complete journal data from JSON files</li>
+                        <li><strong>Import from API:</strong> Connect to MetaTrader API for automated trade imports</li>
+                        <li><strong>Export Options:</strong> Full export, trades only, without screenshots, screenshots only, or CSV format</li>
+                    </ul>
+                </div>
+
+                <!-- Trade Management -->
+                <div style="margin-bottom: 2rem;">
+                    <h4 style="color: var(--color-primary); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <span>📊</span> Trade Management
+                    </h4>
+                    <ul style="margin: 0; padding-left: 1.5rem; display: grid; gap: 0.75rem;">
+                        <li><strong>Add Trades:</strong> Manually add new trades with detailed information</li>
+                        <li><strong>Edit Trades:</strong> Modify existing trade details at any time</li>
+                        <li><strong>Delete Trades:</strong> Remove trades from your history</li>
+                        <li><strong>Trade Details:</strong> Track symbol, direction, entry/exit prices, volume, commission, swap</li>
+                        <li><strong>Journal Notes:</strong> Add setup type, market condition, emotional state, and notes</li>
+                        <li><strong>Rule Adherence:</strong> Track which trading rules you followed</li>
+                        <li><strong>Screenshots:</strong> Attach entry and exit screenshots to trades</li>
+                        <li><strong>TradingView Integration:</strong> Paste TradingView URLs to automatically capture chart snapshots</li>
+                    </ul>
+                </div>
+
+                <!-- Analytics & Statistics -->
+                <div style="margin-bottom: 2rem;">
+                    <h4 style="color: var(--color-primary); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <span>📈</span> Analytics & Statistics
+                    </h4>
+                    <ul style="margin: 0; padding-left: 1.5rem; display: grid; gap: 0.75rem;">
+                        <li><strong>Performance Metrics:</strong> Win rate, total P&L, average win/loss, profit factor, expectancy</li>
+                        <li><strong>Monthly Performance:</strong> Track profit/loss by month with visual charts</li>
+                        <li><strong>Daily Performance:</strong> Analyze performance by day of the week</li>
+                        <li><strong>Hourly Performance:</strong> Identify your most profitable trading hours</li>
+                        <li><strong>Rule Performance:</strong> See which trading rules contribute to your success</li>
+                        <li><strong>Setup Performance:</strong> Analyze performance by setup type</li>
+                        <li><strong>Market Condition Analysis:</strong> Compare performance across different market conditions</li>
+                        <li><strong>Equity Curve:</strong> Visualize your account balance over time</li>
+                    </ul>
+                </div>
+
+                <!-- Advanced Analysis -->
+                <div style="margin-bottom: 2rem;">
+                    <h4 style="color: var(--color-primary); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <span>🎲</span> Advanced Analysis
+                    </h4>
+                    <ul style="margin: 0; padding-left: 1.5rem; display: grid; gap: 0.75rem;">
+                        <li><strong>Monte Carlo Simulation:</strong> Run 1000-5000 simulations to project potential outcomes</li>
+                        <li><strong>Risk of Ruin:</strong> Calculate probability of losing a percentage of your account</li>
+                        <li><strong>Drawdown Analysis:</strong> Track maximum drawdown and recovery periods</li>
+                        <li><strong>Confidence Intervals:</strong> 10th, 50th, and 90th percentile projections</li>
+                        <li><strong>Probability Analysis:</strong> Understand the range of possible trading outcomes</li>
+                    </ul>
+                </div>
+
+                <!-- Customization -->
+                <div style="margin-bottom: 2rem;">
+                    <h4 style="color: var(--color-primary); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <span>⚙️</span> Customization
+                    </h4>
+                    <ul style="margin: 0; padding-left: 1.5rem; display: grid; gap: 0.75rem;">
+                        <li><strong>Custom Rules:</strong> Create and manage your own trading rules</li>
+                        <li><strong>Starting Balance:</strong> Set your initial account equity</li>
+                        <li><strong>Platform Selection:</strong> Choose between cTrader, MT4, or MT5</li>
+                        <li><strong>Import Modes:</strong> Overwrite, append, or update existing data</li>
+                        <li><strong>Dark Mode:</strong> Automatic dark mode based on system preferences</li>
+                        <li><strong>Collapsible Sections:</strong> Customize your view by expanding/collapsing sections</li>
+                    </ul>
+                </div>
+
+                <!-- Visualization -->
+                <div style="margin-bottom: 2rem;">
+                    <h4 style="color: var(--color-primary); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <span>📊</span> Visualization Tools
+                    </h4>
+                    <ul style="margin: 0; padding-left: 1.5rem; display: grid; gap: 0.75rem;">
+                        <li><strong>Interactive Charts:</strong> Powered by Chart.js for rich visualizations</li>
+                        <li><strong>Calendar View:</strong> See your P&L on a monthly calendar</li>
+                        <li><strong>Performance Graphs:</strong> Multiple chart types for different metrics</li>
+                        <li><strong>Screenshot Lightbox:</strong> View trade screenshots in full screen</li>
+                        <li><strong>Color-Coded Data:</strong> Green for profits, red for losses, visual indicators</li>
+                    </ul>
+                </div>
+
+                <!-- Tips -->
+                <div style="padding: 1rem; background: var(--color-bg-1); border-radius: var(--radius-base); border-left: 4px solid var(--color-teal-500);">
+                    <h4 style="margin: 0 0 0.75rem 0; color: var(--color-teal-500); display: flex; align-items: center; gap: 0.5rem;">
+                        <span>💡</span> Pro Tips
+                    </h4>
+                    <ul style="margin: 0; padding-left: 1.5rem; font-size: var(--font-size-sm); display: grid; gap: 0.5rem;">
+                        <li>Click the <strong>ℹ️ (i) icons</strong> next to each section for detailed help</li>
+                        <li>Use <strong>auto-save</strong> to prevent data loss</li>
+                        <li>Export your data regularly as a backup</li>
+                        <li>Attach screenshots to trades for better review and analysis</li>
+                        <li>Define custom rules to track your strategy adherence</li>
+                        <li>Use Monte Carlo simulations to set realistic expectations</li>
+                        <li>Review your performance by time of day to optimize your trading schedule</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div style="margin-top: 1.5rem; text-align: center;">
+                <button onclick="toggleFeaturesModal()" class="btn btn--primary">Got it!</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // ============================================================================
         // SECURITY FUNCTIONS - Added for XSS and injection protection
@@ -3592,6 +3731,12 @@ select.form-control {
         // Toggle API import modal
         function toggleAPIImportModal() {
             const modal = document.getElementById('apiImportModal');
+            modal.style.display = modal.style.display === 'none' ? 'flex' : 'none';
+        }
+
+        // Toggle features modal
+        function toggleFeaturesModal() {
+            const modal = document.getElementById('featuresModal');
             modal.style.display = modal.style.display === 'none' ? 'flex' : 'none';
         }
 
