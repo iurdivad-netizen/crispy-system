@@ -9970,16 +9970,8 @@ select.form-control {
         }
         
         // Print Functions
-        function printTrade(tradeIndex) {
-            const trade = appState.trades[tradeIndex];
-            const printWindow = window.open('', '', 'width=800,height=600');
-
-            if (!printWindow) {
-                showMessage('Unable to open print window. Please check pop-up blocker settings.', 'error');
-                return;
-            }
-
-            // Build HTML content with security escaping
+        // Helper function to generate HTML for a single trade
+        function generateTradeHtml(trade, isLast = false) {
             const pipClass = trade.pips >= 0 ? 'positive' : 'negative';
             const plClass = (trade.netPL || trade.profit) >= 0 ? 'positive' : 'negative';
 
@@ -10011,7 +10003,55 @@ select.form-control {
                 notesHtml = `<div class="section"><h3>Notes</h3><p>${escapeHtml(trade.notes)}</p></div>`;
             }
 
-            // Complete HTML document
+            // Add page break after each trade except the last one
+            const pageBreakClass = !isLast ? ' page-break' : '';
+
+            return `
+    <div class="trade-page${pageBreakClass}">
+        <div class="header">
+            <h1>Trade Report</h1>
+            <h2>${escapeHtml(trade.symbol)} - ${escapeHtml(trade.date)} ${escapeHtml(trade.time)}</h2>
+        </div>
+
+        <div class="trade-info">
+            <div>
+                <strong>Entry Price:</strong> ${escapeHtml(trade.entryPrice.toFixed(5))}<br>
+                <strong>Exit Price:</strong> ${escapeHtml(trade.exitPrice.toFixed(5))}<br>
+                <strong>Direction:</strong> ${escapeHtml(trade.direction)}<br>
+                <strong>Volume:</strong> ${escapeHtml(String(trade.volume))}
+            </div>
+            <div>
+                <strong>Pips:</strong> <span class="${pipClass}">${escapeHtml(trade.pips.toFixed(1))}</span><br>
+                <strong>P&L:</strong> <span class="${plClass}">${escapeHtml(formatCurrency(trade.netPL || trade.profit))}</span><br>
+                <strong>Commission:</strong> ${escapeHtml(formatCurrency(trade.commission))}<br>
+                <strong>Swap:</strong> ${escapeHtml(formatCurrency(trade.swap))}
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>Trade Analysis</h3>
+            <strong>Setup Type:</strong> ${escapeHtml(trade.setupType || 'Not specified')}<br>
+            <strong>Market Condition:</strong> ${escapeHtml(trade.marketCondition || 'Not specified')}<br>
+            <strong>Emotional State:</strong> ${escapeHtml(trade.emotionalState || 'Not specified')}<br>
+            <strong>Rule Adherence:</strong> ${escapeHtml(trade.ruleAdherence || 'Not specified')}
+        </div>
+
+        ${notesHtml}
+
+        ${screenshotsHtml}
+    </div>`;
+        }
+
+        // Print individual trade (for per-trade print buttons if needed)
+        function printTrade(tradeIndex) {
+            const trade = appState.trades[tradeIndex];
+            const printWindow = window.open('', '', 'width=800,height=600');
+
+            if (!printWindow) {
+                showMessage('Unable to open print window. Please check pop-up blocker settings.', 'error');
+                return;
+            }
+
             const htmlContent = `
 <!DOCTYPE html>
 <html>
@@ -10033,55 +10073,74 @@ select.form-control {
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>Trade Report</h1>
-        <h2>${escapeHtml(trade.symbol)} - ${escapeHtml(trade.date)} ${escapeHtml(trade.time)}</h2>
-    </div>
-
-    <div class="trade-info">
-        <div>
-            <strong>Entry Price:</strong> ${escapeHtml(trade.entryPrice.toFixed(5))}<br>
-            <strong>Exit Price:</strong> ${escapeHtml(trade.exitPrice.toFixed(5))}<br>
-            <strong>Direction:</strong> ${escapeHtml(trade.direction)}<br>
-            <strong>Volume:</strong> ${escapeHtml(String(trade.volume))}
-        </div>
-        <div>
-            <strong>Pips:</strong> <span class="${pipClass}">${escapeHtml(trade.pips.toFixed(1))}</span><br>
-            <strong>P&L:</strong> <span class="${plClass}">${escapeHtml(formatCurrency(trade.netPL || trade.profit))}</span><br>
-            <strong>Commission:</strong> ${escapeHtml(formatCurrency(trade.commission))}<br>
-            <strong>Swap:</strong> ${escapeHtml(formatCurrency(trade.swap))}
-        </div>
-    </div>
-
-    <div class="section">
-        <h3>Trade Analysis</h3>
-        <strong>Setup Type:</strong> ${escapeHtml(trade.setupType || 'Not specified')}<br>
-        <strong>Market Condition:</strong> ${escapeHtml(trade.marketCondition || 'Not specified')}<br>
-        <strong>Emotional State:</strong> ${escapeHtml(trade.emotionalState || 'Not specified')}<br>
-        <strong>Rule Adherence:</strong> ${escapeHtml(trade.ruleAdherence || 'Not specified')}
-    </div>
-
-    ${notesHtml}
-
-    ${screenshotsHtml}
+    ${generateTradeHtml(trade, true)}
 </body>
 </html>`;
 
-            // Write content to the new window
             printWindow.document.open();
             printWindow.document.write(htmlContent);
             printWindow.document.close();
 
-            // Wait for content to load before printing
             setTimeout(() => {
                 printWindow.print();
             }, 500);
         }
-        
-        
+
+        // Print all trades - each trade on its own page
         function printTrades() {
-            // Implementation for printing all trades
-            showMessage('Print all trades functionality would open print dialog with all trades');
+            if (!appState.trades || appState.trades.length === 0) {
+                showMessage('No trades to print', 'error');
+                return;
+            }
+
+            const printWindow = window.open('', '', 'width=800,height=600');
+
+            if (!printWindow) {
+                showMessage('Unable to open print window. Please check pop-up blocker settings.', 'error');
+                return;
+            }
+
+            // Generate HTML for all trades
+            let tradesHtml = '';
+            appState.trades.forEach((trade, index) => {
+                const isLast = index === appState.trades.length - 1;
+                tradesHtml += generateTradeHtml(trade, isLast);
+            });
+
+            const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>All Trades Report - ${appState.trades.length} trades</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .trade-page { margin-bottom: 20px; }
+        .page-break { page-break-after: always; }
+        .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
+        .trade-info { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0; }
+        .section { margin: 20px 0; }
+        .positive { color: green; font-weight: bold; }
+        .negative { color: red; font-weight: bold; }
+        img { max-width: 300px; margin: 10px 0; border: 1px solid #ccc; }
+        @media print {
+            @page { size: landscape; }
+            body { margin: 15px; }
+        }
+    </style>
+</head>
+<body>
+    ${tradesHtml}
+</body>
+</html>`;
+
+            printWindow.document.open();
+            printWindow.document.write(htmlContent);
+            printWindow.document.close();
+
+            setTimeout(() => {
+                printWindow.print();
+            }, 500);
         }
         
         // Configuration Functions
