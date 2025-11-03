@@ -2848,6 +2848,28 @@ select.form-control {
             }
         }
 
+        // Security: Screenshot URL sanitization - allows data URIs and http/https URLs
+        function sanitizeScreenshotUrl(url) {
+            if (!url || typeof url !== 'string') return '';
+
+            // Allow data URIs for base64 images (from paste/upload)
+            if (url.startsWith('data:image/')) {
+                return url;
+            }
+
+            // Allow http/https URLs (for TradingView links, etc.)
+            try {
+                const urlObj = new URL(url);
+                if (['http:', 'https:'].includes(urlObj.protocol)) {
+                    return urlObj.href;
+                }
+            } catch {
+                // Invalid URL format
+            }
+
+            return '';
+        }
+
         // Security: Safe URL opener with validation
         function safeOpenURL(url) {
             if (!url || !url.trim()) {
@@ -9981,16 +10003,20 @@ select.form-control {
                 screenshotsHtml = '<div class="section"><h3>Screenshots</h3>';
 
                 if (trade.entryScreenshot) {
-                    const entryUrl = sanitizeUrl(trade.entryScreenshot);
+                    // Get the screenshot source (handles base64 conversion if needed)
+                    const entrySrc = getScreenshotSrc(trade.entryScreenshot);
+                    const entryUrl = sanitizeScreenshotUrl(entrySrc);
                     if (entryUrl) {
-                        screenshotsHtml += `<div><strong>Entry:</strong><br><img src="${entryUrl}" alt="Entry Screenshot"></div>`;
+                        screenshotsHtml += `<div><strong>Entry:</strong><br><img src="${entryUrl}" alt="Entry Screenshot" style="max-width: 400px; margin: 10px 0;"></div>`;
                     }
                 }
 
                 if (trade.exitScreenshot) {
-                    const exitUrl = sanitizeUrl(trade.exitScreenshot);
+                    // Get the screenshot source (handles base64 conversion if needed)
+                    const exitSrc = getScreenshotSrc(trade.exitScreenshot);
+                    const exitUrl = sanitizeScreenshotUrl(exitSrc);
                     if (exitUrl) {
-                        screenshotsHtml += `<div><strong>Exit:</strong><br><img src="${exitUrl}" alt="Exit Screenshot"></div>`;
+                        screenshotsHtml += `<div><strong>Exit:</strong><br><img src="${exitUrl}" alt="Exit Screenshot" style="max-width: 400px; margin: 10px 0;"></div>`;
                     }
                 }
 
