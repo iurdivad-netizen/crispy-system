@@ -1428,7 +1428,14 @@ select.form-control {
         <div style="max-width: 1200px; margin: 0 auto; padding: 2rem;">
             <!-- Header -->
             <h1 class="gradient-header">Z-APP</h1>
-            <h2 style="text-align: center; color: #94a3b8; font-size: 1.25rem; margin-top: -1rem; margin-bottom: 2rem; font-weight: 400;">Comprehensive Trading Journal</h2>
+            <h2 style="text-align: center; color: #94a3b8; font-size: 1.25rem; margin-top: -1rem; margin-bottom: 1rem; font-weight: 400;">Comprehensive Trading Journal</h2>
+
+            <!-- Features Button -->
+            <div style="text-align: center; margin-bottom: 2rem;">
+                <button class="btn btn--primary" onclick="toggleFeaturesModal()" title="Learn about all app features">
+                    ℹ️ Features Guide
+                </button>
+            </div>
 
             <!-- Save Status Indicator -->
             <div style="text-align: center; margin-bottom: 1rem; padding: 0.75rem; background: var(--color-bg-1); border: 1px solid var(--color-border); border-radius: var(--radius-base); display: flex; justify-content: center; align-items: center; gap: 1rem; flex-wrap: wrap;">
@@ -1484,10 +1491,6 @@ select.form-control {
 
                 <button class="btn btn-secondary" onclick="printTrades()" id="printBtn" disabled>
                     🖨️ Print
-                </button>
-
-                <button class="btn" onclick="toggleFeaturesModal()" title="Learn about all app features">
-                    ℹ️ Features
                 </button>
 
                 <!-- Export with dropdown -->
