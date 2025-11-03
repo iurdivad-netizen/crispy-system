@@ -2505,6 +2505,14 @@ select.form-control {
                         </div>
                     </div>
 
+                    <!-- Baseline Data -->
+                    <div id="monteCarloBaselineData" style="margin-bottom: 1.5rem; padding: 1rem; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-base);">
+                        <h4 style="font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); margin-bottom: var(--space-12); color: var(--color-text);">📊 Baseline Historical Data</h4>
+                        <div id="monteCarloBaselineContent" style="color: var(--color-text-secondary); font-size: var(--font-size-xs);">
+                            <!-- Baseline stats will be dynamically inserted here -->
+                        </div>
+                    </div>
+
                     <!-- Results Summary -->
                     <div id="monteCarloResults" style="display: none;">
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
@@ -5545,6 +5553,11 @@ select.form-control {
             };
 
             appState.currentBalance = currentBalance;
+
+            // Update Monte Carlo baseline data if section is visible
+            if (appState.showMonteCarlo) {
+                displayMonteCarloBaselineData();
+            }
         }
 
         // Calculate statistics for a specific month
@@ -7593,6 +7606,119 @@ select.form-control {
             saveToLocalStorage();
         }
 
+        function displayMonteCarloBaselineData() {
+            const baselineContent = document.getElementById('monteCarloBaselineContent');
+
+            if (appState.trades.length === 0) {
+                baselineContent.innerHTML = '<p style="margin: 0; font-style: italic;">No trades imported yet. Import trades to see baseline statistics.</p>';
+                return;
+            }
+
+            const trades = appState.trades;
+            const startingBalance = appState.startingBalance;
+
+            // Calculate basic trade statistics
+            const totalTrades = trades.length;
+            const winningTrades = trades.filter(t => (t.netPL || t.profit || 0) > 0);
+            const losingTrades = trades.filter(t => (t.netPL || t.profit || 0) < 0);
+            const winRate = totalTrades > 0 ? ((winningTrades.length / totalTrades) * 100).toFixed(1) : 0;
+
+            // Calculate average win/loss
+            const avgWin = winningTrades.length > 0
+                ? winningTrades.reduce((sum, t) => sum + (t.netPL || t.profit || 0), 0) / winningTrades.length
+                : 0;
+            const avgLoss = losingTrades.length > 0
+                ? losingTrades.reduce((sum, t) => sum + (t.netPL || t.profit || 0), 0) / losingTrades.length
+                : 0;
+
+            // Calculate total P&L
+            const totalPL = trades.reduce((sum, t) => sum + (t.netPL || t.profit || 0), 0);
+
+            // Calculate returns (as percentage of starting balance)
+            const returns = trades.map(t => {
+                const pl = t.netPL || t.profit || 0;
+                return (pl / startingBalance) * 100; // Convert to percentage
+            });
+
+            // Calculate average and median return
+            const avgReturn = returns.length > 0
+                ? returns.reduce((sum, r) => sum + r, 0) / returns.length
+                : 0;
+            const sortedReturns = [...returns].sort((a, b) => a - b);
+            const medianReturn = returns.length > 0
+                ? sortedReturns[Math.floor(sortedReturns.length / 2)]
+                : 0;
+
+            // Calculate standard deviation of returns
+            const variance = returns.length > 0
+                ? returns.reduce((sum, r) => sum + Math.pow(r - avgReturn, 2), 0) / returns.length
+                : 0;
+            const stdDev = Math.sqrt(variance);
+
+            // Calculate historical max drawdown
+            let balance = startingBalance;
+            let peak = balance;
+            let maxDrawdown = 0;
+
+            trades.forEach(trade => {
+                balance += (trade.netPL || trade.profit || 0);
+                if (balance > peak) {
+                    peak = balance;
+                }
+                const drawdown = peak > 0 ? ((peak - balance) / peak) * 100 : 0;
+                if (drawdown > maxDrawdown) {
+                    maxDrawdown = drawdown;
+                }
+            });
+
+            // Calculate win/loss ratio
+            const winLossRatio = avgLoss !== 0 ? (avgWin / Math.abs(avgLoss)).toFixed(2) : 'N/A';
+
+            // Get date range
+            const dates = trades.map(t => new Date(t.entryTime || t.timestamp)).filter(d => !isNaN(d));
+            const minDate = dates.length > 0 ? new Date(Math.min(...dates)) : null;
+            const maxDate = dates.length > 0 ? new Date(Math.max(...dates)) : null;
+            const dateRange = minDate && maxDate
+                ? `${minDate.toLocaleDateString()} - ${maxDate.toLocaleDateString()}`
+                : 'N/A';
+
+            // Build HTML
+            baselineContent.innerHTML = `
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                    <div>
+                        <div style="font-weight: var(--font-weight-semibold); color: var(--color-text); margin-bottom: var(--space-4);">Account Information</div>
+                        <div style="margin-bottom: var(--space-4);">Starting Balance: <strong style="color: var(--color-text);">$${startingBalance.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></div>
+                        <div style="margin-bottom: var(--space-4);">Total Historical P&L: <strong style="color: ${totalPL >= 0 ? 'var(--color-success)' : 'var(--color-error)'};">${totalPL >= 0 ? '+' : ''}$${totalPL.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></div>
+                        <div>Date Range: <strong style="color: var(--color-text);">${dateRange}</strong></div>
+                    </div>
+                    <div>
+                        <div style="font-weight: var(--font-weight-semibold); color: var(--color-text); margin-bottom: var(--space-4);">Trade Statistics</div>
+                        <div style="margin-bottom: var(--space-4);">Total Trades: <strong style="color: var(--color-text);">${totalTrades}</strong></div>
+                        <div style="margin-bottom: var(--space-4);">Win Rate: <strong style="color: ${parseFloat(winRate) >= 50 ? 'var(--color-success)' : 'var(--color-text)'};">${winRate}%</strong></div>
+                        <div>Win/Loss Ratio: <strong style="color: var(--color-text);">${winLossRatio}</strong></div>
+                    </div>
+                    <div>
+                        <div style="font-weight: var(--font-weight-semibold); color: var(--color-text); margin-bottom: var(--space-4);">Average Outcomes</div>
+                        <div style="margin-bottom: var(--space-4);">Avg Win: <strong style="color: var(--color-success);">+$${avgWin.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></div>
+                        <div style="margin-bottom: var(--space-4);">Avg Loss: <strong style="color: var(--color-error);">${avgLoss >= 0 ? '' : ''}$${avgLoss.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></div>
+                    </div>
+                    <div>
+                        <div style="font-weight: var(--font-weight-semibold); color: var(--color-text); margin-bottom: var(--space-4);">Return Metrics</div>
+                        <div style="margin-bottom: var(--space-4);">Avg Return/Trade: <strong style="color: ${avgReturn >= 0 ? 'var(--color-success)' : 'var(--color-error)'};">${avgReturn >= 0 ? '+' : ''}${avgReturn.toFixed(3)}%</strong></div>
+                        <div style="margin-bottom: var(--space-4);">Median Return: <strong style="color: ${medianReturn >= 0 ? 'var(--color-success)' : 'var(--color-error)'};">${medianReturn >= 0 ? '+' : ''}${medianReturn.toFixed(3)}%</strong></div>
+                        <div>Return Std Dev: <strong style="color: var(--color-text);">${stdDev.toFixed(3)}%</strong></div>
+                    </div>
+                    <div>
+                        <div style="font-weight: var(--font-weight-semibold); color: var(--color-text); margin-bottom: var(--space-4);">Risk Metrics</div>
+                        <div>Max Drawdown: <strong style="color: var(--color-error);">${maxDrawdown.toFixed(2)}%</strong></div>
+                    </div>
+                </div>
+                <div style="margin-top: var(--space-12); padding-top: var(--space-12); border-top: 1px solid var(--color-border); font-style: italic; font-size: var(--font-size-xs);">
+                    The simulation will randomly resample from these ${totalTrades} historical trades to generate possible future outcomes.
+                </div>
+            `;
+        }
+
         function toggleMonteCarlo() {
             appState.showMonteCarlo = !appState.showMonteCarlo;
             const content = document.querySelector('#monteCarloSection .section-content');
@@ -7600,6 +7726,7 @@ select.form-control {
             if (appState.showMonteCarlo) {
                 content.style.display = 'block';
                 toggleButton.textContent = '▼';
+                displayMonteCarloBaselineData(); // Update baseline data when section is opened
             } else {
                 content.style.display = 'none';
                 toggleButton.textContent = '▶';
