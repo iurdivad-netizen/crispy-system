@@ -1327,6 +1327,12 @@ select.form-control {
         }
 
         /* Section Info Tooltip Styles */
+        .section-info-container {
+            position: relative;
+            display: inline-block;
+            margin-left: var(--space-8);
+        }
+
         .section-info-icon {
             display: inline-flex;
             align-items: center;
@@ -1338,10 +1344,8 @@ select.form-control {
             color: white;
             font-size: 12px;
             font-weight: bold;
-            cursor: help;
+            cursor: pointer;
             transition: all var(--duration-fast) var(--ease-standard);
-            position: relative;
-            margin-left: var(--space-8);
             border: 1px solid rgba(255, 255, 255, 0.3);
         }
 
@@ -1351,6 +1355,7 @@ select.form-control {
         }
 
         .section-info-tooltip {
+            display: none;
             position: fixed;
             top: auto;
             left: auto;
@@ -1361,17 +1366,12 @@ select.form-control {
             padding: var(--space-12);
             box-shadow: var(--shadow-lg);
             z-index: 99999;
-            opacity: 0;
-            visibility: hidden;
-            transition: all var(--duration-normal) var(--ease-standard);
-            pointer-events: none;
             min-width: 280px;
             max-width: 400px;
         }
 
-        .section-info-icon:hover .section-info-tooltip {
-            opacity: 1;
-            visibility: visible;
+        .section-info-tooltip.show {
+            display: block;
         }
 
         .section-info-tooltip-title {
@@ -1602,8 +1602,10 @@ select.form-control {
                     <div style="display: flex; align-items: center; gap: var(--space-12);">
                         <span style="font-size: var(--font-size-lg);">⚙️</span>
                         <span>Account Settings</span>
-                        <span class="section-info-icon" onclick="event.stopPropagation();">
-                            i
+                        <div class="section-info-container">
+                            <span class="section-info-icon" onclick="toggleInfoTooltip(event, this.nextElementSibling);">
+                                i
+                            </span>
                             <div class="section-info-tooltip">
                                 <div class="section-info-tooltip-title">⚙️ Account Settings</div>
                                 <div class="section-info-tooltip-content">
@@ -1616,7 +1618,7 @@ select.form-control {
                                     </ul>
                                 </div>
                             </div>
-                        </span>
+                        </div>
                     </div>
                     <span id="accountSettingsArrow" style="font-size: var(--font-size-xl); transition: transform var(--duration-normal) var(--ease-standard);">▶</span>
                 </button>
@@ -1770,8 +1772,10 @@ select.form-control {
                         <span style="font-size: var(--font-size-lg);">🔌</span>
                         <span>API Settings</span>
                         <span style="font-size: var(--font-size-xs); color: var(--color-text-secondary);">(Import Historic Trades)</span>
-                        <span class="section-info-icon" onclick="event.stopPropagation();">
-                            i
+                        <div class="section-info-container">
+                            <span class="section-info-icon" onclick="toggleInfoTooltip(event, this.nextElementSibling);">
+                                i
+                            </span>
                             <div class="section-info-tooltip">
                                 <div class="section-info-tooltip-title">🔌 API Settings</div>
                                 <div class="section-info-tooltip-content">
@@ -1784,7 +1788,7 @@ select.form-control {
                                     </ul>
                                 </div>
                             </div>
-                        </span>
+                        </div>
                     </div>
                     <span id="apiSettingsArrow" style="font-size: var(--font-size-xl); transition: transform var(--duration-normal) var(--ease-standard);">▶</span>
                 </button>
@@ -1884,8 +1888,10 @@ select.form-control {
                     <div style="display: flex; align-items: center; gap: var(--space-12);">
                         <h3 style="margin: 0; display: flex; align-items: center; gap: var(--space-8);">
                             📊 Performance Statistics
-                            <span class="section-info-icon" onclick="event.stopPropagation();">
-                                i
+                            <div class="section-info-container">
+                                <span class="section-info-icon" onclick="toggleInfoTooltip(event, this.nextElementSibling);">
+                                    i
+                                </span>
                                 <div class="section-info-tooltip">
                                     <div class="section-info-tooltip-title">📊 Performance Statistics</div>
                                     <div class="section-info-tooltip-content">
@@ -1900,7 +1906,7 @@ select.form-control {
                                         Use the gear icon to customize which stats to display.
                                     </div>
                                 </div>
-                            </span>
+                            </div>
                         </h3>
                         <button
                             id="statisticsToggle"
@@ -1943,8 +1949,10 @@ select.form-control {
                     <div style="display: flex; align-items: center; gap: var(--space-12);">
                         <h3 style="margin: 0; display: flex; align-items: center; gap: var(--space-8);">
                             📈 Performance Charts
-                            <span class="section-info-icon" onclick="event.stopPropagation();">
-                                i
+                            <div class="section-info-container">
+                                <span class="section-info-icon" onclick="toggleInfoTooltip(event, this.nextElementSibling);">
+                                    i
+                                </span>
                                 <div class="section-info-tooltip">
                                     <div class="section-info-tooltip-title">📈 Performance Charts</div>
                                     <div class="section-info-tooltip-content">
@@ -1958,7 +1966,7 @@ select.form-control {
                                         Adjust zoom level and configure which charts to display.
                                     </div>
                                 </div>
-                            </span>
+                            </div>
                         </h3>
                         <button
                             id="chartsToggle"
@@ -2028,8 +2036,10 @@ select.form-control {
                     <div style="display: flex; align-items: center; gap: var(--space-12);">
                         <h3 style="margin: 0; display: flex; align-items: center; gap: var(--space-8);">
                             📋 Trade History
-                            <span class="section-info-icon" onclick="event.stopPropagation();">
-                                i
+                            <div class="section-info-container">
+                                <span class="section-info-icon" onclick="toggleInfoTooltip(event, this.nextElementSibling);">
+                                    i
+                                </span>
                                 <div class="section-info-tooltip">
                                     <div class="section-info-tooltip-title">📋 Trade History</div>
                                     <div class="section-info-tooltip-content">
@@ -2043,7 +2053,7 @@ select.form-control {
                                         Use the gear icon to configure which columns to display.
                                     </div>
                                 </div>
-                            </span>
+                            </div>
                         </h3>
                         <button
                             id="tradeHistoryToggle"
@@ -2100,8 +2110,10 @@ select.form-control {
                     <div style="display: flex; align-items: center; gap: var(--space-12);">
                         <h3 style="margin: 0; display: flex; align-items: center; gap: var(--space-8);">
                             🔬 Rule Combinations Analysis
-                            <span class="section-info-icon" onclick="event.stopPropagation();">
-                                i
+                            <div class="section-info-container">
+                                <span class="section-info-icon" onclick="toggleInfoTooltip(event, this.nextElementSibling);">
+                                    i
+                                </span>
                                 <div class="section-info-tooltip">
                                     <div class="section-info-tooltip-title">🔬 Rule Combinations Analysis</div>
                                     <div class="section-info-tooltip-content">
@@ -2115,7 +2127,7 @@ select.form-control {
                                         Requires custom trading rules to be defined first.
                                     </div>
                                 </div>
-                            </span>
+                            </div>
                         </h3>
                         <button
                             id="ruleCombinationsToggle"
@@ -2156,8 +2168,10 @@ select.form-control {
                     <div style="display: flex; align-items: center; gap: var(--space-12);">
                         <h3 style="margin: 0; display: flex; align-items: center; gap: var(--space-8);">
                             Custom Trading Rules
-                            <span class="section-info-icon" onclick="event.stopPropagation();">
-                                i
+                            <div class="section-info-container">
+                                <span class="section-info-icon" onclick="toggleInfoTooltip(event, this.nextElementSibling);">
+                                    i
+                                </span>
                                 <div class="section-info-tooltip">
                                     <div class="section-info-tooltip-title">📝 Custom Trading Rules</div>
                                     <div class="section-info-tooltip-content">
@@ -2171,7 +2185,7 @@ select.form-control {
                                         Examples: "Trend Following", "Support/Resistance", "Morning Trades"
                                     </div>
                                 </div>
-                            </span>
+                            </div>
                         </h3>
                         <button
                             id="rulesToggle"
@@ -2199,8 +2213,10 @@ select.form-control {
                     <div style="display: flex; align-items: center; gap: var(--space-12);">
                         <h3 style="margin: 0; display: flex; align-items: center; gap: var(--space-8);">
                             Performance Breakdowns
-                            <span class="section-info-icon" onclick="event.stopPropagation();">
-                                i
+                            <div class="section-info-container">
+                                <span class="section-info-icon" onclick="toggleInfoTooltip(event, this.nextElementSibling);">
+                                    i
+                                </span>
                                 <div class="section-info-tooltip">
                                     <div class="section-info-tooltip-title">📊 Performance Breakdowns</div>
                                     <div class="section-info-tooltip-content">
@@ -2214,7 +2230,7 @@ select.form-control {
                                         Add these tags to trades for deeper insights.
                                     </div>
                                 </div>
-                            </span>
+                            </div>
                         </h3>
                         <button
                             id="breakdownsToggle"
@@ -2297,8 +2313,10 @@ select.form-control {
                     <div style="display: flex; align-items: center; gap: var(--space-12);">
                         <h3 style="margin: 0; display: flex; align-items: center; gap: var(--space-8);">
                             Time-based Analytics
-                            <span class="section-info-icon" onclick="event.stopPropagation();">
-                                i
+                            <div class="section-info-container">
+                                <span class="section-info-icon" onclick="toggleInfoTooltip(event, this.nextElementSibling);">
+                                    i
+                                </span>
                                 <div class="section-info-tooltip">
                                     <div class="section-info-tooltip-title">📅 Time-based Analytics</div>
                                     <div class="section-info-tooltip-content">
@@ -2312,7 +2330,7 @@ select.form-control {
                                         Identify your most profitable trading times.
                                     </div>
                                 </div>
-                            </span>
+                            </div>
                         </h3>
                         <button
                             id="timeAnalyticsToggle"
@@ -2391,8 +2409,10 @@ select.form-control {
                     <div style="display: flex; align-items: center; gap: var(--space-12);">
                         <h3 style="margin: 0; display: flex; align-items: center; gap: var(--space-8);">
                             Calendar View
-                            <span class="section-info-icon" onclick="event.stopPropagation();">
-                                i
+                            <div class="section-info-container">
+                                <span class="section-info-icon" onclick="toggleInfoTooltip(event, this.nextElementSibling);">
+                                    i
+                                </span>
                                 <div class="section-info-tooltip">
                                     <div class="section-info-tooltip-title">📅 Calendar View</div>
                                     <div class="section-info-tooltip-content">
@@ -2406,7 +2426,7 @@ select.form-control {
                                         Quickly identify patterns in your trading schedule.
                                     </div>
                                 </div>
-                            </span>
+                            </div>
                         </h3>
                         <button
                             id="calendarToggle"
@@ -2432,8 +2452,10 @@ select.form-control {
                     <div style="display: flex; align-items: center; gap: var(--space-12);">
                         <h3 style="margin: 0; display: flex; align-items: center; gap: var(--space-8);">
                             🎲 Monte Carlo Simulation
-                            <span class="section-info-icon" onclick="event.stopPropagation();">
-                                i
+                            <div class="section-info-container">
+                                <span class="section-info-icon" onclick="toggleInfoTooltip(event, this.nextElementSibling);">
+                                    i
+                                </span>
                                 <div class="section-info-tooltip">
                                     <div class="section-info-tooltip-title">🎲 Monte Carlo Simulation</div>
                                     <div class="section-info-tooltip-content">
@@ -2447,7 +2469,7 @@ select.form-control {
                                         Understand the range of possible outcomes from your trading strategy.
                                     </div>
                                 </div>
-                            </span>
+                            </div>
                         </h3>
                         <button
                             id="monteCarloToggle"
@@ -2541,8 +2563,10 @@ select.form-control {
                     <div style="display: flex; align-items: center; gap: var(--space-12);">
                         <h3 style="margin: 0; display: flex; align-items: center; gap: var(--space-8);">
                             🤖 AI Analysis
-                            <span class="section-info-icon" onclick="event.stopPropagation();">
-                                i
+                            <div class="section-info-container">
+                                <span class="section-info-icon" onclick="toggleInfoTooltip(event, this.nextElementSibling);">
+                                    i
+                                </span>
                                 <div class="section-info-tooltip">
                                     <div class="section-info-tooltip-title">🤖 AI Analysis</div>
                                     <div class="section-info-tooltip-content">
@@ -2556,7 +2580,7 @@ select.form-control {
                                         Get personalized trading insights and improvement suggestions.
                                     </div>
                                 </div>
-                            </span>
+                            </div>
                         </h3>
                         <button
                             id="aiToggle"
@@ -4063,10 +4087,15 @@ select.form-control {
             document.getElementById('csvInput').addEventListener('change', handleCSVImport);
             document.getElementById('jsonInput').addEventListener('change', handleJSONImport);
             
-            // Click outside to close export menu
+            // Click outside to close export menu and info tooltips
             document.addEventListener('click', function(e) {
                 if (appState.showExportMenu && !e.target.closest('.export-menu-container')) {
                     setShowExportMenu(false);
+                }
+
+                // Close info tooltips if clicking outside
+                if (!e.target.closest('.section-info-container')) {
+                    closeAllInfoTooltips();
                 }
             });
             
@@ -6094,11 +6123,43 @@ select.form-control {
                 updateSizeEstimates();
             }
         }
-        
+
         function setShowExportMenu(show) {
             appState.showExportMenu = show;
             const dropdown = document.getElementById('exportDropdown');
             dropdown.style.display = show ? 'block' : 'none';
+        }
+
+        // Info Tooltip Functions
+        function toggleInfoTooltip(event, tooltipElement) {
+            event.stopPropagation();
+
+            // Close all other tooltips first
+            document.querySelectorAll('.section-info-tooltip.show').forEach(tooltip => {
+                if (tooltip !== tooltipElement) {
+                    tooltip.classList.remove('show');
+                }
+            });
+
+            // Toggle the current tooltip
+            const isShowing = tooltipElement.classList.contains('show');
+            tooltipElement.classList.toggle('show');
+
+            // Position the tooltip near the icon
+            if (!isShowing) {
+                const icon = event.currentTarget;
+                const rect = icon.getBoundingClientRect();
+
+                // Position below the icon
+                tooltipElement.style.top = (rect.bottom + 8) + 'px';
+                tooltipElement.style.left = (rect.left - 130) + 'px'; // Center it roughly
+            }
+        }
+
+        function closeAllInfoTooltips() {
+            document.querySelectorAll('.section-info-tooltip.show').forEach(tooltip => {
+                tooltip.classList.remove('show');
+            });
         }
         
         function handleExportData(exportType = 'full') {
