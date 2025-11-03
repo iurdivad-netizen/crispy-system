@@ -1448,7 +1448,7 @@ select.form-control {
                     <button class="btn btn--sm btn--secondary" onclick="saveToLocalStorage(); showMessage('✅ Manual save successful');" title="Save data now">
                         💾 Save Now
                     </button>
-                    <button class="btn btn--sm btn--secondary" onclick="showStorageInfo()" title="View storage information">
+                    <button id="storageInfoButton" class="btn btn--sm btn--secondary" onclick="showStorageInfo()" title="View storage information">
                         📊 Storage Info (100MB)
                     </button>
                 </div>
@@ -3652,6 +3652,7 @@ select.form-control {
 
                 lastSaveTimestamp = new Date();
                 updateSaveStatusIndicator();
+                updateStorageInfoButton();
 
                 return true;
             } catch (error) {
@@ -3765,6 +3766,8 @@ select.form-control {
                 const timeAgo = getTimeAgo(lastSaveTimestamp);
                 showMessage(`✅ Loaded ${tradeCount} trade${tradeCount !== 1 ? 's' : ''} from last session (${timeAgo})`, 'success');
 
+                updateStorageInfoButton();
+
                 return true;
             } catch (error) {
                 console.error('Error loading from localStorage:', error);
@@ -3854,6 +3857,27 @@ select.form-control {
             indicator.style.color = 'var(--color-success)';
         }
 
+        // Update storage info button with current usage
+        function updateStorageInfoButton() {
+            const button = document.getElementById('storageInfoButton');
+            if (!button) return;
+
+            try {
+                const savedData = localStorage.getItem(STORAGE_KEYS.APP_STATE);
+                if (!savedData) {
+                    button.innerHTML = '📊 Storage Info (0MB)';
+                    return;
+                }
+
+                const totalSize = new Blob([savedData]).size;
+                const totalSizeMB = (totalSize / (1024 * 1024)).toFixed(2);
+                button.innerHTML = `📊 Storage Info (${totalSizeMB}MB)`;
+            } catch (error) {
+                console.error('Error updating storage info button:', error);
+                button.innerHTML = '📊 Storage Info';
+            }
+        }
+
         // Start periodic save status updates
         function startSaveStatusUpdates() {
             if (saveStatusUpdateTimer) {
@@ -3862,6 +3886,7 @@ select.form-control {
 
             saveStatusUpdateTimer = setInterval(() => {
                 updateSaveStatusIndicator();
+                updateStorageInfoButton();
             }, 10000); // Update every 10 seconds
         }
 
@@ -3902,6 +3927,7 @@ select.form-control {
                 keysToRemove.forEach(key => localStorage.removeItem(key));
 
                 showMessage(`✅ Cleared all stored data (${keysToRemove.length} items)`, 'success');
+                updateStorageInfoButton();
                 return true;
             } catch (error) {
                 console.error('Error clearing storage:', error);
@@ -4060,6 +4086,7 @@ select.form-control {
             startAutoSave();
             startSaveStatusUpdates();
             updateSaveStatusIndicator();
+            updateStorageInfoButton();
         });
         
         function initializeUIStates() {
