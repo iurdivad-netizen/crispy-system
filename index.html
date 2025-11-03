@@ -7205,33 +7205,34 @@ select.form-control {
             showMessage(`Converting TradingView chart to image...`, 'info');
 
             try {
-                // Create a proxy image to load and convert to base64
-                const img = new Image();
-                img.crossOrigin = 'anonymous';
+                // Determine the proxy server URL
+                const proxyUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+                    ? `http://localhost:3000/api/fetch-image`
+                    : `/api/fetch-image`;
 
-                const loadPromise = new Promise((resolve, reject) => {
-                    img.onload = () => resolve(img);
-                    img.onerror = () => reject(new Error('Failed to load TradingView snapshot image'));
-
-                    // Set a timeout
-                    setTimeout(() => reject(new Error('Image load timeout')), 10000);
+                // Use proxy server to fetch and convert the image
+                const response = await fetch(proxyUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ imageUrl: imageUrl })
                 });
 
-                img.src = imageUrl;
-                const loadedImg = await loadPromise;
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || `Server error: ${response.status}`);
+                }
 
-                // Convert to canvas then to base64
-                const canvas = document.createElement('canvas');
-                canvas.width = loadedImg.naturalWidth;
-                canvas.height = loadedImg.naturalHeight;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(loadedImg, 0, 0);
+                const data = await response.json();
 
-                const base64Data = canvas.toDataURL('image/png');
+                if (!data.success || !data.dataUri) {
+                    throw new Error('Invalid response from server');
+                }
 
                 // Save to the appropriate screenshot field
                 const field = type === 'entry' ? 'entryScreenshot' : 'exitScreenshot';
-                appState.trades[tradeIndex][field] = base64Data;
+                appState.trades[tradeIndex][field] = data.dataUri;
 
                 renderTradeDetails(tradeIndex);
                 showMessage(`✅ TradingView chart converted to ${type} screenshot!`, 'success');
@@ -7239,7 +7240,17 @@ select.form-control {
 
             } catch (error) {
                 console.error('Error converting TradingView to image:', error);
-                showMessage(`❌ Failed to convert TradingView chart. The image may be blocked by CORS restrictions. Try uploading a manual screenshot instead.`, 'error');
+
+                // Provide different error messages based on the error type
+                let errorMessage = '❌ Failed to convert TradingView chart. ';
+                if (error.message.includes('fetch')) {
+                    errorMessage += 'Make sure the proxy server is running (npm start). ';
+                } else {
+                    errorMessage += error.message + ' ';
+                }
+                errorMessage += 'Try uploading a manual screenshot instead.';
+
+                showMessage(errorMessage, 'error');
             }
         }
 
@@ -10262,17 +10273,21 @@ select.form-control {
             const pipClass = trade.pips >= 0 ? 'positive' : 'negative';
             const plClass = (trade.netPL || trade.profit) >= 0 ? 'positive' : 'negative';
 
-            // Build screenshots HTML if they exist
+            // Build screenshots HTML if they exist (includes TradingView URLs)
             let screenshotsHtml = '';
-            if (trade.entryScreenshot || trade.exitScreenshot) {
+            if (trade.entryScreenshot || trade.exitScreenshot || trade.tradingViewEntry || trade.tradingViewExit) {
                 screenshotsHtml = '<div class="section"><h3>Screenshots</h3>';
 
-                if (trade.entryScreenshot) {
-                    screenshotsHtml += generateScreenshotHtml('Entry', trade.entryScreenshot);
+                // For entry: use screenshot if available, otherwise use TradingView URL
+                const entryData = trade.entryScreenshot || trade.tradingViewEntry;
+                if (entryData) {
+                    screenshotsHtml += generateScreenshotHtml('Entry', entryData);
                 }
 
-                if (trade.exitScreenshot) {
-                    screenshotsHtml += generateScreenshotHtml('Exit', trade.exitScreenshot);
+                // For exit: use screenshot if available, otherwise use TradingView URL
+                const exitData = trade.exitScreenshot || trade.tradingViewExit;
+                if (exitData) {
+                    screenshotsHtml += generateScreenshotHtml('Exit', exitData);
                 }
 
                 screenshotsHtml += '</div>';
