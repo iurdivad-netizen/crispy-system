@@ -10005,19 +10005,21 @@ select.form-control {
             const isTradingViewUrl = sanitizedUrl.includes('tradingview.com');
 
             if (isTradingViewUrl) {
-                // For TradingView URLs, show image with fallback to link
+                // For TradingView URLs, use iframe for better print support
                 const uniqueId = `tv-${Math.random().toString(36).substr(2, 9)}`;
                 return `
-                    <div>
+                    <div style="margin: 10px 0;">
                         <strong>${escapeHtml(label)}:</strong><br>
-                        <img id="${uniqueId}"
-                             src="${sanitizedUrl}"
-                             alt="${escapeHtml(label)} Screenshot"
-                             style="max-width: 400px; margin: 10px 0; border: 1px solid #ccc;"
-                             onerror="this.style.display='none'; document.getElementById('${uniqueId}-fallback').style.display='block';">
-                        <div id="${uniqueId}-fallback" style="display: none; padding: 10px; background: #f5f5f5; border: 1px solid #ddd; border-radius: 4px; margin: 10px 0;">
-                            <p style="margin: 0 0 5px 0; color: #666; font-size: 14px;">📊 TradingView Chart (Click to open)</p>
-                            <a href="${sanitizedUrl}" target="_blank" style="color: #2962ff; text-decoration: none; word-break: break-all;">${sanitizedUrl}</a>
+                        <div style="margin: 10px 0;">
+                            <iframe id="${uniqueId}"
+                                    src="${sanitizedUrl}"
+                                    style="width: 800px; height: 600px; border: 1px solid #ccc; display: block;"
+                                    frameborder="0"
+                                    scrolling="no">
+                            </iframe>
+                        </div>
+                        <div style="padding: 5px 0; font-size: 12px; color: #666;">
+                            <strong>Chart URL:</strong> <a href="${sanitizedUrl}" target="_blank" style="color: #2962ff; text-decoration: none; word-break: break-all;">${sanitizedUrl}</a>
                         </div>
                     </div>`;
             } else {
@@ -10116,9 +10118,11 @@ select.form-control {
         .positive { color: green; font-weight: bold; }
         .negative { color: red; font-weight: bold; }
         img { max-width: 300px; margin: 10px 0; border: 1px solid #ccc; }
+        iframe { display: block; }
         @media print {
             @page { size: landscape; }
             body { margin: 15px; }
+            iframe { display: block; page-break-inside: avoid; }
         }
     </style>
 </head>
@@ -10131,9 +10135,10 @@ select.form-control {
             printWindow.document.write(htmlContent);
             printWindow.document.close();
 
+            // Wait longer for iframes to load (TradingView charts)
             setTimeout(() => {
                 printWindow.print();
-            }, 500);
+            }, 3000);
         }
 
         // Print all trades - each trade on its own page
@@ -10173,9 +10178,11 @@ select.form-control {
         .positive { color: green; font-weight: bold; }
         .negative { color: red; font-weight: bold; }
         img { max-width: 300px; margin: 10px 0; border: 1px solid #ccc; }
+        iframe { display: block; }
         @media print {
             @page { size: landscape; }
             body { margin: 15px; }
+            iframe { display: block; page-break-inside: avoid; }
         }
     </style>
 </head>
@@ -10188,11 +10195,12 @@ select.form-control {
             printWindow.document.write(htmlContent);
             printWindow.document.close();
 
+            // Wait longer for iframes to load (TradingView charts)
             setTimeout(() => {
                 printWindow.print();
-            }, 500);
+            }, 3000);
         }
-        
+
         // Configuration Functions
         function getStatLabel(key) {
             const labels = {
