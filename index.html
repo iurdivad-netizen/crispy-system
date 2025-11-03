@@ -10160,13 +10160,7 @@ select.form-control {
             background: #c0392b;
         }
         .print-content {
-            margin-top: 70px;
-        }
-        .loading-indicator {
-            display: inline-block;
-            margin-left: 10px;
-            color: #f39c12;
-            font-size: 14px;
+            margin-top: 90px;
         }
 
         @media print {
@@ -10181,25 +10175,15 @@ select.form-control {
 <body>
     <div class="print-preview-controls">
         <h2 style="margin: 0 0 10px 0;">Print Preview</h2>
+        <p style="margin: 5px 0; font-size: 14px; color: #ecf0f1;">Review the content below. Wait for charts to load before printing.</p>
         <div>
             <button class="print-btn" onclick="window.print()">🖨️ Print (Ctrl+P)</button>
             <button class="close-btn" onclick="window.close()">✕ Close</button>
-            <span class="loading-indicator" id="loadingIndicator">⏳ Loading charts...</span>
         </div>
     </div>
     <div class="print-content">
         ${generateTradeHtml(trade, true)}
     </div>
-    <script>
-        // Hide loading indicator after charts have had time to load
-        setTimeout(() => {
-            const indicator = document.getElementById('loadingIndicator');
-            if (indicator) {
-                indicator.textContent = '✓ Ready to print';
-                indicator.style.color = '#27ae60';
-            }
-        }, 3000);
-    </script>
 </body>
 </html>`;
 
@@ -10287,13 +10271,7 @@ select.form-control {
             background: #c0392b;
         }
         .print-content {
-            margin-top: 70px;
-        }
-        .loading-indicator {
-            display: inline-block;
-            margin-left: 10px;
-            color: #f39c12;
-            font-size: 14px;
+            margin-top: 90px;
         }
 
         @media print {
@@ -10308,25 +10286,15 @@ select.form-control {
 <body>
     <div class="print-preview-controls">
         <h2 style="margin: 0 0 10px 0;">Print Preview - ${appState.trades.length} Trades</h2>
+        <p style="margin: 5px 0; font-size: 14px; color: #ecf0f1;">Review the content below. Wait for charts to load before printing.</p>
         <div>
             <button class="print-btn" onclick="window.print()">🖨️ Print (Ctrl+P)</button>
             <button class="close-btn" onclick="window.close()">✕ Close</button>
-            <span class="loading-indicator" id="loadingIndicator">⏳ Loading charts...</span>
         </div>
     </div>
     <div class="print-content">
         ${tradesHtml}
     </div>
-    <script>
-        // Hide loading indicator after charts have had time to load
-        setTimeout(() => {
-            const indicator = document.getElementById('loadingIndicator');
-            if (indicator) {
-                indicator.textContent = '✓ Ready to print';
-                indicator.style.color = '#27ae60';
-            }
-        }, 3000);
-    </script>
 </body>
 </html>`;
 
