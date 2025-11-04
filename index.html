@@ -10254,9 +10254,62 @@ select.form-control {
     </div>`;
         }
 
+        // Preload TradingView images before printing
+        async function preloadTradingViewImages(trades) {
+            const imagesToPreload = [];
+
+            // Collect all TradingView URLs that need preloading
+            trades.forEach(trade => {
+                // Check if TradingView URLs exist without screenshots
+                if (trade.tradingViewEntry && !trade.entryScreenshot) {
+                    const tvMatch = trade.tradingViewEntry.match(/tradingview\.com\/x\/([^\/]+)/);
+                    if (tvMatch && tvMatch[1]) {
+                        imagesToPreload.push(`https://s.tradingview.com/snapshots/x/${tvMatch[1]}.png`);
+                    }
+                }
+
+                if (trade.tradingViewExit && !trade.exitScreenshot) {
+                    const tvMatch = trade.tradingViewExit.match(/tradingview\.com\/x\/([^\/]+)/);
+                    if (tvMatch && tvMatch[1]) {
+                        imagesToPreload.push(`https://s.tradingview.com/snapshots/x/${tvMatch[1]}.png`);
+                    }
+                }
+            });
+
+            if (imagesToPreload.length === 0) {
+                return; // No images to preload
+            }
+
+            // Show loading message
+            showMessage(`Loading ${imagesToPreload.length} TradingView chart${imagesToPreload.length > 1 ? 's' : ''}...`, 'info');
+
+            // Preload all images
+            const preloadPromises = imagesToPreload.map(imageUrl => {
+                return new Promise((resolve) => {
+                    const img = new Image();
+
+                    // Resolve on load or error (we don't want to block printing)
+                    img.onload = () => resolve(true);
+                    img.onerror = () => resolve(false);
+
+                    // Set a timeout to prevent indefinite waiting
+                    setTimeout(() => resolve(false), 5000);
+
+                    img.src = imageUrl;
+                });
+            });
+
+            // Wait for all images to load or timeout
+            await Promise.all(preloadPromises);
+        }
+
         // Print individual trade (for per-trade print buttons if needed)
-        function printTrade(tradeIndex) {
+        async function printTrade(tradeIndex) {
             const trade = appState.trades[tradeIndex];
+
+            // Preload TradingView images first
+            await preloadTradingViewImages([trade]);
+
             const printWindow = window.open('', '', 'width=1200,height=800');
 
             if (!printWindow) {
@@ -10352,11 +10405,14 @@ select.form-control {
         }
 
         // Print all trades - each trade on its own page
-        function printTrades() {
+        async function printTrades() {
             if (!appState.trades || appState.trades.length === 0) {
                 showMessage('No trades to print', 'error');
                 return;
             }
+
+            // Preload TradingView images first
+            await preloadTradingViewImages(appState.trades);
 
             const printWindow = window.open('', '', 'width=1200,height=800');
 
