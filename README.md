@@ -12,10 +12,16 @@ A comprehensive forex trading journal application for tracking and analyzing you
 
 ## Recent Fix: TradingView Charts in Print Preview
 
-TradingView chart URLs now display in print preview even without uploaded screenshots. The print preview will:
-- Show uploaded screenshots if available
-- Fall back to displaying TradingView chart images directly from URLs
-- Display a fallback link if the image cannot be loaded due to network issues
+TradingView chart URLs now display in print preview with automatic image preloading. When you click print:
+
+1. **Automatic Preloading**: The app automatically preloads all TradingView chart images in the background
+2. **Loading Indicator**: You'll see a message showing how many charts are being loaded
+3. **Smart Display**: The print preview will:
+   - Show uploaded screenshots if available
+   - Fall back to displaying TradingView chart images directly from URLs
+   - Display a fallback link if the image cannot be loaded
+
+This ensures charts are cached and ready for printing, providing the best print quality.
 
 ## How to Use
 
@@ -39,7 +45,15 @@ Simply open `index.html` in your web browser. No installation or server required
 ### Printing Trades
 - **Single Trade:** Click the print icon on any trade card
 - **All Trades:** Use the "Print All Trades" button at the top
-- TradingView charts will automatically appear in the print preview
+
+**Automatic Chart Loading:**
+When you click print, the app will:
+1. Show a loading message indicating how many TradingView charts are being preloaded
+2. Automatically fetch and cache all TradingView chart images in the background
+3. Wait up to 5 seconds per image for loading
+4. Open the print preview with all charts ready to display
+
+This ensures the best print quality and prevents broken images in your printed reports.
 
 ### Exporting/Importing Data
 - **Export:** Click "Export to JSON" to download all your trade data
@@ -64,10 +78,19 @@ Simply open `index.html` in your web browser. No installation or server required
 3. Try opening the TradingView URL directly in your browser to confirm it's valid
 
 ### TradingView Images Not Loading
-If TradingView images don't load in print preview:
-- This may be due to TradingView's content delivery restrictions
-- Use the workaround: take a screenshot and upload it manually
-- The fallback link will still be displayed so you can reference the chart
+If TradingView images don't load in print preview despite automatic preloading:
+- Check your internet connection (images are fetched from TradingView's CDN)
+- The app waits up to 5 seconds per image - if your connection is slow, some images may timeout
+- TradingView may have content delivery restrictions for certain regions
+- **Workaround**: Take a screenshot and upload it manually for guaranteed inclusion
+- A fallback link will still be displayed so you can reference the chart
+
+### Slow Print Preview Loading
+If the print preview takes a long time to open:
+- This is normal when you have many TradingView URLs without uploaded screenshots
+- The app is preloading all chart images in the background (up to 5 seconds per image)
+- Wait for the loading message to complete
+- To speed this up: upload screenshots instead of using URLs only
 
 ## Browser Compatibility
 - Chrome/Edge (recommended)
