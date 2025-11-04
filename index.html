@@ -6733,12 +6733,17 @@ select.form-control {
             if (!base64Data || typeof base64Data !== 'string') {
                 return null;
             }
-            
+
             // If already has data URI prefix, return as-is
             if (base64Data.startsWith('data:image/')) {
                 return base64Data;
             }
-            
+
+            // If it's a URL (TradingView link or other), return as-is
+            if (base64Data.startsWith('http://') || base64Data.startsWith('https://')) {
+                return base64Data;
+            }
+
             // If it's raw Base64, add the prefix
             return `data:image/png;base64,${base64Data}`;
         }
