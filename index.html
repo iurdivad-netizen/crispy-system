@@ -1929,6 +1929,17 @@ select.form-control {
                             <button class="btn btn-secondary" onclick="changeAnalyticsMonth(1); event.stopPropagation();" style="padding: var(--space-4) var(--space-8); font-size: var(--font-size-xs);">›</button>
                         </div>
                         <button class="btn btn-secondary" onclick="resetToTotalView(); event.stopPropagation();" style="padding: var(--space-4) var(--space-12); font-size: var(--font-size-xs);" title="View all-time statistics">TOTAL</button>
+                        <div style="display: flex; align-items: center; gap: var(--space-8);">
+                            <label style="font-size: var(--font-size-xs); color: var(--color-text-secondary); margin: 0;">Setup:</label>
+                            <select id="setupFilterSelect" onchange="changeSetupFilter(this.value); event.stopPropagation();" style="padding: var(--space-4) var(--space-8); font-size: var(--font-size-xs); background: rgba(var(--color-surface), 0.5); border: 1px solid var(--color-border); border-radius: var(--radius-sm); color: var(--color-text); cursor: pointer;">
+                                <option value="all">All Setups</option>
+                                <option value="Breakout">Breakout</option>
+                                <option value="Pullback">Pullback</option>
+                                <option value="Reversal">Reversal</option>
+                                <option value="Range">Range</option>
+                                <option value="Trend Following">Trend Following</option>
+                            </select>
+                        </div>
                         <button class="toggle-button" onclick="toggleStatsConfig(); event.stopPropagation();" title="Configure Statistics">⚙️</button>
                     </div>
                 </div>
@@ -3168,6 +3179,8 @@ select.form-control {
             // Monthly analytics navigation state
             analyticsCurrentMonth: -1,  // -1 means "TOTAL (All Time)" view
             analyticsCurrentYear: new Date().getFullYear(),
+            // Setup filter state
+            selectedSetup: 'all',  // 'all' or specific setup type
             // Rule combinations navigation state
             ruleCombinationsCurrentMonth: -1,  // -1 means "TOTAL (All Time)" view
             ruleCombinationsCurrentYear: new Date().getFullYear(),
@@ -3790,6 +3803,7 @@ select.form-control {
                     visibleCharts: appState.visibleCharts,
                     visibleColumns: appState.visibleColumns,
                     aiPromptInclusions: appState.aiPromptInclusions,
+                    selectedSetup: appState.selectedSetup,
                     // Section collapse states
                     showTradeHistory: appState.showTradeHistory,
                     showAccountSettings: appState.showAccountSettings,
@@ -3902,6 +3916,9 @@ select.form-control {
                 }
                 if (data.aiPromptInclusions) {
                     Object.assign(appState.aiPromptInclusions, data.aiPromptInclusions);
+                }
+                if (data.selectedSetup !== undefined) {
+                    appState.selectedSetup = data.selectedSetup;
                 }
                 // Restore section collapse states
                 if (data.showTradeHistory !== undefined) {
@@ -4285,6 +4302,12 @@ select.form-control {
             const radioButton = document.querySelector(`input[name="importModeRadio"][value="${importModeValue}"]`);
             if (radioButton) {
                 radioButton.checked = true;
+            }
+
+            // Initialize setup filter dropdown
+            const setupFilterSelect = document.getElementById('setupFilterSelect');
+            if (setupFilterSelect) {
+                setupFilterSelect.value = appState.selectedSetup || 'all';
             }
         }
 
@@ -5575,7 +5598,11 @@ select.form-control {
                 return;
             }
 
-            const trades = appState.trades;
+            // Apply setup filter if selected
+            let trades = appState.trades;
+            if (appState.selectedSetup !== 'all') {
+                trades = trades.filter(t => t.setupType === appState.selectedSetup);
+            }
             // CORRECTED: Use netPL consistently for calculations
             const wins = trades.filter(t => (t.netPL || t.profit) > 0);
             const losses = trades.filter(t => (t.netPL || t.profit) < 0);
@@ -5734,11 +5761,16 @@ select.form-control {
         function calculateStatisticsForMonth(year, month) {
             // Filter trades for the selected month
             const selectedMonthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
-            const monthTrades = appState.trades.filter(trade => {
+            let monthTrades = appState.trades.filter(trade => {
                 const tradeDate = new Date(trade.date);
                 const tradeMonthKey = `${tradeDate.getFullYear()}-${String(tradeDate.getMonth() + 1).padStart(2, '0')}`;
                 return tradeMonthKey === selectedMonthKey;
             });
+
+            // Apply setup filter if selected
+            if (appState.selectedSetup !== 'all') {
+                monthTrades = monthTrades.filter(t => t.setupType === appState.selectedSetup);
+            }
 
             if (monthTrades.length === 0) {
                 return {
@@ -9317,6 +9349,11 @@ select.form-control {
             updateDailyStats();
             updateOpenHourlyStats();
             updateHourlyStats();
+            updateStatisticsDisplay();
+        }
+
+        function changeSetupFilter(setupType) {
+            appState.selectedSetup = setupType;
             updateStatisticsDisplay();
         }
 
