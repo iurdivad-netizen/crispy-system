@@ -8279,6 +8279,12 @@ select.form-control {
         }
 
         function runPropFirmSimulation() {
+            // Check if trades exist
+            if (appState.trades.length === 0) {
+                showMessage('Please import some trades first.', 'error');
+                return;
+            }
+
             // Get simulation parameters
             const numSimulations = parseInt(document.getElementById('pfNumSimulations').value);
             const challengeBalance = parseFloat(document.getElementById('pfChallengeBalance').value);
