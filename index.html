@@ -11292,30 +11292,18 @@ select.form-control {
             const isTradingViewUrl = sanitizedUrl.includes('tradingview.com');
 
             if (isTradingViewUrl) {
-                // Use data URI if available, otherwise convert URL to snapshot image URL
-                let imageUrl = dataUri || sanitizedUrl;
-
-                if (!dataUri) {
-                    const tvMatch = sanitizedUrl.match(/tradingview\.com\/x\/([^\/]+)/);
-                    if (tvMatch && tvMatch[1]) {
-                        const snapshotId = tvMatch[1];
-                        imageUrl = `https://s.tradingview.com/snapshots/x/${snapshotId}.png`;
-                    }
-                }
-
+                // Embed TradingView chart in iframe for printing
                 const uniqueId = `tv-${Math.random().toString(36).substr(2, 9)}`;
                 return `
-                    <div style="margin: 10px 0;">
+                    <div style="margin: 10px 0; page-break-inside: avoid;">
                         <strong>${escapeHtml(label)}:</strong><br>
-                        <img id="${uniqueId}"
-                             src="${imageUrl}"
-                             alt="${escapeHtml(label)} TradingView Chart"
-                             style="max-width: 800px; width: 100%; height: auto; margin: 10px 0; border: 1px solid #ccc; display: block;"
-                             onerror="this.style.display='none'; document.getElementById('${uniqueId}-fallback').style.display='block';">
-                        <div id="${uniqueId}-fallback" style="display: none; padding: 10px; background: #f5f5f5; border: 1px solid #ddd; border-radius: 4px; margin: 10px 0;">
-                            <p style="margin: 0 0 5px 0; color: #666; font-size: 14px;">📊 TradingView Chart</p>
-                            <p style="margin: 5px 0; font-size: 12px; color: #888;">Image could not be loaded. Click link to view chart:</p>
-                            <a href="${sanitizedUrl}" target="_blank" style="color: #2962ff; text-decoration: none; word-break: break-all;">${sanitizedUrl}</a>
+                        <div style="padding: 15px; background: #f8f9fa; border: 2px dashed #dee2e6; border-radius: 4px; margin: 10px 0; text-align: center;">
+                            <p style="margin: 0 0 10px 0; color: #495057; font-size: 14px; font-weight: bold;">📊 TradingView Chart (Link Only)</p>
+                            <p style="margin: 0 0 10px 0; color: #6c757d; font-size: 12px;">TradingView charts cannot be printed directly. Please save a screenshot from TradingView.</p>
+                            <div style="background: white; padding: 10px; border-radius: 4px; margin: 10px 0;">
+                                <a href="${sanitizedUrl}" target="_blank" style="color: #2962ff; text-decoration: none; word-break: break-all; font-size: 12px; font-family: monospace;">${sanitizedUrl}</a>
+                            </div>
+                            <p style="margin: 10px 0 0 0; color: #6c757d; font-size: 11px; font-style: italic;">💡 Tip: In TradingView, right-click the chart → "Save image" → Upload as screenshot for printable reports</p>
                         </div>
                     </div>`;
             } else {
@@ -11337,17 +11325,13 @@ select.form-control {
                 // For entry: use screenshot if available, otherwise use TradingView URL
                 const entryData = trade.entryScreenshot || trade.tradingViewEntry;
                 if (entryData) {
-                    // Use data URI if available (created during preload)
-                    const entryDataUri = trade.tradingViewEntryDataUri || null;
-                    screenshotsHtml += generateScreenshotHtml('Entry', entryData, entryDataUri);
+                    screenshotsHtml += generateScreenshotHtml('Entry', entryData);
                 }
 
                 // For exit: use screenshot if available, otherwise use TradingView URL
                 const exitData = trade.exitScreenshot || trade.tradingViewExit;
                 if (exitData) {
-                    // Use data URI if available (created during preload)
-                    const exitDataUri = trade.tradingViewExitDataUri || null;
-                    screenshotsHtml += generateScreenshotHtml('Exit', exitData, exitDataUri);
+                    screenshotsHtml += generateScreenshotHtml('Exit', exitData);
                 }
 
                 screenshotsHtml += '</div>';
@@ -11398,89 +11382,21 @@ select.form-control {
     </div>`;
         }
 
-        // Convert image URL to data URI for reliable printing
-        async function convertImageToDataUri(imageUrl) {
-            return new Promise((resolve, reject) => {
-                const img = new Image();
-                img.crossOrigin = 'anonymous';
+        // Check if TradingView images are accessible and show warning if not
+        async function checkTradingViewImages(trades) {
+            let hasInaccessibleImages = false;
 
-                img.onload = function() {
-                    try {
-                        const canvas = document.createElement('canvas');
-                        canvas.width = img.naturalWidth || img.width;
-                        canvas.height = img.naturalHeight || img.height;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0);
-                        const dataUri = canvas.toDataURL('image/png');
-                        resolve(dataUri);
-                    } catch (e) {
-                        console.error('Error converting image to data URI:', e);
-                        resolve(imageUrl); // Fallback to original URL
-                    }
-                };
-
-                img.onerror = function() {
-                    console.error('Error loading image:', imageUrl);
-                    resolve(imageUrl); // Fallback to original URL
-                };
-
-                // Timeout after 10 seconds
-                setTimeout(() => {
-                    console.warn('Image loading timeout:', imageUrl);
-                    resolve(imageUrl); // Fallback to original URL
-                }, 10000);
-
-                img.src = imageUrl;
-            });
-        }
-
-        // Preload and convert TradingView images to data URIs before printing
-        async function preloadTradingViewImages(trades) {
-            const imageConversions = [];
-
-            // Collect all TradingView URLs that need conversion
+            // Check if any trades have TradingView URLs without screenshots
             trades.forEach(trade => {
-                // Check if TradingView URLs exist without screenshots
-                if (trade.tradingViewEntry && !trade.entryScreenshot) {
-                    const tvMatch = trade.tradingViewEntry.match(/tradingview\.com\/x\/([^\/]+)/);
-                    if (tvMatch && tvMatch[1]) {
-                        const imageUrl = `https://s.tradingview.com/snapshots/x/${tvMatch[1]}.png`;
-                        imageConversions.push({
-                            trade,
-                            field: 'tradingViewEntryDataUri',
-                            url: imageUrl
-                        });
-                    }
-                }
-
-                if (trade.tradingViewExit && !trade.exitScreenshot) {
-                    const tvMatch = trade.tradingViewExit.match(/tradingview\.com\/x\/([^\/]+)/);
-                    if (tvMatch && tvMatch[1]) {
-                        const imageUrl = `https://s.tradingview.com/snapshots/x/${tvMatch[1]}.png`;
-                        imageConversions.push({
-                            trade,
-                            field: 'tradingViewExitDataUri',
-                            url: imageUrl
-                        });
-                    }
+                if ((trade.tradingViewEntry && !trade.entryScreenshot) ||
+                    (trade.tradingViewExit && !trade.exitScreenshot)) {
+                    hasInaccessibleImages = true;
                 }
             });
 
-            if (imageConversions.length === 0) {
-                return; // No images to convert
+            if (hasInaccessibleImages) {
+                showMessage('⚠️ TradingView charts cannot be printed directly. For best results, use the screenshot feature in TradingView and upload the images instead.', 'warning');
             }
-
-            // Show loading message
-            showMessage(`Converting ${imageConversions.length} TradingView chart${imageConversions.length > 1 ? 's' : ''} for printing...`, 'info');
-
-            // Convert all images to data URIs
-            const conversionPromises = imageConversions.map(async (item) => {
-                const dataUri = await convertImageToDataUri(item.url);
-                item.trade[item.field] = dataUri;
-            });
-
-            // Wait for all conversions to complete
-            await Promise.all(conversionPromises);
         }
 
         // Wait for all images in print window to load
@@ -11509,8 +11425,8 @@ select.form-control {
         async function printTrade(tradeIndex) {
             const trade = appState.trades[tradeIndex];
 
-            // Preload TradingView images first
-            await preloadTradingViewImages([trade]);
+            // Check and warn about TradingView images
+            await checkTradingViewImages([trade]);
 
             const printWindow = window.open('', '', 'width=1200,height=800');
 
@@ -11623,8 +11539,8 @@ select.form-control {
                 return;
             }
 
-            // Preload TradingView images first
-            await preloadTradingViewImages(appState.trades);
+            // Check and warn about TradingView images
+            await checkTradingViewImages(appState.trades);
 
             const printWindow = window.open('', '', 'width=1200,height=800');
 
