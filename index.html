@@ -2726,6 +2726,57 @@ select.form-control {
                             </div>
                         </div>
 
+                        <!-- Trader Profiles -->
+                        <div style="margin-bottom: 1.5rem; padding: 1rem; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-base);">
+                            <h4 style="font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); margin-bottom: var(--space-12); color: var(--color-text);">👥 Simulated Trader Profiles</h4>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
+                                <!-- Best Trader -->
+                                <div style="padding: 1rem; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: var(--radius-sm);">
+                                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
+                                        <span style="font-size: 1.5rem;">🏆</span>
+                                        <h5 style="margin: 0; font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); color: var(--color-text);">Best Performer</h5>
+                                    </div>
+                                    <div style="font-size: var(--font-size-xs); color: var(--color-text-secondary); line-height: 1.6;">
+                                        <div style="margin-bottom: 0.5rem;"><strong>Outcome:</strong> <span id="pfBestOutcome">-</span></div>
+                                        <div style="margin-bottom: 0.5rem;"><strong>Days:</strong> <span id="pfBestDays">-</span></div>
+                                        <div style="margin-bottom: 0.5rem;"><strong>Final Balance:</strong> <span id="pfBestFinal">-</span></div>
+                                        <div style="margin-bottom: 0.5rem;"><strong>Peak Balance:</strong> <span id="pfBestPeak">-</span></div>
+                                        <div><strong>Return:</strong> <span id="pfBestReturn">-</span></div>
+                                    </div>
+                                </div>
+
+                                <!-- Median Trader -->
+                                <div style="padding: 1rem; background: rgba(74, 158, 255, 0.1); border: 1px solid rgba(74, 158, 255, 0.3); border-radius: var(--radius-sm);">
+                                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
+                                        <span style="font-size: 1.5rem;">📊</span>
+                                        <h5 style="margin: 0; font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); color: var(--color-text);">Median Performer</h5>
+                                    </div>
+                                    <div style="font-size: var(--font-size-xs); color: var(--color-text-secondary); line-height: 1.6;">
+                                        <div style="margin-bottom: 0.5rem;"><strong>Outcome:</strong> <span id="pfMedianOutcome">-</span></div>
+                                        <div style="margin-bottom: 0.5rem;"><strong>Days:</strong> <span id="pfMedianDays">-</span></div>
+                                        <div style="margin-bottom: 0.5rem;"><strong>Final Balance:</strong> <span id="pfMedianFinal">-</span></div>
+                                        <div style="margin-bottom: 0.5rem;"><strong>Peak Balance:</strong> <span id="pfMedianPeak">-</span></div>
+                                        <div><strong>Return:</strong> <span id="pfMedianReturn">-</span></div>
+                                    </div>
+                                </div>
+
+                                <!-- Worst Trader -->
+                                <div style="padding: 1rem; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: var(--radius-sm);">
+                                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
+                                        <span style="font-size: 1.5rem;">📉</span>
+                                        <h5 style="margin: 0; font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); color: var(--color-text);">Worst Performer</h5>
+                                    </div>
+                                    <div style="font-size: var(--font-size-xs); color: var(--color-text-secondary); line-height: 1.6;">
+                                        <div style="margin-bottom: 0.5rem;"><strong>Outcome:</strong> <span id="pfWorstOutcome">-</span></div>
+                                        <div style="margin-bottom: 0.5rem;"><strong>Days:</strong> <span id="pfWorstDays">-</span></div>
+                                        <div style="margin-bottom: 0.5rem;"><strong>Final Balance:</strong> <span id="pfWorstFinal">-</span></div>
+                                        <div style="margin-bottom: 0.5rem;"><strong>Peak Balance:</strong> <span id="pfWorstPeak">-</span></div>
+                                        <div><strong>Return:</strong> <span id="pfWorstReturn">-</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Outcome Breakdown -->
                         <div style="margin-bottom: 1.5rem; padding: 1rem; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-base);">
                             <h4 style="font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); margin-bottom: var(--space-12); color: var(--color-text);">📊 Outcome Breakdown</h4>
@@ -8575,6 +8626,7 @@ select.form-control {
             const outcomes = []; // 'passed', 'maxDD', 'dailyLoss'
             const daysToComplete = [];
             const finalBalances = [];
+            const peakBalances = []; // Track peak balance for each simulation
             const equityCurves = []; // Store first 50 passed and first 50 failed
 
             let passedCount = 0;
@@ -8677,6 +8729,7 @@ select.form-control {
                 outcomes.push(outcome);
                 daysToComplete.push(tradingDays);
                 finalBalances.push(balance);
+                peakBalances.push(peak);
 
                 // Store equity curves for visualization (first 25 passed, first 25 failed)
                 if (outcome === 'passed' && equityCurves.filter(ec => ec.outcome === 'passed').length < 25) {
@@ -8707,6 +8760,43 @@ select.form-control {
                 daysHistogram[binIndex]++;
             }
 
+            // Identify best, worst, and median traders
+            let bestTrader = null;
+            let worstTrader = null;
+            let medianTrader = null;
+
+            // Create array of simulation details
+            const simulations = outcomes.map((outcome, index) => ({
+                index,
+                outcome,
+                days: daysToComplete[index],
+                finalBalance: finalBalances[index],
+                peakBalance: peakBalances[index],
+                returnPct: ((finalBalances[index] - challengeBalance) / challengeBalance) * 100
+            }));
+
+            // Best trader: Highest final balance among passed, or least loss among failed
+            const passedSims = simulations.filter(s => s.outcome === 'passed');
+            if (passedSims.length > 0) {
+                bestTrader = passedSims.reduce((best, sim) =>
+                    sim.finalBalance > best.finalBalance ? sim : best
+                );
+            } else {
+                // If no one passed, best is the one with highest final balance
+                bestTrader = simulations.reduce((best, sim) =>
+                    sim.finalBalance > best.finalBalance ? sim : best
+                );
+            }
+
+            // Worst trader: Lowest final balance
+            worstTrader = simulations.reduce((worst, sim) =>
+                sim.finalBalance < worst.finalBalance ? sim : worst
+            );
+
+            // Median trader: Middle simulation by final balance
+            const sortedByBalance = [...simulations].sort((a, b) => a.finalBalance - b.finalBalance);
+            medianTrader = sortedByBalance[Math.floor(sortedByBalance.length / 2)];
+
             return {
                 successRate,
                 maxDDRate,
@@ -8726,7 +8816,10 @@ select.form-control {
                 targetBalance,
                 passedCount,
                 maxDDViolations,
-                dailyLossViolations
+                dailyLossViolations,
+                bestTrader,
+                worstTrader,
+                medianTrader
             };
         }
 
@@ -9027,6 +9120,42 @@ select.form-control {
 
             const avgLossEl = document.getElementById('pfAvgTradeLoss');
             avgLossEl.style.color = results.avgTradeLoss < 0 ? 'var(--color-negative)' : 'var(--color-text)';
+
+            // Helper function to format outcome
+            const formatOutcome = (outcome) => {
+                if (outcome === 'passed') return '<span style="color: var(--color-success);">✅ Passed</span>';
+                if (outcome === 'maxDD') return '<span style="color: var(--color-error);">❌ Max DD Violation</span>';
+                if (outcome === 'dailyLoss') return '<span style="color: var(--color-error);">⚠️ Daily Loss Violation</span>';
+                return outcome;
+            };
+
+            // Display trader profiles
+            if (results.bestTrader) {
+                document.getElementById('pfBestOutcome').innerHTML = formatOutcome(results.bestTrader.outcome);
+                document.getElementById('pfBestDays').textContent = results.bestTrader.days;
+                document.getElementById('pfBestFinal').textContent = fmt(results.bestTrader.finalBalance);
+                document.getElementById('pfBestPeak').textContent = fmt(results.bestTrader.peakBalance);
+                document.getElementById('pfBestReturn').textContent = `${results.bestTrader.returnPct >= 0 ? '+' : ''}${results.bestTrader.returnPct.toFixed(2)}%`;
+                document.getElementById('pfBestReturn').style.color = results.bestTrader.returnPct >= 0 ? 'var(--color-success)' : 'var(--color-error)';
+            }
+
+            if (results.medianTrader) {
+                document.getElementById('pfMedianOutcome').innerHTML = formatOutcome(results.medianTrader.outcome);
+                document.getElementById('pfMedianDays').textContent = results.medianTrader.days;
+                document.getElementById('pfMedianFinal').textContent = fmt(results.medianTrader.finalBalance);
+                document.getElementById('pfMedianPeak').textContent = fmt(results.medianTrader.peakBalance);
+                document.getElementById('pfMedianReturn').textContent = `${results.medianTrader.returnPct >= 0 ? '+' : ''}${results.medianTrader.returnPct.toFixed(2)}%`;
+                document.getElementById('pfMedianReturn').style.color = results.medianTrader.returnPct >= 0 ? 'var(--color-success)' : 'var(--color-error)';
+            }
+
+            if (results.worstTrader) {
+                document.getElementById('pfWorstOutcome').innerHTML = formatOutcome(results.worstTrader.outcome);
+                document.getElementById('pfWorstDays').textContent = results.worstTrader.days;
+                document.getElementById('pfWorstFinal').textContent = fmt(results.worstTrader.finalBalance);
+                document.getElementById('pfWorstPeak').textContent = fmt(results.worstTrader.peakBalance);
+                document.getElementById('pfWorstReturn').textContent = `${results.worstTrader.returnPct >= 0 ? '+' : ''}${results.worstTrader.returnPct.toFixed(2)}%`;
+                document.getElementById('pfWorstReturn').style.color = results.worstTrader.returnPct >= 0 ? 'var(--color-success)' : 'var(--color-error)';
+            }
 
             // Display outcome breakdown
             const breakdownEl = document.getElementById('pfOutcomeBreakdown');
