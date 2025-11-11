@@ -2486,14 +2486,15 @@ select.form-control {
                                 <div class="section-info-tooltip">
                                     <div class="section-info-tooltip-title">🎲 Monte Carlo Simulation</div>
                                     <div class="section-info-tooltip-content">
-                                        Run thousands of simulations to assess risk and potential outcomes.
+                                        Run thousands of simulations to assess risk and potential outcomes based on your actual trading performance.
                                         <ul>
-                                            <li><strong>Risk Analysis:</strong> Probability of drawdowns and profits</li>
-                                            <li><strong>Simulations:</strong> Randomize trade order 10,000 times</li>
+                                            <li><strong>Standard Mode:</strong> Randomize trade order to project future account balance distribution</li>
+                                            <li><strong>Prop Firm Mode:</strong> Each simulation runs exactly 10,000 trades to evaluate challenge success probability</li>
+                                            <li><strong>Risk Analysis:</strong> Probability of drawdowns, profits, and challenge violations</li>
                                             <li><strong>Percentiles:</strong> Best/worst case scenarios (5th, 50th, 95th)</li>
-                                            <li><strong>Visualizations:</strong> Distribution charts and equity curves</li>
+                                            <li><strong>Visualizations:</strong> Complete equity curves, outcome distributions, and statistical analysis</li>
                                         </ul>
-                                        Understand the range of possible outcomes from your trading strategy.
+                                        Understand the realistic range of possible outcomes from your trading strategy under different scenarios.
                                     </div>
                                 </div>
                             </div>
@@ -2606,18 +2607,21 @@ select.form-control {
                             </div>
                         </div>
                         <div style="margin-top: 1rem; padding: 0.75rem; background: rgba(74, 158, 255, 0.1); border: 1px solid rgba(74, 158, 255, 0.3); border-radius: var(--radius-sm); font-size: var(--font-size-xs); color: var(--color-text-secondary);">
-                            <strong>ℹ️ Challenge Rules:</strong>
+                            <strong>ℹ️ How It Works:</strong>
                             <ul style="margin: 0.5rem 0 0 1.5rem; padding: 0;">
-                                <li>Pass: Reach profit target while meeting minimum trading days</li>
-                                <li>Fail: Exceed max drawdown OR daily loss limit</li>
-                                <li>Max Drawdown: Measured from initial balance</li>
-                                <li>Daily Loss Limit: Measured from previous trading day's closing balance</li>
+                                <li><strong>Simulation Length:</strong> Each simulation runs exactly 10,000 trades to provide complete trajectory analysis</li>
+                                <li><strong>Trade Sampling:</strong> Randomly selects from your historical trades with position sizing applied</li>
+                                <li><strong>Pass Condition:</strong> Reach profit target while meeting minimum trading days requirement</li>
+                                <li><strong>Fail Conditions:</strong> Exceed max drawdown OR daily loss limit at any point</li>
+                                <li><strong>Max Drawdown:</strong> Measured from initial balance (not from peak)</li>
+                                <li><strong>Daily Loss Limit:</strong> Measured from previous trading day's closing balance</li>
                             </ul>
                             <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(74, 158, 255, 0.2);">
                                 <strong>💡 Custom Settings:</strong>
                                 <ul style="margin: 0.5rem 0 0 1.5rem; padding: 0;">
-                                    <li>Trades Per Day: Simulation will randomly use between min and max trades per day</li>
-                                    <li>Custom Avg Win/Loss: Override historical averages for hypothetical scenarios</li>
+                                    <li><strong>Trades Per Day:</strong> Simulation randomly uses between min and max trades per day</li>
+                                    <li><strong>Custom Avg Win/Loss:</strong> Override historical averages for hypothetical "what-if" scenarios</li>
+                                    <li><strong>Position Size:</strong> Scale each trade's P&L by a percentage of current account balance</li>
                                 </ul>
                             </div>
                         </div>
