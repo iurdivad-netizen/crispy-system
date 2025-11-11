@@ -2501,9 +2501,18 @@ select.form-control {
                     </div>
                 </div>
                 <div class="section-content">
-                    <!-- Configuration Panel -->
+                    <!-- Simulation Mode Selector -->
                     <div style="margin-bottom: 1.5rem; padding: 1rem; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-base);">
-                        <h4 style="font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); margin-bottom: var(--space-12); color: var(--color-text);">⚙️ Simulation Settings</h4>
+                        <h4 style="font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); margin-bottom: var(--space-12); color: var(--color-text);">🎯 Simulation Mode</h4>
+                        <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                            <button id="mcModeStandard" class="btn btn-secondary" onclick="switchMCMode('standard')" style="flex: 1; background: var(--color-primary); border-color: var(--color-primary);">Standard Monte Carlo</button>
+                            <button id="mcModePropFirm" class="btn btn-secondary" onclick="switchMCMode('propfirm')" style="flex: 1;">Prop Firm Challenge</button>
+                        </div>
+                    </div>
+
+                    <!-- Configuration Panel - Standard Mode -->
+                    <div id="mcStandardConfig" style="margin-bottom: 1.5rem; padding: 1rem; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-base);">
+                        <h4 style="font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); margin-bottom: var(--space-12); color: var(--color-text);">⚙️ Standard Simulation Settings</h4>
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
                             <div>
                                 <label style="display: block; font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: var(--space-8);">Number of Simulations</label>
@@ -2523,6 +2532,59 @@ select.form-control {
                         </div>
                     </div>
 
+                    <!-- Configuration Panel - Prop Firm Mode -->
+                    <div id="mcPropFirmConfig" style="display: none; margin-bottom: 1.5rem; padding: 1rem; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-base);">
+                        <h4 style="font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); margin-bottom: var(--space-12); color: var(--color-text);">🏢 Prop Firm Challenge Settings</h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
+                            <div>
+                                <label style="display: block; font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: var(--space-8);">Number of Simulations</label>
+                                <input type="number" id="pfNumSimulations" value="1000" min="100" max="10000" step="100"
+                                    style="width: 100%; padding: var(--space-8); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-background); color: var(--color-text);">
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: var(--space-8);">Challenge Balance ($)</label>
+                                <input type="number" id="pfChallengeBalance" value="100000" min="1000" max="1000000" step="1000"
+                                    style="width: 100%; padding: var(--space-8); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-background); color: var(--color-text);">
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: var(--space-8);">Profit Target (%)</label>
+                                <input type="number" id="pfProfitTarget" value="10" min="1" max="100" step="0.5"
+                                    style="width: 100%; padding: var(--space-8); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-background); color: var(--color-text);">
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: var(--space-8);">Max Drawdown (%)</label>
+                                <input type="number" id="pfMaxDrawdown" value="10" min="1" max="50" step="0.5"
+                                    style="width: 100%; padding: var(--space-8); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-background); color: var(--color-text);">
+                                <div style="font-size: 10px; color: var(--color-text-secondary); margin-top: 4px;">From initial balance</div>
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: var(--space-8);">Daily Loss Limit (%)</label>
+                                <input type="number" id="pfDailyLossLimit" value="5" min="1" max="50" step="0.5"
+                                    style="width: 100%; padding: var(--space-8); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-background); color: var(--color-text);">
+                                <div style="font-size: 10px; color: var(--color-text-secondary); margin-top: 4px;">From previous day close</div>
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: var(--space-8);">Min Trading Days</label>
+                                <input type="number" id="pfMinTradingDays" value="5" min="1" max="100" step="1"
+                                    style="width: 100%; padding: var(--space-8); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-background); color: var(--color-text);">
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: var(--space-8);">Position Size (% of Account)</label>
+                                <input type="number" id="pfPositionSize" value="2" min="0.1" max="100" step="0.1"
+                                    style="width: 100%; padding: var(--space-8); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-background); color: var(--color-text);">
+                            </div>
+                        </div>
+                        <div style="margin-top: 1rem; padding: 0.75rem; background: rgba(74, 158, 255, 0.1); border: 1px solid rgba(74, 158, 255, 0.3); border-radius: var(--radius-sm); font-size: var(--font-size-xs); color: var(--color-text-secondary);">
+                            <strong>ℹ️ Challenge Rules:</strong>
+                            <ul style="margin: 0.5rem 0 0 1.5rem; padding: 0;">
+                                <li>Pass: Reach profit target while meeting minimum trading days</li>
+                                <li>Fail: Exceed max drawdown OR daily loss limit</li>
+                                <li>Max Drawdown: Measured from initial balance</li>
+                                <li>Daily Loss Limit: Measured from previous trading day's closing balance</li>
+                            </ul>
+                        </div>
+                    </div>
+
                     <!-- Baseline Data -->
                     <div id="monteCarloBaselineData" style="margin-bottom: 1.5rem; padding: 1rem; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-base);">
                         <h4 style="font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); margin-bottom: var(--space-12); color: var(--color-text);">📊 Baseline Historical Data</h4>
@@ -2531,7 +2593,7 @@ select.form-control {
                         </div>
                     </div>
 
-                    <!-- Results Summary -->
+                    <!-- Results Summary - Standard Mode -->
                     <div id="monteCarloResults" style="display: none;">
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
                             <div class="stat-card">
@@ -2573,6 +2635,61 @@ select.form-control {
                             <div style="background: var(--color-surface); padding: 1rem; border-radius: var(--radius-base); border: 1px solid var(--color-border);">
                                 <h4 style="margin: 0 0 1rem 0; font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold);">Drawdown Distribution</h4>
                                 <canvas id="mcDrawdownChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Results Summary - Prop Firm Mode -->
+                    <div id="propFirmResults" style="display: none;">
+                        <!-- Key Statistics -->
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                            <div class="stat-card">
+                                <div class="stat-label">Challenge Success Rate</div>
+                                <div class="stat-value" id="pfSuccessRate">0%</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">Avg Days to Pass</div>
+                                <div class="stat-value" id="pfAvgDaysPass">0</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">Avg Days to Fail</div>
+                                <div class="stat-value" id="pfAvgDaysFail">0</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">Max DD Violations</div>
+                                <div class="stat-value" id="pfMaxDDViolations">0%</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">Daily Loss Violations</div>
+                                <div class="stat-value" id="pfDailyLossViolations">0%</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">Avg Final Balance (Passed)</div>
+                                <div class="stat-value" id="pfAvgFinalBalance">$0</div>
+                            </div>
+                        </div>
+
+                        <!-- Outcome Breakdown -->
+                        <div style="margin-bottom: 1.5rem; padding: 1rem; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-base);">
+                            <h4 style="font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); margin-bottom: var(--space-12); color: var(--color-text);">📊 Outcome Breakdown</h4>
+                            <div id="pfOutcomeBreakdown" style="color: var(--color-text-secondary); font-size: var(--font-size-xs);">
+                                <!-- Outcome details will be dynamically inserted here -->
+                            </div>
+                        </div>
+
+                        <!-- Charts -->
+                        <div style="display: grid; grid-template-columns: 1fr; gap: 1.5rem;">
+                            <div style="background: var(--color-surface); padding: 1rem; border-radius: var(--radius-base); border: 1px solid var(--color-border);">
+                                <h4 style="margin: 0 0 1rem 0; font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold);">Challenge Outcomes Distribution</h4>
+                                <canvas id="pfOutcomeChart"></canvas>
+                            </div>
+                            <div style="background: var(--color-surface); padding: 1rem; border-radius: var(--radius-base); border: 1px solid var(--color-border);">
+                                <h4 style="margin: 0 0 1rem 0; font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold);">Sample Equity Curves</h4>
+                                <canvas id="pfEquityChart"></canvas>
+                            </div>
+                            <div style="background: var(--color-surface); padding: 1rem; border-radius: var(--radius-base); border: 1px solid var(--color-border);">
+                                <h4 style="margin: 0 0 1rem 0; font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold);">Days to Complete Distribution</h4>
+                                <canvas id="pfDaysChart"></canvas>
                             </div>
                         </div>
                     </div>
@@ -8017,12 +8134,53 @@ select.form-control {
         }
 
         // Monte Carlo Simulation Functions
+        let monteCarloMode = 'standard'; // 'standard' or 'propfirm'
+
+        function switchMCMode(mode) {
+            monteCarloMode = mode;
+
+            // Update button styles
+            const standardBtn = document.getElementById('mcModeStandard');
+            const propFirmBtn = document.getElementById('mcModePropFirm');
+
+            if (mode === 'standard') {
+                standardBtn.style.background = 'var(--color-primary)';
+                standardBtn.style.borderColor = 'var(--color-primary)';
+                propFirmBtn.style.background = '';
+                propFirmBtn.style.borderColor = '';
+
+                document.getElementById('mcStandardConfig').style.display = 'block';
+                document.getElementById('mcPropFirmConfig').style.display = 'none';
+            } else {
+                propFirmBtn.style.background = 'var(--color-primary)';
+                propFirmBtn.style.borderColor = 'var(--color-primary)';
+                standardBtn.style.background = '';
+                standardBtn.style.borderColor = '';
+
+                document.getElementById('mcStandardConfig').style.display = 'none';
+                document.getElementById('mcPropFirmConfig').style.display = 'block';
+            }
+
+            // Hide both results sections
+            document.getElementById('monteCarloResults').style.display = 'none';
+            document.getElementById('propFirmResults').style.display = 'none';
+            document.getElementById('monteCarloPlaceholder').style.display = 'block';
+        }
+
         function runMonteCarloSimulation() {
             if (appState.trades.length === 0) {
                 showMessage('Please import some trades first.', 'error');
                 return;
             }
 
+            if (monteCarloMode === 'standard') {
+                runStandardMonteCarloSimulation();
+            } else {
+                runPropFirmSimulation();
+            }
+        }
+
+        function runStandardMonteCarloSimulation() {
             // Get simulation parameters
             const numSimulations = parseInt(document.getElementById('mcNumSimulations').value);
             const numTrades = parseInt(document.getElementById('mcNumTrades').value);
@@ -8050,6 +8208,65 @@ select.form-control {
                 displayMonteCarloResults(results);
                 drawMonteCarloCharts(results);
                 showMessage('Simulation completed successfully!', 'success');
+            }, 100);
+        }
+
+        function runPropFirmSimulation() {
+            // Get simulation parameters
+            const numSimulations = parseInt(document.getElementById('pfNumSimulations').value);
+            const challengeBalance = parseFloat(document.getElementById('pfChallengeBalance').value);
+            const profitTarget = parseFloat(document.getElementById('pfProfitTarget').value) / 100;
+            const maxDrawdown = parseFloat(document.getElementById('pfMaxDrawdown').value) / 100;
+            const dailyLossLimit = parseFloat(document.getElementById('pfDailyLossLimit').value) / 100;
+            const minTradingDays = parseInt(document.getElementById('pfMinTradingDays').value);
+            const positionSize = parseFloat(document.getElementById('pfPositionSize').value) / 100;
+
+            // Validate parameters
+            if (numSimulations < 100 || numSimulations > 10000) {
+                showMessage('Number of simulations must be between 100 and 10000.', 'error');
+                return;
+            }
+            if (challengeBalance < 1000 || challengeBalance > 1000000) {
+                showMessage('Challenge balance must be between $1,000 and $1,000,000.', 'error');
+                return;
+            }
+            if (profitTarget <= 0 || profitTarget > 1) {
+                showMessage('Profit target must be between 1% and 100%.', 'error');
+                return;
+            }
+            if (maxDrawdown <= 0 || maxDrawdown > 0.5) {
+                showMessage('Max drawdown must be between 1% and 50%.', 'error');
+                return;
+            }
+            if (dailyLossLimit <= 0 || dailyLossLimit > 0.5) {
+                showMessage('Daily loss limit must be between 1% and 50%.', 'error');
+                return;
+            }
+            if (minTradingDays < 1 || minTradingDays > 100) {
+                showMessage('Minimum trading days must be between 1 and 100.', 'error');
+                return;
+            }
+            if (positionSize <= 0 || positionSize > 1) {
+                showMessage('Position size must be between 0.1% and 100%.', 'error');
+                return;
+            }
+
+            showMessage('Running Prop Firm Challenge simulation...', 'info');
+
+            // Run simulation with a slight delay to allow UI update
+            setTimeout(() => {
+                const results = calculatePropFirmSimulation(
+                    numSimulations,
+                    challengeBalance,
+                    profitTarget,
+                    maxDrawdown,
+                    dailyLossLimit,
+                    minTradingDays,
+                    positionSize
+                );
+                displayPropFirmResults(results);
+                drawPropFirmCharts(results);
+                showMessage('Prop Firm Challenge simulation completed successfully!', 'success');
             }, 100);
         }
 
@@ -8174,6 +8391,168 @@ select.form-control {
                 ddHistogram,
                 ddBinLabels,
                 startingBalance
+            };
+        }
+
+        function calculatePropFirmSimulation(numSimulations, challengeBalance, profitTarget, maxDrawdown, dailyLossLimit, minTradingDays, positionSize) {
+            const trades = appState.trades;
+
+            // Extract returns from historical trades
+            const returns = trades.map(trade => {
+                const pl = trade.netPL || trade.profit || 0;
+                return pl / appState.startingBalance; // Return as percentage of starting balance
+            });
+
+            // Track outcomes
+            const outcomes = []; // 'passed', 'maxDD', 'dailyLoss'
+            const daysToComplete = [];
+            const finalBalances = [];
+            const equityCurves = []; // Store first 50 passed and first 50 failed
+
+            let passedCount = 0;
+            let maxDDViolations = 0;
+            let dailyLossViolations = 0;
+            let totalDaysToPass = 0;
+            let totalDaysToFail = 0;
+            let totalFinalBalancePassed = 0;
+
+            const targetBalance = challengeBalance * (1 + profitTarget);
+            const maxDDThreshold = challengeBalance * maxDrawdown;
+
+            for (let sim = 0; sim < numSimulations; sim++) {
+                let balance = challengeBalance;
+                let peak = challengeBalance;
+                let tradingDays = 0;
+                let dailyStartBalance = challengeBalance;
+                let tradesInDay = 0;
+                const equityCurve = [balance];
+
+                let outcome = null;
+                let reachedTarget = false;
+
+                // Simulate until pass or fail
+                let maxIterations = 1000; // Safety limit
+                let iteration = 0;
+
+                while (outcome === null && iteration < maxIterations) {
+                    iteration++;
+
+                    // Randomly select a trade
+                    const randomIndex = Math.floor(Math.random() * returns.length);
+                    const returnPct = returns[randomIndex];
+
+                    // Apply position sizing
+                    const tradeReturn = returnPct * positionSize * balance;
+                    balance += tradeReturn;
+
+                    // Track peak for max drawdown calculation
+                    if (balance > peak) {
+                        peak = balance;
+                    }
+
+                    equityCurve.push(balance);
+                    tradesInDay++;
+
+                    // Check if reached profit target
+                    if (balance >= targetBalance) {
+                        reachedTarget = true;
+                    }
+
+                    // Check max drawdown from initial balance (not peak)
+                    const drawdownFromInitial = challengeBalance - balance;
+                    if (drawdownFromInitial > maxDDThreshold) {
+                        outcome = 'maxDD';
+                        maxDDViolations++;
+                        totalDaysToFail += tradingDays;
+                        break;
+                    }
+
+                    // Simulate end of day (every 3-10 trades randomly)
+                    const tradesPerDay = 3 + Math.floor(Math.random() * 8); // 3-10 trades per day
+                    if (tradesInDay >= tradesPerDay) {
+                        tradingDays++;
+
+                        // Check daily loss limit from previous day's close
+                        const dailyLoss = dailyStartBalance - balance;
+                        const dailyLossThreshold = dailyStartBalance * dailyLossLimit;
+
+                        if (dailyLoss > dailyLossThreshold) {
+                            outcome = 'dailyLoss';
+                            dailyLossViolations++;
+                            totalDaysToFail += tradingDays;
+                            break;
+                        }
+
+                        // Check if passed (reached target and met min days)
+                        if (reachedTarget && tradingDays >= minTradingDays) {
+                            outcome = 'passed';
+                            passedCount++;
+                            totalDaysToPass += tradingDays;
+                            totalFinalBalancePassed += balance;
+                            break;
+                        }
+
+                        // Reset for next day
+                        dailyStartBalance = balance;
+                        tradesInDay = 0;
+                    }
+                }
+
+                // If max iterations reached without outcome, consider it a fail (max DD)
+                if (outcome === null) {
+                    outcome = 'maxDD';
+                    maxDDViolations++;
+                    totalDaysToFail += tradingDays;
+                }
+
+                outcomes.push(outcome);
+                daysToComplete.push(tradingDays);
+                finalBalances.push(balance);
+
+                // Store equity curves for visualization (first 25 passed, first 25 failed)
+                if (outcome === 'passed' && equityCurves.filter(ec => ec.outcome === 'passed').length < 25) {
+                    equityCurves.push({ curve: equityCurve, outcome: 'passed' });
+                } else if (outcome !== 'passed' && equityCurves.filter(ec => ec.outcome === 'failed').length < 25) {
+                    equityCurves.push({ curve: equityCurve, outcome: 'failed' });
+                }
+            }
+
+            // Calculate statistics
+            const successRate = (passedCount / numSimulations) * 100;
+            const maxDDRate = (maxDDViolations / numSimulations) * 100;
+            const dailyLossRate = (dailyLossViolations / numSimulations) * 100;
+            const avgDaysToPass = passedCount > 0 ? totalDaysToPass / passedCount : 0;
+            const avgDaysToFail = (maxDDViolations + dailyLossViolations) > 0 ? totalDaysToFail / (maxDDViolations + dailyLossViolations) : 0;
+            const avgFinalBalancePassed = passedCount > 0 ? totalFinalBalancePassed / passedCount : 0;
+
+            // Create days distribution
+            const maxDays = Math.max(...daysToComplete);
+            const daysHistogram = new Array(Math.min(maxDays + 1, 50)).fill(0);
+            const daysBinLabels = Array.from({ length: daysHistogram.length }, (_, i) => i);
+
+            for (const days of daysToComplete) {
+                const binIndex = Math.min(days, daysHistogram.length - 1);
+                daysHistogram[binIndex]++;
+            }
+
+            return {
+                successRate,
+                maxDDRate,
+                dailyLossRate,
+                avgDaysToPass,
+                avgDaysToFail,
+                avgFinalBalancePassed,
+                outcomes,
+                daysToComplete,
+                finalBalances,
+                equityCurves,
+                daysHistogram,
+                daysBinLabels,
+                challengeBalance,
+                targetBalance,
+                passedCount,
+                maxDDViolations,
+                dailyLossViolations
             };
         }
 
@@ -8415,6 +8794,293 @@ select.form-control {
                             title: {
                                 display: true,
                                 text: 'Maximum Drawdown (%)',
+                                color: textColor
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                color: textColor
+                            },
+                            grid: {
+                                color: gridColor
+                            },
+                            title: {
+                                display: true,
+                                text: 'Number of Simulations',
+                                color: textColor
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function displayPropFirmResults(results) {
+            // Show results section
+            document.getElementById('propFirmResults').style.display = 'block';
+            document.getElementById('monteCarloPlaceholder').style.display = 'none';
+
+            // Format currency
+            const fmt = (val) => `$${val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+            // Update statistics
+            document.getElementById('pfSuccessRate').textContent = `${results.successRate.toFixed(1)}%`;
+            document.getElementById('pfAvgDaysPass').textContent = results.avgDaysToPass > 0 ? results.avgDaysToPass.toFixed(1) : 'N/A';
+            document.getElementById('pfAvgDaysFail').textContent = results.avgDaysToFail > 0 ? results.avgDaysToFail.toFixed(1) : 'N/A';
+            document.getElementById('pfMaxDDViolations').textContent = `${results.maxDDRate.toFixed(1)}%`;
+            document.getElementById('pfDailyLossViolations').textContent = `${results.dailyLossRate.toFixed(1)}%`;
+            document.getElementById('pfAvgFinalBalance').textContent = results.avgFinalBalancePassed > 0 ? fmt(results.avgFinalBalancePassed) : 'N/A';
+
+            // Color code success rate
+            const successRateEl = document.getElementById('pfSuccessRate');
+            if (results.successRate >= 50) {
+                successRateEl.style.color = 'var(--color-positive)';
+            } else if (results.successRate >= 25) {
+                successRateEl.style.color = 'var(--color-orange-400)';
+            } else {
+                successRateEl.style.color = 'var(--color-negative)';
+            }
+
+            // Display outcome breakdown
+            const breakdownEl = document.getElementById('pfOutcomeBreakdown');
+            breakdownEl.innerHTML = `
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+                    <div>
+                        <div style="font-weight: var(--font-weight-semibold); color: var(--color-text); margin-bottom: var(--space-8);">✅ Passed Challenges</div>
+                        <div style="font-size: var(--font-size-lg); color: var(--color-success); margin-bottom: var(--space-4);">${results.passedCount} / ${results.outcomes.length}</div>
+                        <div style="font-size: var(--font-size-xs);">Success rate: ${results.successRate.toFixed(1)}%</div>
+                    </div>
+                    <div>
+                        <div style="font-weight: var(--font-weight-semibold); color: var(--color-text); margin-bottom: var(--space-8);">❌ Max Drawdown Violations</div>
+                        <div style="font-size: var(--font-size-lg); color: var(--color-error); margin-bottom: var(--space-4);">${results.maxDDViolations} / ${results.outcomes.length}</div>
+                        <div style="font-size: var(--font-size-xs);">Violation rate: ${results.maxDDRate.toFixed(1)}%</div>
+                    </div>
+                    <div>
+                        <div style="font-weight: var(--font-weight-semibold); color: var(--color-text); margin-bottom: var(--space-8);">⚠️ Daily Loss Violations</div>
+                        <div style="font-size: var(--font-size-lg); color: var(--color-error); margin-bottom: var(--space-4);">${results.dailyLossViolations} / ${results.outcomes.length}</div>
+                        <div style="font-size: var(--font-size-xs);">Violation rate: ${results.dailyLossRate.toFixed(1)}%</div>
+                    </div>
+                </div>
+                <div style="margin-top: var(--space-12); padding-top: var(--space-12); border-top: 1px solid var(--color-border); font-style: italic; font-size: var(--font-size-xs);">
+                    Based on ${results.outcomes.length} simulations using your historical trading statistics.
+                </div>
+            `;
+        }
+
+        function drawPropFirmCharts(results) {
+            // Destroy existing charts
+            if (appState.chartInstances.pfOutcome) {
+                appState.chartInstances.pfOutcome.destroy();
+            }
+            if (appState.chartInstances.pfEquity) {
+                appState.chartInstances.pfEquity.destroy();
+            }
+            if (appState.chartInstances.pfDays) {
+                appState.chartInstances.pfDays.destroy();
+            }
+
+            const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const textColor = isDarkMode ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.8)';
+            const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+
+            // 1. Outcome Distribution Chart (Pie Chart)
+            const ctxOutcome = document.getElementById('pfOutcomeChart').getContext('2d');
+            appState.chartInstances.pfOutcome = new Chart(ctxOutcome, {
+                type: 'pie',
+                data: {
+                    labels: ['Passed', 'Max DD Violation', 'Daily Loss Violation'],
+                    datasets: [{
+                        data: [results.passedCount, results.maxDDViolations, results.dailyLossViolations],
+                        backgroundColor: [
+                            'rgba(34, 197, 94, 0.8)',
+                            'rgba(239, 68, 68, 0.8)',
+                            'rgba(251, 146, 60, 0.8)'
+                        ],
+                        borderColor: [
+                            'rgba(34, 197, 94, 1)',
+                            'rgba(239, 68, 68, 1)',
+                            'rgba(251, 146, 60, 1)'
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    aspectRatio: 2,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'bottom',
+                            labels: {
+                                color: textColor,
+                                padding: 15,
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: (item) => {
+                                    const total = results.outcomes.length;
+                                    const value = item.parsed;
+                                    const percentage = ((value / total) * 100).toFixed(1);
+                                    return `${item.label}: ${value} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // 2. Equity Curves Chart
+            const ctxEquity = document.getElementById('pfEquityChart').getContext('2d');
+            const datasets = [];
+
+            // Add passed equity curves in green
+            results.equityCurves.filter(ec => ec.outcome === 'passed').forEach((ec, index) => {
+                datasets.push({
+                    label: `Passed ${index + 1}`,
+                    data: ec.curve,
+                    borderColor: `rgba(34, 197, 94, ${0.2 + (0.3 * Math.random())})`,
+                    borderWidth: 1.5,
+                    fill: false,
+                    pointRadius: 0,
+                    tension: 0.1
+                });
+            });
+
+            // Add failed equity curves in red
+            results.equityCurves.filter(ec => ec.outcome === 'failed').forEach((ec, index) => {
+                datasets.push({
+                    label: `Failed ${index + 1}`,
+                    data: ec.curve,
+                    borderColor: `rgba(239, 68, 68, ${0.2 + (0.3 * Math.random())})`,
+                    borderWidth: 1.5,
+                    fill: false,
+                    pointRadius: 0,
+                    tension: 0.1
+                });
+            });
+
+            // Add target line
+            const maxLength = Math.max(...results.equityCurves.map(ec => ec.curve.length));
+            datasets.push({
+                label: 'Profit Target',
+                data: new Array(maxLength).fill(results.targetBalance),
+                borderColor: 'rgba(74, 222, 128, 0.8)',
+                borderWidth: 2,
+                borderDash: [5, 5],
+                fill: false,
+                pointRadius: 0
+            });
+
+            // Add starting balance line
+            datasets.push({
+                label: 'Starting Balance',
+                data: new Array(maxLength).fill(results.challengeBalance),
+                borderColor: 'rgba(255, 255, 255, 0.5)',
+                borderWidth: 2,
+                borderDash: [5, 5],
+                fill: false,
+                pointRadius: 0
+            });
+
+            appState.chartInstances.pfEquity = new Chart(ctxEquity, {
+                type: 'line',
+                data: {
+                    labels: Array.from({ length: maxLength }, (_, i) => i),
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    aspectRatio: 2,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            enabled: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                color: textColor
+                            },
+                            grid: {
+                                color: gridColor
+                            },
+                            title: {
+                                display: true,
+                                text: 'Trade Number',
+                                color: textColor
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                color: textColor,
+                                callback: function(value) {
+                                    return '$' + value.toLocaleString();
+                                }
+                            },
+                            grid: {
+                                color: gridColor
+                            },
+                            title: {
+                                display: true,
+                                text: 'Account Balance',
+                                color: textColor
+                            }
+                        }
+                    }
+                }
+            });
+
+            // 3. Days to Complete Distribution
+            const ctxDays = document.getElementById('pfDaysChart').getContext('2d');
+            appState.chartInstances.pfDays = new Chart(ctxDays, {
+                type: 'bar',
+                data: {
+                    labels: results.daysBinLabels,
+                    datasets: [{
+                        label: 'Frequency',
+                        data: results.daysHistogram,
+                        backgroundColor: 'rgba(33, 128, 141, 0.6)',
+                        borderColor: 'rgba(33, 128, 141, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    aspectRatio: 2,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                title: (items) => `Days: ${items[0].label}`,
+                                label: (item) => `Simulations: ${item.parsed.y}`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                color: textColor,
+                                autoSkip: true,
+                                maxTicksLimit: 20
+                            },
+                            grid: {
+                                color: gridColor
+                            },
+                            title: {
+                                display: true,
+                                text: 'Trading Days',
                                 color: textColor
                             }
                         },
