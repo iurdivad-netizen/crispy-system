@@ -2489,7 +2489,7 @@ select.form-control {
                                         Run thousands of simulations to assess risk and potential outcomes based on your actual trading performance.
                                         <ul>
                                             <li><strong>Standard Mode:</strong> Randomize trade order to project future account balance distribution</li>
-                                            <li><strong>Prop Firm Mode:</strong> Each simulation runs exactly 10,000 trades to evaluate challenge success probability</li>
+                                            <li><strong>Prop Firm Mode:</strong> Run configurable number of trades per simulation to evaluate challenge success probability</li>
                                             <li><strong>Risk Analysis:</strong> Probability of drawdowns, profits, and challenge violations</li>
                                             <li><strong>Percentiles:</strong> Best/worst case scenarios (5th, 50th, 95th)</li>
                                             <li><strong>Visualizations:</strong> Complete equity curves, outcome distributions, and statistical analysis</li>
@@ -2552,6 +2552,12 @@ select.form-control {
                                     style="width: 100%; padding: var(--space-8); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-background); color: var(--color-text);">
                             </div>
                             <div>
+                                <label style="display: block; font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: var(--space-8);">Trades Per Simulation</label>
+                                <input type="number" id="pfTradesPerSim" value="10000" min="100" max="50000" step="100"
+                                    style="width: 100%; padding: var(--space-8); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-background); color: var(--color-text);">
+                                <div style="font-size: 10px; color: var(--color-text-secondary); margin-top: 4px;">Complete trajectory length</div>
+                            </div>
+                            <div>
                                 <label style="display: block; font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: var(--space-8);">Challenge Balance ($)</label>
                                 <input type="number" id="pfChallengeBalance" value="100000" min="1000" max="1000000" step="1000"
                                     style="width: 100%; padding: var(--space-8); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-background); color: var(--color-text);">
@@ -2609,7 +2615,7 @@ select.form-control {
                         <div style="margin-top: 1rem; padding: 0.75rem; background: rgba(74, 158, 255, 0.1); border: 1px solid rgba(74, 158, 255, 0.3); border-radius: var(--radius-sm); font-size: var(--font-size-xs); color: var(--color-text-secondary);">
                             <strong>ℹ️ How It Works:</strong>
                             <ul style="margin: 0.5rem 0 0 1.5rem; padding: 0;">
-                                <li><strong>Simulation Length:</strong> Each simulation runs exactly 10,000 trades to provide complete trajectory analysis</li>
+                                <li><strong>Simulation Length:</strong> Configure how many trades each simulation runs (default 10,000) for complete trajectory analysis</li>
                                 <li><strong>Trade Sampling:</strong> Randomly selects from your historical trades with position sizing applied</li>
                                 <li><strong>Pass Condition:</strong> Reach profit target while meeting minimum trading days requirement</li>
                                 <li><strong>Fail Conditions:</strong> Exceed max drawdown OR daily loss limit at any point</li>
@@ -2619,6 +2625,7 @@ select.form-control {
                             <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(74, 158, 255, 0.2);">
                                 <strong>💡 Custom Settings:</strong>
                                 <ul style="margin: 0.5rem 0 0 1.5rem; padding: 0;">
+                                    <li><strong>Trades Per Simulation:</strong> Control trajectory length (100-50,000 trades) for different analysis depths</li>
                                     <li><strong>Trades Per Day:</strong> Simulation randomly uses between min and max trades per day</li>
                                     <li><strong>Custom Avg Win/Loss:</strong> Override historical averages for hypothetical "what-if" scenarios</li>
                                     <li><strong>Position Size:</strong> Scale each trade's P&L by a percentage of current account balance</li>
@@ -8291,6 +8298,7 @@ select.form-control {
 
             // Get simulation parameters
             const numSimulations = parseInt(document.getElementById('pfNumSimulations').value);
+            const tradesPerSim = parseInt(document.getElementById('pfTradesPerSim').value);
             const challengeBalance = parseFloat(document.getElementById('pfChallengeBalance').value);
             const profitTarget = parseFloat(document.getElementById('pfProfitTarget').value) / 100;
             const maxDrawdown = parseFloat(document.getElementById('pfMaxDrawdown').value) / 100;
@@ -8309,6 +8317,10 @@ select.form-control {
             // Validate parameters
             if (numSimulations < 100 || numSimulations > 10000) {
                 showMessage('Number of simulations must be between 100 and 10000.', 'error');
+                return;
+            }
+            if (tradesPerSim < 100 || tradesPerSim > 50000) {
+                showMessage('Trades per simulation must be between 100 and 50,000.', 'error');
                 return;
             }
             if (challengeBalance < 1000 || challengeBalance > 1000000) {
@@ -8367,6 +8379,7 @@ select.form-control {
                 try {
                     const results = calculatePropFirmSimulation(
                         numSimulations,
+                        tradesPerSim,
                         challengeBalance,
                         profitTarget,
                         maxDrawdown,
@@ -8516,7 +8529,7 @@ select.form-control {
             };
         }
 
-        function calculatePropFirmSimulation(numSimulations, challengeBalance, profitTarget, maxDrawdown, dailyLossLimit, minTradingDays, positionSize, minTradesPerDay, maxTradesPerDay, customAvgWin, customAvgLoss) {
+        function calculatePropFirmSimulation(numSimulations, tradesPerSim, challengeBalance, profitTarget, maxDrawdown, dailyLossLimit, minTradingDays, positionSize, minTradesPerDay, maxTradesPerDay, customAvgWin, customAvgLoss) {
             const trades = appState.trades;
             const startingBalance = appState.startingBalance;
 
@@ -8585,8 +8598,8 @@ select.form-control {
                 let outcome = null;
                 let reachedTarget = false;
 
-                // Simulate exactly 10,000 trades
-                const maxTrades = 10000;
+                // Simulate specified number of trades
+                const maxTrades = tradesPerSim;
                 let tradeCount = 0;
 
                 while (tradeCount < maxTrades) {
@@ -8654,7 +8667,7 @@ select.form-control {
                     }
                 }
 
-                // If no outcome after 10,000 trades, consider it a fail (didn't reach target)
+                // If no outcome after all trades, consider it a fail (didn't reach target)
                 if (outcome === null) {
                     outcome = 'maxDD';
                     maxDDViolations++;
