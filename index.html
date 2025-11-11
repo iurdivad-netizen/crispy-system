@@ -8752,11 +8752,11 @@ select.form-control {
 
             // Create days distribution
             const maxDays = Math.max(...daysToComplete);
-            const daysHistogram = new Array(Math.min(maxDays + 1, 50)).fill(0);
+            const daysHistogram = new Array(maxDays + 1).fill(0);
             const daysBinLabels = Array.from({ length: daysHistogram.length }, (_, i) => i);
 
             for (const days of daysToComplete) {
-                const binIndex = Math.min(days, daysHistogram.length - 1);
+                const binIndex = days; // Use exact day count, no capping
                 daysHistogram[binIndex]++;
             }
 
