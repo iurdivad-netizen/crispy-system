@@ -1195,7 +1195,16 @@ select.form-control {
                 opacity: 0;
             }
         }
-    
+
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
 
         /* Enhanced Screenshot and TradingView Button Styles */
         .screenshot-container {
@@ -2692,6 +2701,13 @@ select.form-control {
                                 <canvas id="pfDaysChart"></canvas>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- Loading Indicator -->
+                    <div id="monteCarloLoading" style="display: none; text-align: center; padding: 3rem;">
+                        <div style="display: inline-block; width: 60px; height: 60px; border: 6px solid rgba(33, 128, 141, 0.2); border-top-color: rgba(33, 128, 141, 1); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                        <p style="margin-top: 1.5rem; font-size: var(--font-size-base); color: var(--color-text); font-weight: var(--font-weight-semibold);">Running simulation...</p>
+                        <p style="margin-top: 0.5rem; font-size: var(--font-size-sm); color: var(--color-text-secondary);">This may take a few moments depending on the number of simulations.</p>
                     </div>
 
                     <div id="monteCarloPlaceholder" style="text-align: center; padding: 3rem; color: var(--color-text-secondary);">
@@ -8161,9 +8177,10 @@ select.form-control {
                 document.getElementById('mcPropFirmConfig').style.display = 'block';
             }
 
-            // Hide both results sections
+            // Hide all result sections, show placeholder
             document.getElementById('monteCarloResults').style.display = 'none';
             document.getElementById('propFirmResults').style.display = 'none';
+            document.getElementById('monteCarloLoading').style.display = 'none';
             document.getElementById('monteCarloPlaceholder').style.display = 'block';
         }
 
@@ -8200,14 +8217,27 @@ select.form-control {
                 return;
             }
 
-            showMessage('Running Monte Carlo simulation...', 'info');
+            // Show loading indicator, hide results and placeholder
+            document.getElementById('monteCarloLoading').style.display = 'block';
+            document.getElementById('monteCarloResults').style.display = 'none';
+            document.getElementById('propFirmResults').style.display = 'none';
+            document.getElementById('monteCarloPlaceholder').style.display = 'none';
 
             // Run simulation with a slight delay to allow UI update
             setTimeout(() => {
-                const results = calculateMonteCarloSimulation(numSimulations, numTrades, positionSize);
-                displayMonteCarloResults(results);
-                drawMonteCarloCharts(results);
-                showMessage('Simulation completed successfully!', 'success');
+                try {
+                    const results = calculateMonteCarloSimulation(numSimulations, numTrades, positionSize);
+                    displayMonteCarloResults(results);
+                    drawMonteCarloCharts(results);
+                    showMessage('Simulation completed successfully!', 'success');
+                } catch (error) {
+                    console.error('Simulation error:', error);
+                    showMessage('Error running simulation. Please try again.', 'error');
+                    document.getElementById('monteCarloPlaceholder').style.display = 'block';
+                } finally {
+                    // Hide loading indicator
+                    document.getElementById('monteCarloLoading').style.display = 'none';
+                }
             }, 100);
         }
 
@@ -8251,22 +8281,35 @@ select.form-control {
                 return;
             }
 
-            showMessage('Running Prop Firm Challenge simulation...', 'info');
+            // Show loading indicator, hide results and placeholder
+            document.getElementById('monteCarloLoading').style.display = 'block';
+            document.getElementById('monteCarloResults').style.display = 'none';
+            document.getElementById('propFirmResults').style.display = 'none';
+            document.getElementById('monteCarloPlaceholder').style.display = 'none';
 
             // Run simulation with a slight delay to allow UI update
             setTimeout(() => {
-                const results = calculatePropFirmSimulation(
-                    numSimulations,
-                    challengeBalance,
-                    profitTarget,
-                    maxDrawdown,
-                    dailyLossLimit,
-                    minTradingDays,
-                    positionSize
-                );
-                displayPropFirmResults(results);
-                drawPropFirmCharts(results);
-                showMessage('Prop Firm Challenge simulation completed successfully!', 'success');
+                try {
+                    const results = calculatePropFirmSimulation(
+                        numSimulations,
+                        challengeBalance,
+                        profitTarget,
+                        maxDrawdown,
+                        dailyLossLimit,
+                        minTradingDays,
+                        positionSize
+                    );
+                    displayPropFirmResults(results);
+                    drawPropFirmCharts(results);
+                    showMessage('Prop Firm Challenge simulation completed successfully!', 'success');
+                } catch (error) {
+                    console.error('Simulation error:', error);
+                    showMessage('Error running simulation. Please try again.', 'error');
+                    document.getElementById('monteCarloPlaceholder').style.display = 'block';
+                } finally {
+                    // Hide loading indicator
+                    document.getElementById('monteCarloLoading').style.display = 'none';
+                }
             }, 100);
         }
 
@@ -8557,9 +8600,11 @@ select.form-control {
         }
 
         function displayMonteCarloResults(results) {
-            // Show results section
+            // Show results section, hide others
             document.getElementById('monteCarloResults').style.display = 'block';
+            document.getElementById('propFirmResults').style.display = 'none';
             document.getElementById('monteCarloPlaceholder').style.display = 'none';
+            document.getElementById('monteCarloLoading').style.display = 'none';
 
             // Format currency
             const fmt = (val) => `$${val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -8816,9 +8861,11 @@ select.form-control {
         }
 
         function displayPropFirmResults(results) {
-            // Show results section
+            // Show results section, hide others
             document.getElementById('propFirmResults').style.display = 'block';
+            document.getElementById('monteCarloResults').style.display = 'none';
             document.getElementById('monteCarloPlaceholder').style.display = 'none';
+            document.getElementById('monteCarloLoading').style.display = 'none';
 
             // Format currency
             const fmt = (val) => `$${val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
