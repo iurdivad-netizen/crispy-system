@@ -2582,6 +2582,28 @@ select.form-control {
                                 <input type="number" id="pfPositionSize" value="2" min="0.1" max="100" step="0.1"
                                     style="width: 100%; padding: var(--space-8); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-background); color: var(--color-text);">
                             </div>
+                            <div>
+                                <label style="display: block; font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: var(--space-8);">Min Trades Per Day</label>
+                                <input type="number" id="pfMinTradesPerDay" value="3" min="1" max="50" step="1"
+                                    style="width: 100%; padding: var(--space-8); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-background); color: var(--color-text);">
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: var(--space-8);">Max Trades Per Day</label>
+                                <input type="number" id="pfMaxTradesPerDay" value="10" min="1" max="50" step="1"
+                                    style="width: 100%; padding: var(--space-8); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-background); color: var(--color-text);">
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: var(--space-8);">Custom Avg Win ($)</label>
+                                <input type="number" id="pfCustomAvgWin" value="" placeholder="Leave empty for historical"
+                                    style="width: 100%; padding: var(--space-8); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-background); color: var(--color-text);">
+                                <div style="font-size: 10px; color: var(--color-text-secondary); margin-top: 4px;">Optional override</div>
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: var(--space-8);">Custom Avg Loss ($)</label>
+                                <input type="number" id="pfCustomAvgLoss" value="" placeholder="Leave empty for historical"
+                                    style="width: 100%; padding: var(--space-8); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-background); color: var(--color-text);">
+                                <div style="font-size: 10px; color: var(--color-text-secondary); margin-top: 4px;">Optional override (enter as negative)</div>
+                            </div>
                         </div>
                         <div style="margin-top: 1rem; padding: 0.75rem; background: rgba(74, 158, 255, 0.1); border: 1px solid rgba(74, 158, 255, 0.3); border-radius: var(--radius-sm); font-size: var(--font-size-xs); color: var(--color-text-secondary);">
                             <strong>ℹ️ Challenge Rules:</strong>
@@ -2591,6 +2613,13 @@ select.form-control {
                                 <li>Max Drawdown: Measured from initial balance</li>
                                 <li>Daily Loss Limit: Measured from previous trading day's closing balance</li>
                             </ul>
+                            <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(74, 158, 255, 0.2);">
+                                <strong>💡 Custom Settings:</strong>
+                                <ul style="margin: 0.5rem 0 0 1.5rem; padding: 0;">
+                                    <li>Trades Per Day: Simulation will randomly use between min and max trades per day</li>
+                                    <li>Custom Avg Win/Loss: Override historical averages for hypothetical scenarios</li>
+                                </ul>
+                            </div>
                         </div>
                     </div>
 
@@ -8259,6 +8288,14 @@ select.form-control {
             const minTradingDays = parseInt(document.getElementById('pfMinTradingDays').value);
             const positionSize = parseFloat(document.getElementById('pfPositionSize').value) / 100;
 
+            // Get new parameters
+            const minTradesPerDay = parseInt(document.getElementById('pfMinTradesPerDay').value);
+            const maxTradesPerDay = parseInt(document.getElementById('pfMaxTradesPerDay').value);
+            const customAvgWinInput = document.getElementById('pfCustomAvgWin').value;
+            const customAvgLossInput = document.getElementById('pfCustomAvgLoss').value;
+            const customAvgWin = customAvgWinInput ? parseFloat(customAvgWinInput) : null;
+            const customAvgLoss = customAvgLossInput ? parseFloat(customAvgLossInput) : null;
+
             // Validate parameters
             if (numSimulations < 100 || numSimulations > 10000) {
                 showMessage('Number of simulations must be between 100 and 10000.', 'error');
@@ -8288,6 +8325,26 @@ select.form-control {
                 showMessage('Position size must be between 0.1% and 100%.', 'error');
                 return;
             }
+            if (minTradesPerDay < 1 || minTradesPerDay > 50) {
+                showMessage('Min trades per day must be between 1 and 50.', 'error');
+                return;
+            }
+            if (maxTradesPerDay < 1 || maxTradesPerDay > 50) {
+                showMessage('Max trades per day must be between 1 and 50.', 'error');
+                return;
+            }
+            if (minTradesPerDay > maxTradesPerDay) {
+                showMessage('Min trades per day cannot exceed max trades per day.', 'error');
+                return;
+            }
+            if (customAvgWin !== null && customAvgWin <= 0) {
+                showMessage('Custom avg win must be positive.', 'error');
+                return;
+            }
+            if (customAvgLoss !== null && customAvgLoss >= 0) {
+                showMessage('Custom avg loss must be negative.', 'error');
+                return;
+            }
 
             // Show loading indicator, hide results and placeholder
             document.getElementById('monteCarloLoading').style.display = 'block';
@@ -8305,7 +8362,11 @@ select.form-control {
                         maxDrawdown,
                         dailyLossLimit,
                         minTradingDays,
-                        positionSize
+                        positionSize,
+                        minTradesPerDay,
+                        maxTradesPerDay,
+                        customAvgWin,
+                        customAvgLoss
                     );
                     displayPropFirmResults(results);
                     drawPropFirmCharts(results);
@@ -8445,14 +8506,47 @@ select.form-control {
             };
         }
 
-        function calculatePropFirmSimulation(numSimulations, challengeBalance, profitTarget, maxDrawdown, dailyLossLimit, minTradingDays, positionSize) {
+        function calculatePropFirmSimulation(numSimulations, challengeBalance, profitTarget, maxDrawdown, dailyLossLimit, minTradingDays, positionSize, minTradesPerDay, maxTradesPerDay, customAvgWin, customAvgLoss) {
             const trades = appState.trades;
+            const startingBalance = appState.startingBalance;
 
-            // Extract returns from historical trades
-            const returns = trades.map(trade => {
-                const pl = trade.netPL || trade.profit || 0;
-                return pl / appState.startingBalance; // Return as percentage of starting balance
-            });
+            // Determine if we use custom or historical data
+            let returns;
+            let actualAvgWin, actualAvgLoss;
+
+            if (customAvgWin !== null && customAvgLoss !== null) {
+                // Use custom avg win/loss to generate synthetic returns
+                // Calculate win rate from historical data
+                const winningTrades = trades.filter(t => (t.netPL || t.profit || 0) > 0);
+                const historicalWinRate = winningTrades.length / trades.length;
+
+                // Generate synthetic returns based on custom values
+                returns = [];
+                const numSyntheticTrades = Math.max(trades.length, 100); // At least 100 trades
+                for (let i = 0; i < numSyntheticTrades; i++) {
+                    const isWin = Math.random() < historicalWinRate;
+                    const pl = isWin ? customAvgWin : customAvgLoss;
+                    returns.push(pl / startingBalance); // Convert to percentage
+                }
+                actualAvgWin = customAvgWin;
+                actualAvgLoss = customAvgLoss;
+            } else {
+                // Extract returns from historical trades
+                returns = trades.map(trade => {
+                    const pl = trade.netPL || trade.profit || 0;
+                    return pl / startingBalance; // Return as percentage of starting balance
+                });
+
+                // Calculate actual avg win/loss from historical data
+                const winningTrades = trades.filter(t => (t.netPL || t.profit || 0) > 0);
+                const losingTrades = trades.filter(t => (t.netPL || t.profit || 0) < 0);
+                actualAvgWin = winningTrades.length > 0
+                    ? winningTrades.reduce((sum, t) => sum + (t.netPL || t.profit || 0), 0) / winningTrades.length
+                    : 0;
+                actualAvgLoss = losingTrades.length > 0
+                    ? losingTrades.reduce((sum, t) => sum + (t.netPL || t.profit || 0), 0) / losingTrades.length
+                    : 0;
+            }
 
             // Track outcomes
             const outcomes = []; // 'passed', 'maxDD', 'dailyLoss'
@@ -8518,8 +8612,8 @@ select.form-control {
                         break;
                     }
 
-                    // Simulate end of day (every 3-10 trades randomly)
-                    const tradesPerDay = 3 + Math.floor(Math.random() * 8); // 3-10 trades per day
+                    // Simulate end of day (random number of trades between min and max)
+                    const tradesPerDay = minTradesPerDay + Math.floor(Math.random() * (maxTradesPerDay - minTradesPerDay + 1));
                     if (tradesInDay >= tradesPerDay) {
                         tradingDays++;
 
@@ -8576,15 +8670,8 @@ select.form-control {
             const avgDaysToFail = (maxDDViolations + dailyLossViolations) > 0 ? totalDaysToFail / (maxDDViolations + dailyLossViolations) : 0;
             const avgFinalBalancePassed = passedCount > 0 ? totalFinalBalancePassed / passedCount : 0;
 
-            // Calculate average trade profit and loss from historical data
-            const winningTrades = trades.filter(t => (t.netPL || t.profit || 0) > 0);
-            const losingTrades = trades.filter(t => (t.netPL || t.profit || 0) < 0);
-            const avgTradeProfit = winningTrades.length > 0
-                ? winningTrades.reduce((sum, t) => sum + (t.netPL || t.profit || 0), 0) / winningTrades.length
-                : 0;
-            const avgTradeLoss = losingTrades.length > 0
-                ? losingTrades.reduce((sum, t) => sum + (t.netPL || t.profit || 0), 0) / losingTrades.length
-                : 0;
+            // avgTradeProfit and avgTradeLoss are already calculated as actualAvgWin and actualAvgLoss above
+            // (either from custom values or historical data)
 
             // Create days distribution
             const maxDays = Math.max(...daysToComplete);
@@ -8603,8 +8690,8 @@ select.form-control {
                 avgDaysToPass,
                 avgDaysToFail,
                 avgFinalBalancePassed,
-                avgTradeProfit,
-                avgTradeLoss,
+                avgTradeProfit: actualAvgWin,
+                avgTradeLoss: actualAvgLoss,
                 outcomes,
                 daysToComplete,
                 finalBalances,
