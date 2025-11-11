@@ -11280,7 +11280,7 @@ select.form-control {
         
         // Print Functions
         // Helper function to generate screenshot HTML with error handling
-        function generateScreenshotHtml(label, screenshotData) {
+        function generateScreenshotHtml(label, screenshotData, dataUri = null) {
             if (!screenshotData) return '';
 
             const src = getScreenshotSrc(screenshotData);
@@ -11292,14 +11292,15 @@ select.form-control {
             const isTradingViewUrl = sanitizedUrl.includes('tradingview.com');
 
             if (isTradingViewUrl) {
-                // Convert TradingView URL to snapshot image URL
-                // Pattern: https://www.tradingview.com/x/ABC123/ -> https://s.tradingview.com/snapshots/x/ABC123.png
-                let imageUrl = sanitizedUrl;
-                const tvMatch = sanitizedUrl.match(/tradingview\.com\/x\/([^\/]+)/);
+                // Use data URI if available, otherwise convert URL to snapshot image URL
+                let imageUrl = dataUri || sanitizedUrl;
 
-                if (tvMatch && tvMatch[1]) {
-                    const snapshotId = tvMatch[1];
-                    imageUrl = `https://s.tradingview.com/snapshots/x/${snapshotId}.png`;
+                if (!dataUri) {
+                    const tvMatch = sanitizedUrl.match(/tradingview\.com\/x\/([^\/]+)/);
+                    if (tvMatch && tvMatch[1]) {
+                        const snapshotId = tvMatch[1];
+                        imageUrl = `https://s.tradingview.com/snapshots/x/${snapshotId}.png`;
+                    }
                 }
 
                 const uniqueId = `tv-${Math.random().toString(36).substr(2, 9)}`;
@@ -11336,13 +11337,17 @@ select.form-control {
                 // For entry: use screenshot if available, otherwise use TradingView URL
                 const entryData = trade.entryScreenshot || trade.tradingViewEntry;
                 if (entryData) {
-                    screenshotsHtml += generateScreenshotHtml('Entry', entryData);
+                    // Use data URI if available (created during preload)
+                    const entryDataUri = trade.tradingViewEntryDataUri || null;
+                    screenshotsHtml += generateScreenshotHtml('Entry', entryData, entryDataUri);
                 }
 
                 // For exit: use screenshot if available, otherwise use TradingView URL
                 const exitData = trade.exitScreenshot || trade.tradingViewExit;
                 if (exitData) {
-                    screenshotsHtml += generateScreenshotHtml('Exit', exitData);
+                    // Use data URI if available (created during preload)
+                    const exitDataUri = trade.tradingViewExitDataUri || null;
+                    screenshotsHtml += generateScreenshotHtml('Exit', exitData, exitDataUri);
                 }
 
                 screenshotsHtml += '</div>';
@@ -11393,53 +11398,111 @@ select.form-control {
     </div>`;
         }
 
-        // Preload TradingView images before printing
-        async function preloadTradingViewImages(trades) {
-            const imagesToPreload = [];
+        // Convert image URL to data URI for reliable printing
+        async function convertImageToDataUri(imageUrl) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
 
-            // Collect all TradingView URLs that need preloading
+                img.onload = function() {
+                    try {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = img.naturalWidth || img.width;
+                        canvas.height = img.naturalHeight || img.height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0);
+                        const dataUri = canvas.toDataURL('image/png');
+                        resolve(dataUri);
+                    } catch (e) {
+                        console.error('Error converting image to data URI:', e);
+                        resolve(imageUrl); // Fallback to original URL
+                    }
+                };
+
+                img.onerror = function() {
+                    console.error('Error loading image:', imageUrl);
+                    resolve(imageUrl); // Fallback to original URL
+                };
+
+                // Timeout after 10 seconds
+                setTimeout(() => {
+                    console.warn('Image loading timeout:', imageUrl);
+                    resolve(imageUrl); // Fallback to original URL
+                }, 10000);
+
+                img.src = imageUrl;
+            });
+        }
+
+        // Preload and convert TradingView images to data URIs before printing
+        async function preloadTradingViewImages(trades) {
+            const imageConversions = [];
+
+            // Collect all TradingView URLs that need conversion
             trades.forEach(trade => {
                 // Check if TradingView URLs exist without screenshots
                 if (trade.tradingViewEntry && !trade.entryScreenshot) {
                     const tvMatch = trade.tradingViewEntry.match(/tradingview\.com\/x\/([^\/]+)/);
                     if (tvMatch && tvMatch[1]) {
-                        imagesToPreload.push(`https://s.tradingview.com/snapshots/x/${tvMatch[1]}.png`);
+                        const imageUrl = `https://s.tradingview.com/snapshots/x/${tvMatch[1]}.png`;
+                        imageConversions.push({
+                            trade,
+                            field: 'tradingViewEntryDataUri',
+                            url: imageUrl
+                        });
                     }
                 }
 
                 if (trade.tradingViewExit && !trade.exitScreenshot) {
                     const tvMatch = trade.tradingViewExit.match(/tradingview\.com\/x\/([^\/]+)/);
                     if (tvMatch && tvMatch[1]) {
-                        imagesToPreload.push(`https://s.tradingview.com/snapshots/x/${tvMatch[1]}.png`);
+                        const imageUrl = `https://s.tradingview.com/snapshots/x/${tvMatch[1]}.png`;
+                        imageConversions.push({
+                            trade,
+                            field: 'tradingViewExitDataUri',
+                            url: imageUrl
+                        });
                     }
                 }
             });
 
-            if (imagesToPreload.length === 0) {
-                return; // No images to preload
+            if (imageConversions.length === 0) {
+                return; // No images to convert
             }
 
             // Show loading message
-            showMessage(`Loading ${imagesToPreload.length} TradingView chart${imagesToPreload.length > 1 ? 's' : ''}...`, 'info');
+            showMessage(`Converting ${imageConversions.length} TradingView chart${imageConversions.length > 1 ? 's' : ''} for printing...`, 'info');
 
-            // Preload all images
-            const preloadPromises = imagesToPreload.map(imageUrl => {
+            // Convert all images to data URIs
+            const conversionPromises = imageConversions.map(async (item) => {
+                const dataUri = await convertImageToDataUri(item.url);
+                item.trade[item.field] = dataUri;
+            });
+
+            // Wait for all conversions to complete
+            await Promise.all(conversionPromises);
+        }
+
+        // Wait for all images in print window to load
+        async function waitForImagesToLoad(printWindow) {
+            const images = printWindow.document.querySelectorAll('img');
+            if (images.length === 0) {
+                return;
+            }
+
+            const promises = Array.from(images).map(img => {
+                if (img.complete && img.naturalHeight !== 0) {
+                    return Promise.resolve();
+                }
                 return new Promise((resolve) => {
-                    const img = new Image();
-
-                    // Resolve on load or error (we don't want to block printing)
-                    img.onload = () => resolve(true);
-                    img.onerror = () => resolve(false);
-
-                    // Set a timeout to prevent indefinite waiting
-                    setTimeout(() => resolve(false), 5000);
-
-                    img.src = imageUrl;
+                    img.onload = () => resolve();
+                    img.onerror = () => resolve(); // Resolve even on error
+                    // Timeout after 10 seconds per image
+                    setTimeout(() => resolve(), 10000);
                 });
             });
 
-            // Wait for all images to load or timeout
-            await Promise.all(preloadPromises);
+            await Promise.all(promises);
         }
 
         // Print individual trade (for per-trade print buttons if needed)
@@ -11519,7 +11582,14 @@ select.form-control {
             .print-content { margin-top: 0; }
             @page { size: landscape; }
             body { margin: 15px; }
-            img { page-break-inside: avoid; max-width: 100%; }
+            img {
+                page-break-inside: avoid;
+                max-width: 100%;
+                display: block !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color-adjust: exact !important;
+            }
         }
     </style>
 </head>
@@ -11541,6 +11611,9 @@ select.form-control {
             printWindow.document.open();
             printWindow.document.write(htmlContent);
             printWindow.document.close();
+
+            // Wait for all images to load before making print available
+            await waitForImagesToLoad(printWindow);
         }
 
         // Print all trades - each trade on its own page
@@ -11632,7 +11705,14 @@ select.form-control {
             .print-content { margin-top: 0; }
             @page { size: landscape; }
             body { margin: 15px; }
-            img { page-break-inside: avoid; max-width: 100%; }
+            img {
+                page-break-inside: avoid;
+                max-width: 100%;
+                display: block !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color-adjust: exact !important;
+            }
         }
     </style>
 </head>
@@ -11654,6 +11734,9 @@ select.form-control {
             printWindow.document.open();
             printWindow.document.write(htmlContent);
             printWindow.document.close();
+
+            // Wait for all images to load before making print available
+            await waitForImagesToLoad(printWindow);
         }
 
         // Configuration Functions
