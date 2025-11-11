@@ -7595,7 +7595,9 @@ select.form-control {
                         const originalSize = e.target.result.length;
                         const compressedSize = compressedDataUrl.length;
                         const savings = ((1 - compressedSize / originalSize) * 100).toFixed(1);
-                        console.log(`Image compressed: ${img.width}x${img.height} → ${Math.round(width)}x${Math.round(height)}, size reduced by ${savings}%`);
+                        const originalKB = (originalSize / 1024).toFixed(1);
+                        const compressedKB = (compressedSize / 1024).toFixed(1);
+                        console.log(`[COMPRESSION] ${img.width}x${img.height} → ${Math.round(width)}x${Math.round(height)} | ${originalKB}KB → ${compressedKB}KB | Saved: ${savings}%`);
 
                         resolve(compressedDataUrl);
                     };
@@ -7621,11 +7623,16 @@ select.form-control {
 
             const field = type === 'entry' ? 'entryScreenshot' : 'exitScreenshot';
 
+            // Show processing message
+            showMessage('Compressing image...', 'info');
+
             // Compress the image before storing
             compressImage(file)
                 .then(compressedDataUrl => {
                     appState.trades[tradeIndex][field] = compressedDataUrl;
                     renderTradeDetails(tradeIndex); // Refresh to show image
+                    const sizeKB = (compressedDataUrl.length / 1024).toFixed(1);
+                    showMessage(`Screenshot uploaded and compressed (${sizeKB}KB)`, 'success');
                 })
                 .catch(error => {
                     console.error('Error compressing image:', error);
