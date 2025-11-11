@@ -2676,6 +2676,14 @@ select.form-control {
                                 <div class="stat-label">Avg Final Balance (Passed)</div>
                                 <div class="stat-value" id="pfAvgFinalBalance">$0</div>
                             </div>
+                            <div class="stat-card">
+                                <div class="stat-label">Avg Trade Profit</div>
+                                <div class="stat-value" id="pfAvgTradeProfit">$0</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">Avg Trade Loss</div>
+                                <div class="stat-value" id="pfAvgTradeLoss">$0</div>
+                            </div>
                         </div>
 
                         <!-- Outcome Breakdown -->
@@ -8568,6 +8576,16 @@ select.form-control {
             const avgDaysToFail = (maxDDViolations + dailyLossViolations) > 0 ? totalDaysToFail / (maxDDViolations + dailyLossViolations) : 0;
             const avgFinalBalancePassed = passedCount > 0 ? totalFinalBalancePassed / passedCount : 0;
 
+            // Calculate average trade profit and loss from historical data
+            const winningTrades = trades.filter(t => (t.netPL || t.profit || 0) > 0);
+            const losingTrades = trades.filter(t => (t.netPL || t.profit || 0) < 0);
+            const avgTradeProfit = winningTrades.length > 0
+                ? winningTrades.reduce((sum, t) => sum + (t.netPL || t.profit || 0), 0) / winningTrades.length
+                : 0;
+            const avgTradeLoss = losingTrades.length > 0
+                ? losingTrades.reduce((sum, t) => sum + (t.netPL || t.profit || 0), 0) / losingTrades.length
+                : 0;
+
             // Create days distribution
             const maxDays = Math.max(...daysToComplete);
             const daysHistogram = new Array(Math.min(maxDays + 1, 50)).fill(0);
@@ -8585,6 +8603,8 @@ select.form-control {
                 avgDaysToPass,
                 avgDaysToFail,
                 avgFinalBalancePassed,
+                avgTradeProfit,
+                avgTradeLoss,
                 outcomes,
                 daysToComplete,
                 finalBalances,
@@ -8877,6 +8897,8 @@ select.form-control {
             document.getElementById('pfMaxDDViolations').textContent = `${results.maxDDRate.toFixed(1)}%`;
             document.getElementById('pfDailyLossViolations').textContent = `${results.dailyLossRate.toFixed(1)}%`;
             document.getElementById('pfAvgFinalBalance').textContent = results.avgFinalBalancePassed > 0 ? fmt(results.avgFinalBalancePassed) : 'N/A';
+            document.getElementById('pfAvgTradeProfit').textContent = fmt(results.avgTradeProfit);
+            document.getElementById('pfAvgTradeLoss').textContent = fmt(results.avgTradeLoss);
 
             // Color code success rate
             const successRateEl = document.getElementById('pfSuccessRate');
@@ -8887,6 +8909,13 @@ select.form-control {
             } else {
                 successRateEl.style.color = 'var(--color-negative)';
             }
+
+            // Color code average profit/loss
+            const avgProfitEl = document.getElementById('pfAvgTradeProfit');
+            avgProfitEl.style.color = results.avgTradeProfit > 0 ? 'var(--color-positive)' : 'var(--color-text)';
+
+            const avgLossEl = document.getElementById('pfAvgTradeLoss');
+            avgLossEl.style.color = results.avgTradeLoss < 0 ? 'var(--color-negative)' : 'var(--color-text)';
 
             // Display outcome breakdown
             const breakdownEl = document.getElementById('pfOutcomeBreakdown');
