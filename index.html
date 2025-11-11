@@ -2612,6 +2612,19 @@ select.form-control {
                                 <div style="font-size: 10px; color: var(--color-text-secondary); margin-top: 4px;">Optional override (enter as negative)</div>
                             </div>
                         </div>
+                        <!-- Early Stop Option -->
+                        <div style="margin-top: 1rem; padding: 0.75rem; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-sm);">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="checkbox" id="pfStopOnPass" checked
+                                    style="cursor: pointer; width: 16px; height: 16px;">
+                                <span style="font-size: var(--font-size-xs); color: var(--color-text); font-weight: var(--font-weight-medium);">
+                                    ⏹️ Stop simulation when goal is reached (passed traders stop, failed traders continue)
+                                </span>
+                            </label>
+                            <div style="margin-top: 0.5rem; font-size: 10px; color: var(--color-text-secondary); margin-left: 1.5rem;">
+                                When checked, simulations stop as soon as they pass. When unchecked, all simulations run the full number of trades regardless of outcome.
+                            </div>
+                        </div>
                         <div style="margin-top: 1rem; padding: 0.75rem; background: rgba(74, 158, 255, 0.1); border: 1px solid rgba(74, 158, 255, 0.3); border-radius: var(--radius-sm); font-size: var(--font-size-xs); color: var(--color-text-secondary);">
                             <strong>ℹ️ How It Works:</strong>
                             <ul style="margin: 0.5rem 0 0 1.5rem; padding: 0;">
@@ -2626,6 +2639,7 @@ select.form-control {
                                 <strong>💡 Custom Settings:</strong>
                                 <ul style="margin: 0.5rem 0 0 1.5rem; padding: 0;">
                                     <li><strong>Trades Per Simulation:</strong> Control trajectory length (100-50,000 trades) for different analysis depths</li>
+                                    <li><strong>Stop on Pass:</strong> When enabled, simulations stop as soon as they pass (reach goal). When disabled, all simulations run full trade count for complete trajectory analysis</li>
                                     <li><strong>Trades Per Day:</strong> Simulation randomly uses between min and max trades per day</li>
                                     <li><strong>Custom Avg Win/Loss:</strong> Override historical averages for hypothetical "what-if" scenarios</li>
                                     <li><strong>Position Size:</strong> Scale each trade's P&L by a percentage of current account balance</li>
@@ -8364,6 +8378,7 @@ select.form-control {
             const customAvgLossInput = document.getElementById('pfCustomAvgLoss').value;
             const customAvgWin = customAvgWinInput ? parseFloat(customAvgWinInput) : null;
             const customAvgLoss = customAvgLossInput ? parseFloat(customAvgLossInput) : null;
+            const stopOnPass = document.getElementById('pfStopOnPass').checked;
 
             // Validate parameters
             if (numSimulations < 100 || numSimulations > 10000) {
@@ -8440,7 +8455,8 @@ select.form-control {
                         minTradesPerDay,
                         maxTradesPerDay,
                         customAvgWin,
-                        customAvgLoss
+                        customAvgLoss,
+                        stopOnPass
                     );
                     displayPropFirmResults(results);
                     drawPropFirmCharts(results);
@@ -8580,7 +8596,7 @@ select.form-control {
             };
         }
 
-        function calculatePropFirmSimulation(numSimulations, tradesPerSim, challengeBalance, profitTarget, maxDrawdown, dailyLossLimit, minTradingDays, positionSize, minTradesPerDay, maxTradesPerDay, customAvgWin, customAvgLoss) {
+        function calculatePropFirmSimulation(numSimulations, tradesPerSim, challengeBalance, profitTarget, maxDrawdown, dailyLossLimit, minTradingDays, positionSize, minTradesPerDay, maxTradesPerDay, customAvgWin, customAvgLoss, stopOnPass) {
             const trades = appState.trades;
             const startingBalance = appState.startingBalance;
 
@@ -8711,6 +8727,11 @@ select.form-control {
                             passedCount++;
                             totalDaysToPass += tradingDays;
                             totalFinalBalancePassed += balance;
+
+                            // If stopOnPass is enabled, stop this simulation early
+                            if (stopOnPass) {
+                                break;
+                            }
                         }
 
                         // Reset for next day
