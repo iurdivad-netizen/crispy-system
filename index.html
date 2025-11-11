@@ -2647,6 +2647,24 @@ select.form-control {
                                     style="width: 100%; padding: var(--space-8); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-background); color: var(--color-text);">
                                 <div style="font-size: 10px; color: var(--color-text-secondary); margin-top: 4px;">Optional override (enter as negative)</div>
                             </div>
+                            <div>
+                                <label style="display: block; font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: var(--space-8);">
+                                    Win Rate (%)
+                                    <span title="Override your historical win rate for 'what-if' scenarios. Leave empty to use your actual historical win rate. For example, enter 60 for a 60% win rate. Works with Custom Avg Win/Loss to create synthetic trade data." style="cursor: help;">ℹ️</span>
+                                </label>
+                                <input type="number" id="pfCustomWinRate" value="" placeholder="Leave empty for historical" min="1" max="99" step="0.1"
+                                    style="width: 100%; padding: var(--space-8); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-background); color: var(--color-text);">
+                                <div style="font-size: 10px; color: var(--color-text-secondary); margin-top: 4px;">Optional override (1-99%)</div>
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: var(--space-8);">
+                                    Risk to Reward Ratio
+                                    <span title="Ratio of average win to average loss (e.g., 2.0 means avg win is 2x avg loss). When provided with either Custom Avg Win OR Custom Avg Loss, automatically calculates the other value. Leave empty if you specify both win and loss amounts directly." style="cursor: help;">ℹ️</span>
+                                </label>
+                                <input type="number" id="pfRiskRewardRatio" value="" placeholder="Leave empty or enter ratio" min="0.1" max="10" step="0.1"
+                                    style="width: 100%; padding: var(--space-8); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-background); color: var(--color-text);">
+                                <div style="font-size: 10px; color: var(--color-text-secondary); margin-top: 4px;">Optional (e.g., 2.0 for 2:1 R:R)</div>
+                            </div>
                         </div>
                         <!-- Early Stop Option -->
                         <div style="margin-top: 1rem; padding: 0.75rem; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-sm);">
@@ -2678,6 +2696,8 @@ select.form-control {
                                     <li><strong>Stop on Pass:</strong> When enabled, simulations stop as soon as they pass (reach goal). When disabled, all simulations run full trade count for complete trajectory analysis</li>
                                     <li><strong>Trades Per Day:</strong> Simulation randomly uses between min and max trades per day</li>
                                     <li><strong>Custom Avg Win/Loss:</strong> Override historical averages for hypothetical "what-if" scenarios</li>
+                                    <li><strong>Win Rate:</strong> Override historical win rate percentage for testing different win rate scenarios</li>
+                                    <li><strong>Risk to Reward:</strong> When provided with either Avg Win OR Avg Loss, automatically calculates the other (e.g., 2.0 R:R with $50 loss = $100 win)</li>
                                     <li><strong>Position Size:</strong> Scale each trade's P&L by a percentage of current account balance</li>
                                 </ul>
                             </div>
@@ -8412,8 +8432,25 @@ select.form-control {
             const maxTradesPerDay = parseInt(document.getElementById('pfMaxTradesPerDay').value);
             const customAvgWinInput = document.getElementById('pfCustomAvgWin').value;
             const customAvgLossInput = document.getElementById('pfCustomAvgLoss').value;
-            const customAvgWin = customAvgWinInput ? parseFloat(customAvgWinInput) : null;
-            const customAvgLoss = customAvgLossInput ? parseFloat(customAvgLossInput) : null;
+            const customWinRateInput = document.getElementById('pfCustomWinRate').value;
+            const riskRewardRatioInput = document.getElementById('pfRiskRewardRatio').value;
+
+            let customAvgWin = customAvgWinInput ? parseFloat(customAvgWinInput) : null;
+            let customAvgLoss = customAvgLossInput ? parseFloat(customAvgLossInput) : null;
+            const customWinRate = customWinRateInput ? parseFloat(customWinRateInput) / 100 : null;
+            const riskRewardRatio = riskRewardRatioInput ? parseFloat(riskRewardRatioInput) : null;
+
+            // Handle risk-to-reward ratio logic
+            if (riskRewardRatio !== null) {
+                if (customAvgWin !== null && customAvgLoss === null) {
+                    // Calculate avg loss from avg win and R:R ratio
+                    customAvgLoss = -(customAvgWin / riskRewardRatio);
+                } else if (customAvgLoss !== null && customAvgWin === null) {
+                    // Calculate avg win from avg loss and R:R ratio
+                    customAvgWin = Math.abs(customAvgLoss) * riskRewardRatio;
+                }
+            }
+
             const stopOnPass = document.getElementById('pfStopOnPass').checked;
 
             // Validate parameters
@@ -8469,6 +8506,14 @@ select.form-control {
                 showMessage('Custom avg loss must be negative.', 'error');
                 return;
             }
+            if (customWinRate !== null && (customWinRate <= 0 || customWinRate >= 1)) {
+                showMessage('Win rate must be between 1% and 99%.', 'error');
+                return;
+            }
+            if (riskRewardRatio !== null && (riskRewardRatio < 0.1 || riskRewardRatio > 10)) {
+                showMessage('Risk to reward ratio must be between 0.1 and 10.', 'error');
+                return;
+            }
 
             // Show loading indicator, hide results and placeholder
             document.getElementById('monteCarloLoading').style.display = 'block';
@@ -8492,6 +8537,7 @@ select.form-control {
                         maxTradesPerDay,
                         customAvgWin,
                         customAvgLoss,
+                        customWinRate,
                         stopOnPass
                     );
                     displayPropFirmResults(results);
@@ -8632,7 +8678,7 @@ select.form-control {
             };
         }
 
-        function calculatePropFirmSimulation(numSimulations, tradesPerSim, challengeBalance, profitTarget, maxDrawdown, dailyLossLimit, minTradingDays, positionSize, minTradesPerDay, maxTradesPerDay, customAvgWin, customAvgLoss, stopOnPass) {
+        function calculatePropFirmSimulation(numSimulations, tradesPerSim, challengeBalance, profitTarget, maxDrawdown, dailyLossLimit, minTradingDays, positionSize, minTradesPerDay, maxTradesPerDay, customAvgWin, customAvgLoss, customWinRate, stopOnPass) {
             const trades = appState.trades;
             const startingBalance = appState.startingBalance;
 
@@ -8640,22 +8686,34 @@ select.form-control {
             let returns;
             let actualAvgWin, actualAvgLoss;
 
-            if (customAvgWin !== null && customAvgLoss !== null) {
-                // Use custom avg win/loss to generate synthetic returns
-                // Calculate win rate from historical data
-                const winningTrades = trades.filter(t => (t.netPL || t.profit || 0) > 0);
-                const historicalWinRate = winningTrades.length / trades.length;
+            // Check if we should use synthetic data (custom parameters provided)
+            const useSyntheticData = (customAvgWin !== null && customAvgLoss !== null) || customWinRate !== null;
 
-                // Generate synthetic returns based on custom values
+            if (useSyntheticData) {
+                // Calculate historical values for any missing custom parameters
+                const winningTrades = trades.filter(t => (t.netPL || t.profit || 0) > 0);
+                const losingTrades = trades.filter(t => (t.netPL || t.profit || 0) < 0);
+                const historicalWinRate = winningTrades.length / trades.length;
+                const historicalAvgWin = winningTrades.length > 0
+                    ? winningTrades.reduce((sum, t) => sum + (t.netPL || t.profit || 0), 0) / winningTrades.length
+                    : 0;
+                const historicalAvgLoss = losingTrades.length > 0
+                    ? losingTrades.reduce((sum, t) => sum + (t.netPL || t.profit || 0), 0) / losingTrades.length
+                    : 0;
+
+                // Determine which values to use: custom or historical
+                const winRate = customWinRate !== null ? customWinRate : historicalWinRate;
+                actualAvgWin = customAvgWin !== null ? customAvgWin : historicalAvgWin;
+                actualAvgLoss = customAvgLoss !== null ? customAvgLoss : historicalAvgLoss;
+
+                // Generate synthetic returns based on determined values
                 returns = [];
                 const numSyntheticTrades = Math.max(trades.length, 100); // At least 100 trades
                 for (let i = 0; i < numSyntheticTrades; i++) {
-                    const isWin = Math.random() < historicalWinRate;
-                    const pl = isWin ? customAvgWin : customAvgLoss;
+                    const isWin = Math.random() < winRate;
+                    const pl = isWin ? actualAvgWin : actualAvgLoss;
                     returns.push(pl / startingBalance); // Convert to percentage
                 }
-                actualAvgWin = customAvgWin;
-                actualAvgLoss = customAvgLoss;
             } else {
                 // Extract returns from historical trades
                 returns = trades.map(trade => {
