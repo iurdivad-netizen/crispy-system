@@ -2547,66 +2547,102 @@ select.form-control {
                         <h4 style="font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); margin-bottom: var(--space-12); color: var(--color-text);">🏢 Prop Firm Challenge Settings</h4>
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
                             <div>
-                                <label style="display: block; font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: var(--space-8);">Number of Simulations</label>
+                                <label style="display: block; font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: var(--space-8);">
+                                    Number of Simulations
+                                    <span title="How many parallel challenge attempts to simulate. More simulations provide more accurate statistical results." style="cursor: help;">ℹ️</span>
+                                </label>
                                 <input type="number" id="pfNumSimulations" value="1000" min="100" max="10000" step="100"
                                     style="width: 100%; padding: var(--space-8); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-background); color: var(--color-text);">
                             </div>
                             <div>
-                                <label style="display: block; font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: var(--space-8);">Trades Per Simulation</label>
+                                <label style="display: block; font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: var(--space-8);">
+                                    Trades Per Simulation
+                                    <span title="Maximum number of trades each simulation will run. Determines how long each challenge attempt continues before completion. Higher values show longer-term outcomes." style="cursor: help;">ℹ️</span>
+                                </label>
                                 <input type="number" id="pfTradesPerSim" value="10000" min="100" max="50000" step="100"
                                     style="width: 100%; padding: var(--space-8); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-background); color: var(--color-text);">
                                 <div style="font-size: 10px; color: var(--color-text-secondary); margin-top: 4px;">Complete trajectory length</div>
                             </div>
                             <div>
-                                <label style="display: block; font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: var(--space-8);">Challenge Balance ($)</label>
+                                <label style="display: block; font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: var(--space-8);">
+                                    Challenge Balance ($)
+                                    <span title="Starting account balance for the prop firm challenge. This is the initial capital you begin trading with. All profit targets and drawdown limits are calculated from this amount." style="cursor: help;">ℹ️</span>
+                                </label>
                                 <input type="number" id="pfChallengeBalance" value="100000" min="1000" max="1000000" step="1000"
                                     style="width: 100%; padding: var(--space-8); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-background); color: var(--color-text);">
                             </div>
                             <div>
-                                <label style="display: block; font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: var(--space-8);">Profit Target (%)</label>
+                                <label style="display: block; font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: var(--space-8);">
+                                    Profit Target (%)
+                                    <span title="Percentage gain required to pass the challenge. For example, 10% on a $100,000 account means you need to reach $110,000 to pass (while meeting minimum trading days requirement)." style="cursor: help;">ℹ️</span>
+                                </label>
                                 <input type="number" id="pfProfitTarget" value="10" min="1" max="100" step="0.5"
                                     style="width: 100%; padding: var(--space-8); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-background); color: var(--color-text);">
                             </div>
                             <div>
-                                <label style="display: block; font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: var(--space-8);">Max Drawdown (%)</label>
+                                <label style="display: block; font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: var(--space-8);">
+                                    Max Drawdown (%)
+                                    <span title="Maximum allowed loss from the initial balance before failing the challenge. This is measured from your starting balance, not from peak equity. For example, 10% on a $100,000 account means you fail if your balance drops below $90,000." style="cursor: help;">ℹ️</span>
+                                </label>
                                 <input type="number" id="pfMaxDrawdown" value="10" min="1" max="50" step="0.5"
                                     style="width: 100%; padding: var(--space-8); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-background); color: var(--color-text);">
                                 <div style="font-size: 10px; color: var(--color-text-secondary); margin-top: 4px;">From initial balance</div>
                             </div>
                             <div>
-                                <label style="display: block; font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: var(--space-8);">Daily Loss Limit (%)</label>
+                                <label style="display: block; font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: var(--space-8);">
+                                    Daily Loss Limit (%)
+                                    <span title="Maximum allowed loss in a single trading day before failing the challenge. This is measured from the previous day's closing balance. For example, with 5% limit, if you closed yesterday at $105,000, you fail if your balance drops below $99,750 today." style="cursor: help;">ℹ️</span>
+                                </label>
                                 <input type="number" id="pfDailyLossLimit" value="5" min="1" max="50" step="0.5"
                                     style="width: 100%; padding: var(--space-8); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-background); color: var(--color-text);">
                                 <div style="font-size: 10px; color: var(--color-text-secondary); margin-top: 4px;">From previous day close</div>
                             </div>
                             <div>
-                                <label style="display: block; font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: var(--space-8);">Min Trading Days</label>
+                                <label style="display: block; font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: var(--space-8);">
+                                    Min Trading Days
+                                    <span title="Minimum number of trading days required before you can pass the challenge. Even if you reach your profit target, you must trade for at least this many days. This ensures consistent trading activity." style="cursor: help;">ℹ️</span>
+                                </label>
                                 <input type="number" id="pfMinTradingDays" value="5" min="1" max="100" step="1"
                                     style="width: 100%; padding: var(--space-8); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-background); color: var(--color-text);">
                             </div>
                             <div>
-                                <label style="display: block; font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: var(--space-8);">Position Size (% of Account)</label>
+                                <label style="display: block; font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: var(--space-8);">
+                                    Position Size (% of Account)
+                                    <span title="Percentage of your current account balance risked per trade. This scales your historical P&L to the challenge account size. For example, 2% means each trade's P&L is scaled to 2% of your current balance." style="cursor: help;">ℹ️</span>
+                                </label>
                                 <input type="number" id="pfPositionSize" value="2" min="0.1" max="100" step="0.1"
                                     style="width: 100%; padding: var(--space-8); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-background); color: var(--color-text);">
                             </div>
                             <div>
-                                <label style="display: block; font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: var(--space-8);">Min Trades Per Day</label>
+                                <label style="display: block; font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: var(--space-8);">
+                                    Min Trades Per Day
+                                    <span title="Minimum number of trades that can occur in a single trading day. The simulation randomly selects a number between min and max for each day to simulate realistic varying activity levels." style="cursor: help;">ℹ️</span>
+                                </label>
                                 <input type="number" id="pfMinTradesPerDay" value="3" min="1" max="50" step="1"
                                     style="width: 100%; padding: var(--space-8); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-background); color: var(--color-text);">
                             </div>
                             <div>
-                                <label style="display: block; font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: var(--space-8);">Max Trades Per Day</label>
+                                <label style="display: block; font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: var(--space-8);">
+                                    Max Trades Per Day
+                                    <span title="Maximum number of trades that can occur in a single trading day. The simulation randomly selects a number between min and max for each day to simulate realistic varying activity levels." style="cursor: help;">ℹ️</span>
+                                </label>
                                 <input type="number" id="pfMaxTradesPerDay" value="10" min="1" max="50" step="1"
                                     style="width: 100%; padding: var(--space-8); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-background); color: var(--color-text);">
                             </div>
                             <div>
-                                <label style="display: block; font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: var(--space-8);">Custom Avg Win ($)</label>
+                                <label style="display: block; font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: var(--space-8);">
+                                    Custom Avg Win ($)
+                                    <span title="Override your historical average winning trade amount for 'what-if' scenarios. Leave empty to use your actual historical win rate data. Useful for testing if you improved your strategy or trade management." style="cursor: help;">ℹ️</span>
+                                </label>
                                 <input type="number" id="pfCustomAvgWin" value="" placeholder="Leave empty for historical"
                                     style="width: 100%; padding: var(--space-8); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-background); color: var(--color-text);">
                                 <div style="font-size: 10px; color: var(--color-text-secondary); margin-top: 4px;">Optional override</div>
                             </div>
                             <div>
-                                <label style="display: block; font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: var(--space-8);">Custom Avg Loss ($)</label>
+                                <label style="display: block; font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: var(--space-8);">
+                                    Custom Avg Loss ($)
+                                    <span title="Override your historical average losing trade amount for 'what-if' scenarios. Leave empty to use your actual historical loss data. Enter as a negative value (e.g., -50). Useful for testing if you improved your risk management." style="cursor: help;">ℹ️</span>
+                                </label>
                                 <input type="number" id="pfCustomAvgLoss" value="" placeholder="Leave empty for historical"
                                     style="width: 100%; padding: var(--space-8); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-background); color: var(--color-text);">
                                 <div style="font-size: 10px; color: var(--color-text-secondary); margin-top: 4px;">Optional override (enter as negative)</div>
