@@ -8581,12 +8581,12 @@ select.form-control {
                 let outcome = null;
                 let reachedTarget = false;
 
-                // Simulate until pass or fail
-                let maxIterations = 1000; // Safety limit
-                let iteration = 0;
+                // Simulate exactly 10,000 trades
+                const maxTrades = 10000;
+                let tradeCount = 0;
 
-                while (outcome === null && iteration < maxIterations) {
-                    iteration++;
+                while (tradeCount < maxTrades) {
+                    tradeCount++;
 
                     // Randomly select a trade
                     const randomIndex = Math.floor(Math.random() * returns.length);
@@ -8609,13 +8609,14 @@ select.form-control {
                         reachedTarget = true;
                     }
 
-                    // Check max drawdown from initial balance (not peak)
-                    const drawdownFromInitial = challengeBalance - balance;
-                    if (drawdownFromInitial > maxDDThreshold) {
-                        outcome = 'maxDD';
-                        maxDDViolations++;
-                        totalDaysToFail += tradingDays;
-                        break;
+                    // Check max drawdown from initial balance (not peak) - only if no outcome yet
+                    if (outcome === null) {
+                        const drawdownFromInitial = challengeBalance - balance;
+                        if (drawdownFromInitial > maxDDThreshold) {
+                            outcome = 'maxDD';
+                            maxDDViolations++;
+                            totalDaysToFail += tradingDays;
+                        }
                     }
 
                     // Simulate end of day (random number of trades between min and max)
@@ -8623,24 +8624,24 @@ select.form-control {
                     if (tradesInDay >= tradesPerDay) {
                         tradingDays++;
 
-                        // Check daily loss limit from previous day's close
-                        const dailyLoss = dailyStartBalance - balance;
-                        const dailyLossThreshold = dailyStartBalance * dailyLossLimit;
+                        // Check daily loss limit from previous day's close - only if no outcome yet
+                        if (outcome === null) {
+                            const dailyLoss = dailyStartBalance - balance;
+                            const dailyLossThreshold = dailyStartBalance * dailyLossLimit;
 
-                        if (dailyLoss > dailyLossThreshold) {
-                            outcome = 'dailyLoss';
-                            dailyLossViolations++;
-                            totalDaysToFail += tradingDays;
-                            break;
+                            if (dailyLoss > dailyLossThreshold) {
+                                outcome = 'dailyLoss';
+                                dailyLossViolations++;
+                                totalDaysToFail += tradingDays;
+                            }
                         }
 
-                        // Check if passed (reached target and met min days)
-                        if (reachedTarget && tradingDays >= minTradingDays) {
+                        // Check if passed (reached target and met min days) - only if no outcome yet
+                        if (outcome === null && reachedTarget && tradingDays >= minTradingDays) {
                             outcome = 'passed';
                             passedCount++;
                             totalDaysToPass += tradingDays;
                             totalFinalBalancePassed += balance;
-                            break;
                         }
 
                         // Reset for next day
@@ -8649,7 +8650,7 @@ select.form-control {
                     }
                 }
 
-                // If max iterations reached without outcome, consider it a fail (max DD)
+                // If no outcome after 10,000 trades, consider it a fail (didn't reach target)
                 if (outcome === null) {
                     outcome = 'maxDD';
                     maxDDViolations++;
