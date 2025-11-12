@@ -12053,31 +12053,36 @@ select.form-control {
         /* Screenshot pages */
         .screenshot-page {
             page-break-before: always;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
             text-align: center;
+            padding: 20px;
         }
         .screenshot-page h2 {
-            margin-bottom: 20px;
+            margin: 10px 0;
             color: #333;
+            font-size: 1.2em;
+        }
+        .screenshot-page p {
+            margin: 5px 0 15px 0;
+            color: #666;
+            font-size: 0.95em;
         }
         .screenshot-page img {
             max-width: 100%;
-            max-height: 85vh;
+            max-height: 80vh;
             border: 2px solid #333;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: block;
+            margin: 0 auto;
         }
         .screenshot-label {
             background: #333;
             color: white;
-            padding: 10px 20px;
+            padding: 6px 15px;
             border-radius: 5px;
-            margin-bottom: 15px;
-            font-size: 1.2em;
+            margin: 0 0 10px 0;
+            font-size: 1em;
             font-weight: bold;
+            display: inline-block;
         }
 
         @media print {
@@ -12099,8 +12104,26 @@ select.form-control {
             }
             .screenshot-page {
                 page-break-before: always;
+                page-break-inside: avoid;
                 margin: 0;
-                padding: 20px;
+                padding: 15px;
+            }
+            .screenshot-page h2 {
+                margin: 5px 0;
+                page-break-after: avoid;
+            }
+            .screenshot-page p {
+                margin: 5px 0 10px 0;
+                page-break-after: avoid;
+            }
+            .screenshot-label {
+                page-break-after: avoid;
+                margin: 0 0 5px 0;
+            }
+            .screenshot-page img {
+                page-break-before: avoid;
+                page-break-inside: avoid;
+                max-height: 75vh;
             }
             img {
                 page-break-inside: avoid;
@@ -12211,7 +12234,7 @@ select.form-control {
         <div class="screenshot-page">
             <div class="screenshot-label">📸 Entry Screenshot</div>
             <h2>${escapeHtml(trade.symbol || 'N/A')} - Entry</h2>
-            <p style="color: #666; margin-bottom: 20px;">${formatDate(trade.entryDate)} | ${escapeHtml(trade.direction || 'N/A')} @ ${trade.entryPrice ? escapeHtml(trade.entryPrice.toFixed(5)) : 'N/A'}</p>
+            <p>${formatDate(trade.entryDate)} | ${escapeHtml(trade.direction || 'N/A')} @ ${trade.entryPrice ? escapeHtml(trade.entryPrice.toFixed(5)) : 'N/A'}</p>
             <img src="${getScreenshotSrc(trade.entryScreenshot)}" alt="Entry Screenshot">
         </div>
         ` : ''}
@@ -12221,7 +12244,7 @@ select.form-control {
         <div class="screenshot-page">
             <div class="screenshot-label">📸 Exit Screenshot</div>
             <h2>${escapeHtml(trade.symbol || 'N/A')} - Exit</h2>
-            <p style="color: #666; margin-bottom: 20px;">${formatDate(trade.exitDate)} | Close @ ${trade.exitPrice ? escapeHtml(trade.exitPrice.toFixed(5)) : 'N/A'} | P&L: <span class="${plClass}">$${trade.profitLoss ? escapeHtml(trade.profitLoss.toFixed(2)) : '0.00'}</span></p>
+            <p>${formatDate(trade.exitDate)} | Close @ ${trade.exitPrice ? escapeHtml(trade.exitPrice.toFixed(5)) : 'N/A'} | P&L: <span class="${plClass}">$${trade.profitLoss ? escapeHtml(trade.profitLoss.toFixed(2)) : '0.00'}</span></p>
             <img src="${getScreenshotSrc(trade.exitScreenshot)}" alt="Exit Screenshot">
         </div>
         ` : ''}
