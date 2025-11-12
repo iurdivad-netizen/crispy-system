@@ -11710,6 +11710,16 @@ select.form-control {
                 notesHtml = `<div class="section"><h3>Notes</h3><p>${escapeHtml(trade.notes)}</p></div>`;
             }
 
+            // Build custom rules HTML if exists
+            let rulesHtml = '';
+            if (trade.rulesFollowed && trade.rulesFollowed.length > 0) {
+                const ruleNames = trade.rulesFollowed.map(ruleId => {
+                    const rule = appState.customRules.find(r => r.id === ruleId);
+                    return rule ? rule.name : ruleId;
+                }).join(', ');
+                rulesHtml = `<div class="section"><h3>Custom Rules Followed</h3><p>${escapeHtml(ruleNames)}</p></div>`;
+            }
+
             // Add page break after each trade except the last one
             const pageBreakClass = !isLast ? ' page-break' : '';
 
@@ -11744,6 +11754,8 @@ select.form-control {
         </div>
 
         ${notesHtml}
+
+        ${rulesHtml}
 
         ${screenshotsHtml}
     </div>`;
@@ -11921,15 +11933,6 @@ select.form-control {
             let notesHtml = '';
             if (trade.notes) {
                 notesHtml = `<div class="section"><h3>Notes</h3><p style="white-space: pre-wrap;">${escapeHtml(trade.notes)}</p></div>`;
-            }
-
-            let rulesHtml = '';
-            if (trade.rulesFollowed && trade.rulesFollowed.length > 0) {
-                const ruleNames = trade.rulesFollowed.map(ruleId => {
-                    const rule = appState.customRules.find(r => r.id === ruleId);
-                    return rule ? rule.name : ruleId;
-                }).join(', ');
-                rulesHtml = `<div class="section"><h3>Custom Rules Followed</h3><p>${escapeHtml(ruleNames)}</p></div>`;
             }
 
             // Format dates
@@ -12232,10 +12235,10 @@ select.form-control {
                 ${trade.rulesFollowed && trade.rulesFollowed.length > 0 ? `
                 <div class="info-item" style="grid-column: span 2;">
                     <strong>Custom Rules</strong>
-                    <span style="font-size: 0.85em;">${trade.rulesFollowed.map(ruleId => {
+                    <span style="font-size: 0.85em;">${escapeHtml(trade.rulesFollowed.map(ruleId => {
                         const rule = appState.customRules.find(r => r.id === ruleId);
                         return rule ? rule.name : ruleId;
-                    }).join(', ')}</span>
+                    }).join(', '))}</span>
                 </div>
                 ` : ''}
             </div>
@@ -12402,10 +12405,10 @@ select.form-control {
                 ${trade.rulesFollowed && trade.rulesFollowed.length > 0 ? `
                 <div class="info-item" style="grid-column: span 2;">
                     <strong>Custom Rules</strong>
-                    <span style="font-size: 0.85em;">${trade.rulesFollowed.map(ruleId => {
+                    <span style="font-size: 0.85em;">${escapeHtml(trade.rulesFollowed.map(ruleId => {
                         const rule = appState.customRules.find(r => r.id === ruleId);
                         return rule ? rule.name : ruleId;
-                    }).join(', ')}</span>
+                    }).join(', '))}</span>
                 </div>
                 ` : ''}
             </div>
