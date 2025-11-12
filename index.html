@@ -11935,6 +11935,20 @@ select.form-control {
                 notesHtml = `<div class="section"><h3>Notes</h3><p style="white-space: pre-wrap;">${escapeHtml(trade.notes)}</p></div>`;
             }
 
+            // Pre-calculate custom rules HTML
+            let customRulesHtml = '';
+            if (trade.rulesFollowed && trade.rulesFollowed.length > 0) {
+                const ruleNames = trade.rulesFollowed.map(ruleId => {
+                    const rule = appState.customRules.find(r => r.id === ruleId);
+                    return rule ? rule.name : ruleId;
+                }).join(', ');
+                customRulesHtml = `
+                <div class="info-item" style="grid-column: span 2;">
+                    <strong>Custom Rules</strong>
+                    <span style="font-size: 0.85em;">${escapeHtml(ruleNames)}</span>
+                </div>`;
+            }
+
             // Format dates
             const formatDate = (dateStr) => {
                 if (!dateStr) return 'N/A';
@@ -12232,15 +12246,7 @@ select.form-control {
                     <strong>Rule Adherence</strong>
                     <span>${escapeHtml(trade.ruleAdherence || 'Not specified')}</span>
                 </div>
-                ${trade.rulesFollowed && trade.rulesFollowed.length > 0 ? `
-                <div class="info-item" style="grid-column: span 2;">
-                    <strong>Custom Rules</strong>
-                    <span style="font-size: 0.85em;">${escapeHtml(trade.rulesFollowed.map(ruleId => {
-                        const rule = appState.customRules.find(r => r.id === ruleId);
-                        return rule ? rule.name : ruleId;
-                    }).join(', '))}</span>
-                </div>
-                ` : ''}
+                ${customRulesHtml}
             </div>
 
             ${trade.notes ? `
@@ -12328,6 +12334,20 @@ select.form-control {
                 const profitLoss = trade.netPL || trade.netProfit || trade.profit || 0;
                 const plClass = profitLoss >= 0 ? 'positive' : 'negative';
 
+                // Pre-calculate custom rules HTML for this trade
+                let customRulesHtml = '';
+                if (trade.rulesFollowed && trade.rulesFollowed.length > 0) {
+                    const ruleNames = trade.rulesFollowed.map(ruleId => {
+                        const rule = appState.customRules.find(r => r.id === ruleId);
+                        return rule ? rule.name : ruleId;
+                    }).join(', ');
+                    customRulesHtml = `
+                <div class="info-item" style="grid-column: span 2;">
+                    <strong>Custom Rules</strong>
+                    <span style="font-size: 0.85em;">${escapeHtml(ruleNames)}</span>
+                </div>`;
+                }
+
                 // Trade details page
                 tradesHtml += `
         <!-- Trade #${tradeIndex + 1}: Details Page -->
@@ -12402,15 +12422,7 @@ select.form-control {
                     <strong>Rule Adherence</strong>
                     <span>${escapeHtml(trade.ruleAdherence || 'Not specified')}</span>
                 </div>
-                ${trade.rulesFollowed && trade.rulesFollowed.length > 0 ? `
-                <div class="info-item" style="grid-column: span 2;">
-                    <strong>Custom Rules</strong>
-                    <span style="font-size: 0.85em;">${escapeHtml(trade.rulesFollowed.map(ruleId => {
-                        const rule = appState.customRules.find(r => r.id === ruleId);
-                        return rule ? rule.name : ruleId;
-                    }).join(', '))}</span>
-                </div>
-                ` : ''}
+                ${customRulesHtml}
             </div>
 
             ${trade.notes ? `
