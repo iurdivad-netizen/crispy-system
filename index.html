@@ -1009,6 +1009,49 @@ select.form-control {
             cursor: pointer;
         }
 
+        /* Screenshots Viewer Styles */
+        #screenshotsViewer {
+            animation: fadeIn 0.2s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        #screenshotThumbnails {
+            scrollbar-width: thin;
+            scrollbar-color: var(--color-border) var(--color-surface);
+        }
+
+        #screenshotThumbnails::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        #screenshotThumbnails::-webkit-scrollbar-track {
+            background: var(--color-surface);
+            border-radius: var(--radius-base);
+        }
+
+        #screenshotThumbnails::-webkit-scrollbar-thumb {
+            background: var(--color-border);
+            border-radius: var(--radius-base);
+        }
+
+        #screenshotThumbnails::-webkit-scrollbar-thumb:hover {
+            background: var(--color-primary);
+        }
+
+        #prevScreenshotBtn:disabled,
+        #nextScreenshotBtn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
         .rules-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -3089,6 +3132,42 @@ select.form-control {
     <div id="lightbox" class="lightbox" style="display: none;" onclick="closeLightbox()">
         <button class="lightbox-close" onclick="closeLightbox()">×</button>
         <img id="lightboxImage" alt="Trade Screenshot">
+    </div>
+
+    <!-- Screenshots Viewer Page -->
+    <div id="screenshotsViewer" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--color-background); z-index: 10000; overflow-y: auto;">
+        <div style="max-width: 1400px; margin: 0 auto; padding: 2rem;">
+            <!-- Header -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 2px solid var(--color-border);">
+                <h2 style="margin: 0; color: var(--color-text); display: flex; align-items: center; gap: var(--space-12);">
+                    <span>📸</span> Trade Screenshots Gallery
+                </h2>
+                <button class="btn btn-secondary" onclick="closeScreenshotsViewer()" style="font-size: 1.5rem; padding: 0.5rem 1rem;">×</button>
+            </div>
+
+            <!-- Navigation Controls -->
+            <div style="display: flex; justify-content: center; align-items: center; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap;">
+                <button class="btn btn-secondary" onclick="navigateScreenshot(-1)" id="prevScreenshotBtn">
+                    ← Previous
+                </button>
+                <div style="padding: 0.5rem 1rem; background: var(--color-surface); border-radius: var(--radius-base); border: 1px solid var(--color-border);">
+                    <span id="screenshotCounter" style="font-weight: 600; color: var(--color-text);">1 / 1</span>
+                </div>
+                <button class="btn btn-secondary" onclick="navigateScreenshot(1)" id="nextScreenshotBtn">
+                    Next →
+                </button>
+            </div>
+
+            <!-- Screenshot Display -->
+            <div id="screenshotViewerContent" style="background: var(--color-surface); border-radius: var(--radius-lg); padding: 2rem; box-shadow: var(--shadow-lg);">
+                <!-- Content will be dynamically populated -->
+            </div>
+
+            <!-- Screenshot Thumbnails Navigation -->
+            <div id="screenshotThumbnails" style="display: flex; gap: 1rem; margin-top: 2rem; overflow-x: auto; padding: 1rem; background: var(--color-surface); border-radius: var(--radius-lg);">
+                <!-- Thumbnails will be dynamically populated -->
+            </div>
+        </div>
     </div>
 
     <!-- API Import Modal -->
@@ -5843,6 +5922,12 @@ select.form-control {
                 </div>
 
                 <!-- Enhanced Screenshots Section -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-8);">
+                    <h4 style="margin: 0; color: var(--color-text);">Screenshots</h4>
+                    <button class="btn btn-secondary" onclick="event.stopPropagation(); openScreenshotsViewer(${tradeIndex})" style="font-size: var(--font-size-sm); padding: 0.4rem 0.8rem;">
+                        📸 View Gallery
+                    </button>
+                </div>
                 <div class="form-grid">
                     <div class="form-group" onclick="appState.activePasteTarget = 'entry'">
                         <label>Entry Screenshot</label>
@@ -7741,7 +7826,195 @@ select.form-control {
         function closeLightbox() {
             document.getElementById('lightbox').style.display = 'none';
         }
-        
+
+        // Screenshots Viewer Functions
+        let screenshotsViewerState = {
+            screenshots: [],
+            currentIndex: 0
+        };
+
+        function openScreenshotsViewer(tradeIndex) {
+            // Collect all screenshots from all trades
+            screenshotsViewerState.screenshots = [];
+
+            appState.trades.forEach((trade, idx) => {
+                if (trade.entryScreenshot) {
+                    screenshotsViewerState.screenshots.push({
+                        tradeIndex: idx,
+                        type: 'entry',
+                        src: getScreenshotSrc(trade.entryScreenshot),
+                        trade: trade
+                    });
+                }
+                if (trade.exitScreenshot) {
+                    screenshotsViewerState.screenshots.push({
+                        tradeIndex: idx,
+                        type: 'exit',
+                        src: getScreenshotSrc(trade.exitScreenshot),
+                        trade: trade
+                    });
+                }
+            });
+
+            if (screenshotsViewerState.screenshots.length === 0) {
+                showNotification('No screenshots available', 'warning');
+                return;
+            }
+
+            // Find the index of the screenshot for the current trade
+            const targetIndex = screenshotsViewerState.screenshots.findIndex(s => s.tradeIndex === tradeIndex);
+            screenshotsViewerState.currentIndex = targetIndex >= 0 ? targetIndex : 0;
+
+            // Show the viewer
+            document.getElementById('screenshotsViewer').style.display = 'block';
+            document.body.style.overflow = 'hidden'; // Prevent background scrolling
+
+            renderScreenshotViewer();
+        }
+
+        function closeScreenshotsViewer() {
+            document.getElementById('screenshotsViewer').style.display = 'none';
+            document.body.style.overflow = ''; // Restore scrolling
+        }
+
+        function navigateScreenshot(direction) {
+            const newIndex = screenshotsViewerState.currentIndex + direction;
+
+            if (newIndex >= 0 && newIndex < screenshotsViewerState.screenshots.length) {
+                screenshotsViewerState.currentIndex = newIndex;
+                renderScreenshotViewer();
+            }
+        }
+
+        function jumpToScreenshot(index) {
+            if (index >= 0 && index < screenshotsViewerState.screenshots.length) {
+                screenshotsViewerState.currentIndex = index;
+                renderScreenshotViewer();
+            }
+        }
+
+        function renderScreenshotViewer() {
+            const { screenshots, currentIndex } = screenshotsViewerState;
+            const current = screenshots[currentIndex];
+
+            if (!current) return;
+
+            const trade = current.trade;
+            const formatDate = (dateStr) => {
+                if (!dateStr) return 'N/A';
+                const date = new Date(dateStr);
+                return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+            };
+
+            // Update counter
+            document.getElementById('screenshotCounter').textContent =
+                `${currentIndex + 1} / ${screenshots.length}`;
+
+            // Update navigation buttons
+            document.getElementById('prevScreenshotBtn').disabled = currentIndex === 0;
+            document.getElementById('nextScreenshotBtn').disabled = currentIndex === screenshots.length - 1;
+
+            // Render main content
+            const contentHtml = `
+                <div style="display: grid; gap: 2rem;">
+                    <!-- Trade Information -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; padding: 1rem; background: var(--color-background); border-radius: var(--radius-base);">
+                        <div>
+                            <div style="font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: 0.25rem;">Trade #</div>
+                            <div style="font-weight: 600; color: var(--color-text);">${current.tradeIndex + 1}</div>
+                        </div>
+                        <div>
+                            <div style="font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: 0.25rem;">Screenshot Type</div>
+                            <div style="font-weight: 600; color: var(--color-text); text-transform: capitalize;">${current.type}</div>
+                        </div>
+                        <div>
+                            <div style="font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: 0.25rem;">Symbol</div>
+                            <div style="font-weight: 600; color: var(--color-text);">${trade.symbol || 'N/A'}</div>
+                        </div>
+                        <div>
+                            <div style="font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: 0.25rem;">Date</div>
+                            <div style="font-weight: 600; color: var(--color-text);">${current.type === 'entry' ? formatDate(trade.entryDate) : formatDate(trade.exitDate)}</div>
+                        </div>
+                        <div>
+                            <div style="font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: 0.25rem;">Direction</div>
+                            <div style="font-weight: 600; color: ${trade.direction === 'Long' ? 'var(--color-success)' : 'var(--color-danger)'};">${trade.direction || 'N/A'}</div>
+                        </div>
+                        <div>
+                            <div style="font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: 0.25rem;">P&L</div>
+                            <div style="font-weight: 600; color: ${(trade.profitLoss || 0) >= 0 ? 'var(--color-success)' : 'var(--color-danger)'};">$${(trade.profitLoss || 0).toFixed(2)}</div>
+                        </div>
+                    </div>
+
+                    <!-- Screenshot Image -->
+                    <div style="text-align: center;">
+                        <img src="${current.src}"
+                             alt="${current.type} screenshot for trade #${current.tradeIndex + 1}"
+                             style="max-width: 100%; max-height: 70vh; border-radius: var(--radius-base); box-shadow: var(--shadow-lg); cursor: zoom-in;"
+                             onclick="openLightbox('${current.src}')">
+                        <div style="margin-top: 1rem; color: var(--color-text-secondary); font-size: var(--font-size-sm);">
+                            Click image to view full size
+                        </div>
+                    </div>
+
+                    <!-- Trade Notes (if available) -->
+                    ${trade.notes ? `
+                        <div style="padding: 1rem; background: var(--color-background); border-radius: var(--radius-base); border-left: 3px solid var(--color-primary);">
+                            <div style="font-weight: 600; margin-bottom: 0.5rem; color: var(--color-text);">Notes:</div>
+                            <div style="color: var(--color-text-secondary); white-space: pre-wrap;">${trade.notes}</div>
+                        </div>
+                    ` : ''}
+
+                    <!-- Jump to Trade Button -->
+                    <div style="text-align: center;">
+                        <button class="btn btn-primary" onclick="closeScreenshotsViewer(); editTrade(${current.tradeIndex})">
+                            View Trade Details
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('screenshotViewerContent').innerHTML = contentHtml;
+
+            // Render thumbnails
+            const thumbnailsHtml = screenshots.map((ss, idx) => `
+                <div onclick="jumpToScreenshot(${idx})"
+                     style="flex-shrink: 0; cursor: pointer; border: 3px solid ${idx === currentIndex ? 'var(--color-primary)' : 'var(--color-border)'}; border-radius: var(--radius-base); overflow: hidden; transition: all 0.2s; opacity: ${idx === currentIndex ? '1' : '0.6'};"
+                     onmouseover="this.style.opacity='1'; this.style.transform='scale(1.05)'"
+                     onmouseout="this.style.opacity='${idx === currentIndex ? '1' : '0.6'}'; this.style.transform='scale(1)'">
+                    <img src="${ss.src}"
+                         alt="Trade #${ss.tradeIndex + 1} ${ss.type}"
+                         style="width: 120px; height: 80px; object-fit: cover; display: block;">
+                    <div style="padding: 0.25rem 0.5rem; background: var(--color-background); font-size: var(--font-size-xs); text-align: center;">
+                        #${ss.tradeIndex + 1} ${ss.type}
+                    </div>
+                </div>
+            `).join('');
+
+            document.getElementById('screenshotThumbnails').innerHTML = thumbnailsHtml ||
+                '<div style="color: var(--color-text-secondary); padding: 1rem; text-align: center; width: 100%;">No thumbnails available</div>';
+
+            // Scroll active thumbnail into view
+            const thumbnailsContainer = document.getElementById('screenshotThumbnails');
+            const activeThumbnail = thumbnailsContainer.children[currentIndex];
+            if (activeThumbnail) {
+                activeThumbnail.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            }
+        }
+
+        // Keyboard navigation for screenshots viewer
+        document.addEventListener('keydown', (e) => {
+            const viewer = document.getElementById('screenshotsViewer');
+            if (viewer.style.display === 'block') {
+                if (e.key === 'ArrowLeft') {
+                    navigateScreenshot(-1);
+                } else if (e.key === 'ArrowRight') {
+                    navigateScreenshot(1);
+                } else if (e.key === 'Escape') {
+                    closeScreenshotsViewer();
+                }
+            }
+        });
+
         // Custom Rules Management
         function updateRuleCombinationsAnalysis() {
             const resultsDiv = document.getElementById('ruleCombinationsResults');
