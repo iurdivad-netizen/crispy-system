@@ -11715,7 +11715,7 @@ select.form-control {
             if (trade.rulesFollowed && trade.rulesFollowed.length > 0) {
                 const ruleNames = trade.rulesFollowed.map(ruleId => {
                     const rule = appState.customRules.find(r => r.id === ruleId);
-                    return rule ? rule.name : ruleId;
+                    return rule ? rule.text : ruleId;
                 }).join(', ');
                 rulesHtml = `<div class="section"><h3>Custom Rules Followed</h3><p>${escapeHtml(ruleNames)}</p></div>`;
             }
@@ -11940,7 +11940,7 @@ select.form-control {
             if (trade.rulesFollowed && trade.rulesFollowed.length > 0) {
                 const ruleNames = trade.rulesFollowed.map(ruleId => {
                     const rule = appState.customRules.find(r => r.id === ruleId);
-                    return rule ? rule.name : ruleId;
+                    return rule ? rule.text : ruleId;
                 }).join(', ');
                 customRulesHtml = `
                 <div class="info-item" style="grid-column: span 2;">
@@ -12339,7 +12339,7 @@ select.form-control {
                 if (trade.rulesFollowed && trade.rulesFollowed.length > 0) {
                     const ruleNames = trade.rulesFollowed.map(ruleId => {
                         const rule = appState.customRules.find(r => r.id === ruleId);
-                        return rule ? rule.name : ruleId;
+                        return rule ? rule.text : ruleId;
                     }).join(', ');
                     customRulesHtml = `
                 <div class="info-item" style="grid-column: span 2;">
