@@ -11953,8 +11953,12 @@ select.form-control {
         .header {
             text-align: center;
             border-bottom: 2px solid #333;
-            padding-bottom: 10px;
-            margin-bottom: 20px;
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+        }
+        .header h1 {
+            font-size: 1.5em;
+            margin: 0;
         }
         .trade-info {
             display: grid;
@@ -11975,23 +11979,32 @@ select.form-control {
         }
         .info-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
-            margin: 15px 0;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin: 10px 0;
         }
         .info-item {
-            padding: 8px;
+            padding: 6px 8px;
             background: #f5f5f5;
             border-left: 3px solid #333;
         }
         .info-item strong {
             display: block;
-            font-size: 0.9em;
+            font-size: 0.75em;
             color: #666;
-            margin-bottom: 4px;
+            margin-bottom: 2px;
         }
         .info-item span {
-            font-size: 1.1em;
+            font-size: 0.95em;
+        }
+        .compact-section {
+            margin: 8px 0;
+        }
+        .compact-section h3 {
+            font-size: 1em;
+            margin: 8px 0 6px 0;
+            padding-bottom: 4px;
+            border-bottom: 1px solid #ddd;
         }
 
         /* Print Preview Controls */
@@ -12074,8 +12087,15 @@ select.form-control {
             .print-content {
                 margin-top: 0;
             }
+            @page {
+                size: landscape;
+                margin: 0.5in;
+            }
             body {
-                margin: 15px;
+                margin: 0;
+            }
+            .trade-details-page {
+                page-break-after: always;
             }
             .screenshot-page {
                 page-break-before: always;
@@ -12104,94 +12124,86 @@ select.form-control {
     <div class="print-content">
         <!-- Page 1: Trade Details -->
         <div class="trade-details-page">
-            <div class="header">
-                <h1>📊 Trade Report</h1>
-                <h2>${escapeHtml(trade.symbol || 'N/A')}</h2>
-                <p style="margin: 5px 0; color: #666;">Trade #${tradeIndex + 1}</p>
+            <div class="header" style="padding-bottom: 8px; margin-bottom: 12px;">
+                <h1 style="font-size: 1.5em; margin: 0 0 4px 0;">📊 Trade Report - ${escapeHtml(trade.symbol || 'N/A')}</h1>
+                <p style="margin: 0; color: #666; font-size: 0.9em;">Trade #${tradeIndex + 1} | ${formatDate(trade.entryDate)} → ${formatDate(trade.exitDate)}</p>
             </div>
 
-            <div class="section">
-                <h3>📅 Trade Dates</h3>
-                <div class="info-grid">
-                    <div class="info-item">
-                        <strong>Entry Date</strong>
-                        <span>${formatDate(trade.entryDate)}</span>
-                    </div>
-                    <div class="info-item">
-                        <strong>Exit Date</strong>
-                        <span>${formatDate(trade.exitDate)}</span>
-                    </div>
+            <!-- All Trade Information in One Compact Layout -->
+            <div class="info-grid" style="margin-bottom: 10px;">
+                <div class="info-item">
+                    <strong>Entry Date</strong>
+                    <span>${formatDate(trade.entryDate)}</span>
                 </div>
-            </div>
-
-            <div class="section">
-                <h3>💰 Trade Details</h3>
-                <div class="info-grid">
-                    <div class="info-item">
-                        <strong>Entry Price</strong>
-                        <span>${trade.entryPrice ? escapeHtml(trade.entryPrice.toFixed(5)) : 'N/A'}</span>
-                    </div>
-                    <div class="info-item">
-                        <strong>Exit Price</strong>
-                        <span>${trade.exitPrice ? escapeHtml(trade.exitPrice.toFixed(5)) : 'N/A'}</span>
-                    </div>
-                    <div class="info-item">
-                        <strong>Direction</strong>
-                        <span>${escapeHtml(trade.direction || 'N/A')}</span>
-                    </div>
-                    <div class="info-item">
-                        <strong>Volume</strong>
-                        <span>${escapeHtml(String(trade.volume || 'N/A'))}</span>
-                    </div>
+                <div class="info-item">
+                    <strong>Entry Price</strong>
+                    <span>${trade.entryPrice ? escapeHtml(trade.entryPrice.toFixed(5)) : 'N/A'}</span>
                 </div>
-            </div>
-
-            <div class="section">
-                <h3>📈 Performance</h3>
-                <div class="info-grid">
-                    <div class="info-item">
-                        <strong>Pips</strong>
-                        <span class="${pipClass}">${trade.pips ? escapeHtml(trade.pips.toFixed(1)) : 'N/A'}</span>
-                    </div>
-                    <div class="info-item">
-                        <strong>Profit/Loss</strong>
-                        <span class="${plClass}">$${trade.profitLoss ? escapeHtml(trade.profitLoss.toFixed(2)) : '0.00'}</span>
-                    </div>
-                    <div class="info-item">
-                        <strong>Commission</strong>
-                        <span>${trade.commission ? '$' + escapeHtml(trade.commission.toFixed(2)) : '$0.00'}</span>
-                    </div>
-                    <div class="info-item">
-                        <strong>Swap</strong>
-                        <span>${trade.swap ? '$' + escapeHtml(trade.swap.toFixed(2)) : '$0.00'}</span>
-                    </div>
+                <div class="info-item">
+                    <strong>Exit Date</strong>
+                    <span>${formatDate(trade.exitDate)}</span>
                 </div>
-            </div>
-
-            <div class="section">
-                <h3>📊 Trade Analysis</h3>
-                <div class="info-grid">
-                    <div class="info-item">
-                        <strong>Setup Type</strong>
-                        <span>${escapeHtml(trade.setupType || 'Not specified')}</span>
-                    </div>
-                    <div class="info-item">
-                        <strong>Market Condition</strong>
-                        <span>${escapeHtml(trade.marketCondition || 'Not specified')}</span>
-                    </div>
-                    <div class="info-item">
-                        <strong>Emotional State</strong>
-                        <span>${escapeHtml(trade.emotionalState || 'Not specified')}</span>
-                    </div>
-                    <div class="info-item">
-                        <strong>Rule Adherence</strong>
-                        <span>${escapeHtml(trade.ruleAdherence || 'Not specified')}</span>
-                    </div>
+                <div class="info-item">
+                    <strong>Exit Price</strong>
+                    <span>${trade.exitPrice ? escapeHtml(trade.exitPrice.toFixed(5)) : 'N/A'}</span>
                 </div>
+                <div class="info-item">
+                    <strong>Direction</strong>
+                    <span>${escapeHtml(trade.direction || 'N/A')}</span>
+                </div>
+                <div class="info-item">
+                    <strong>Volume</strong>
+                    <span>${escapeHtml(String(trade.volume || 'N/A'))}</span>
+                </div>
+                <div class="info-item">
+                    <strong>Pips</strong>
+                    <span class="${pipClass}">${trade.pips ? escapeHtml(trade.pips.toFixed(1)) : 'N/A'}</span>
+                </div>
+                <div class="info-item">
+                    <strong>Profit/Loss</strong>
+                    <span class="${plClass}">$${trade.profitLoss ? escapeHtml(trade.profitLoss.toFixed(2)) : '0.00'}</span>
+                </div>
+                <div class="info-item">
+                    <strong>Commission</strong>
+                    <span>${trade.commission ? '$' + escapeHtml(trade.commission.toFixed(2)) : '$0.00'}</span>
+                </div>
+                <div class="info-item">
+                    <strong>Swap</strong>
+                    <span>${trade.swap ? '$' + escapeHtml(trade.swap.toFixed(2)) : '$0.00'}</span>
+                </div>
+                <div class="info-item">
+                    <strong>Setup Type</strong>
+                    <span>${escapeHtml(trade.setupType || 'Not specified')}</span>
+                </div>
+                <div class="info-item">
+                    <strong>Market Condition</strong>
+                    <span>${escapeHtml(trade.marketCondition || 'Not specified')}</span>
+                </div>
+                <div class="info-item">
+                    <strong>Emotional State</strong>
+                    <span>${escapeHtml(trade.emotionalState || 'Not specified')}</span>
+                </div>
+                <div class="info-item">
+                    <strong>Rule Adherence</strong>
+                    <span>${escapeHtml(trade.ruleAdherence || 'Not specified')}</span>
+                </div>
+                ${trade.rulesFollowed && trade.rulesFollowed.length > 0 ? `
+                <div class="info-item" style="grid-column: span 2;">
+                    <strong>Custom Rules</strong>
+                    <span style="font-size: 0.85em;">${trade.rulesFollowed.map(ruleId => {
+                        const rule = appState.customRules.find(r => r.id === ruleId);
+                        return rule ? rule.name : ruleId;
+                    }).join(', ')}</span>
+                </div>
+                ` : ''}
             </div>
 
-            ${rulesHtml}
-            ${notesHtml}
+            ${trade.notes ? `
+            <div style="margin: 10px 0; padding: 8px; background: #f9f9f9; border-left: 3px solid #333; border-radius: 3px;">
+                <strong style="font-size: 0.85em; color: #666; display: block; margin-bottom: 4px;">Notes:</strong>
+                <div style="font-size: 0.9em; white-space: pre-wrap; line-height: 1.4;">${escapeHtml(trade.notes)}</div>
+            </div>
+            ` : ''}
         </div>
 
         ${trade.entryScreenshot ? `
