@@ -7934,15 +7934,15 @@ select.form-control {
                         </div>
                         <div>
                             <div style="font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: 0.25rem;">Date</div>
-                            <div style="font-weight: 600; color: var(--color-text);">${current.type === 'entry' ? formatDate(trade.entryDate) : formatDate(trade.exitDate)}</div>
+                            <div style="font-weight: 600; color: var(--color-text);">${current.type === 'entry' ? formatDate(trade.openDate) : formatDate(trade.date)}</div>
                         </div>
                         <div>
                             <div style="font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: 0.25rem;">Direction</div>
-                            <div style="font-weight: 600; color: ${trade.direction === 'Long' ? 'var(--color-success)' : 'var(--color-danger)'};">${trade.direction || 'N/A'}</div>
+                            <div style="font-weight: 600; color: ${trade.direction === 'Long' || trade.direction === 'Buy' ? 'var(--color-success)' : 'var(--color-danger)'};">${trade.direction || 'N/A'}</div>
                         </div>
                         <div>
                             <div style="font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: 0.25rem;">P&L</div>
-                            <div style="font-weight: 600; color: ${(trade.profitLoss || 0) >= 0 ? 'var(--color-success)' : 'var(--color-danger)'};">$${(trade.profitLoss || 0).toFixed(2)}</div>
+                            <div style="font-weight: 600; color: ${((trade.netPL || trade.netProfit || trade.profit || 0) >= 0) ? 'var(--color-success)' : 'var(--color-danger)'};">$${(trade.netPL || trade.netProfit || trade.profit || 0).toFixed(2)}</div>
                         </div>
                     </div>
 
@@ -11915,7 +11915,8 @@ select.form-control {
 
             // Generate trade details HTML (without screenshots)
             const pipClass = trade.pips >= 0 ? 'positive' : 'negative';
-            const plClass = (trade.netPL || trade.profitLoss) >= 0 ? 'positive' : 'negative';
+            const profitLoss = trade.netPL || trade.netProfit || trade.profit || 0;
+            const plClass = profitLoss >= 0 ? 'positive' : 'negative';
 
             let notesHtml = '';
             if (trade.notes) {
@@ -11936,6 +11937,15 @@ select.form-control {
                 if (!dateStr) return 'N/A';
                 const date = new Date(dateStr);
                 return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+            };
+
+            // Format date and time together
+            const formatDateTime = (dateStr, timeStr) => {
+                if (!dateStr) return 'N/A';
+                if (timeStr) {
+                    return `${formatDate(dateStr)} ${timeStr}`;
+                }
+                return formatDate(dateStr);
             };
 
             const htmlContent = `
@@ -12149,22 +12159,30 @@ select.form-control {
         <div class="trade-details-page">
             <div class="header" style="padding-bottom: 8px; margin-bottom: 12px;">
                 <h1 style="font-size: 1.5em; margin: 0 0 4px 0;">📊 Trade Report - ${escapeHtml(trade.symbol || 'N/A')}</h1>
-                <p style="margin: 0; color: #666; font-size: 0.9em;">Trade #${tradeIndex + 1} | ${formatDate(trade.entryDate)} → ${formatDate(trade.exitDate)}</p>
+                <p style="margin: 0; color: #666; font-size: 0.9em;">Trade #${tradeIndex + 1} | ${formatDateTime(trade.openDate, trade.openTime)} → ${formatDateTime(trade.date, trade.time)}</p>
             </div>
 
             <!-- All Trade Information in One Compact Layout -->
             <div class="info-grid" style="margin-bottom: 10px;">
                 <div class="info-item">
                     <strong>Entry Date</strong>
-                    <span>${formatDate(trade.entryDate)}</span>
+                    <span>${formatDate(trade.openDate)}</span>
+                </div>
+                <div class="info-item">
+                    <strong>Entry Time</strong>
+                    <span>${escapeHtml(trade.openTime || 'N/A')}</span>
+                </div>
+                <div class="info-item">
+                    <strong>Exit Date</strong>
+                    <span>${formatDate(trade.date)}</span>
+                </div>
+                <div class="info-item">
+                    <strong>Exit Time</strong>
+                    <span>${escapeHtml(trade.time || 'N/A')}</span>
                 </div>
                 <div class="info-item">
                     <strong>Entry Price</strong>
                     <span>${trade.entryPrice ? escapeHtml(trade.entryPrice.toFixed(5)) : 'N/A'}</span>
-                </div>
-                <div class="info-item">
-                    <strong>Exit Date</strong>
-                    <span>${formatDate(trade.exitDate)}</span>
                 </div>
                 <div class="info-item">
                     <strong>Exit Price</strong>
@@ -12184,7 +12202,7 @@ select.form-control {
                 </div>
                 <div class="info-item">
                     <strong>Profit/Loss</strong>
-                    <span class="${plClass}">$${trade.profitLoss ? escapeHtml(trade.profitLoss.toFixed(2)) : '0.00'}</span>
+                    <span class="${plClass}">$${escapeHtml(profitLoss.toFixed(2))}</span>
                 </div>
                 <div class="info-item">
                     <strong>Commission</strong>
@@ -12234,7 +12252,7 @@ select.form-control {
         <div class="screenshot-page">
             <div class="screenshot-label">📸 Entry Screenshot</div>
             <h2>${escapeHtml(trade.symbol || 'N/A')} - Entry</h2>
-            <p>${formatDate(trade.entryDate)} | ${escapeHtml(trade.direction || 'N/A')} @ ${trade.entryPrice ? escapeHtml(trade.entryPrice.toFixed(5)) : 'N/A'}</p>
+            <p>${formatDateTime(trade.openDate, trade.openTime)} | ${escapeHtml(trade.direction || 'N/A')} @ ${trade.entryPrice ? escapeHtml(trade.entryPrice.toFixed(5)) : 'N/A'}</p>
             <img src="${getScreenshotSrc(trade.entryScreenshot)}" alt="Entry Screenshot">
         </div>
         ` : ''}
@@ -12244,7 +12262,7 @@ select.form-control {
         <div class="screenshot-page">
             <div class="screenshot-label">📸 Exit Screenshot</div>
             <h2>${escapeHtml(trade.symbol || 'N/A')} - Exit</h2>
-            <p>${formatDate(trade.exitDate)} | Close @ ${trade.exitPrice ? escapeHtml(trade.exitPrice.toFixed(5)) : 'N/A'} | P&L: <span class="${plClass}">$${trade.profitLoss ? escapeHtml(trade.profitLoss.toFixed(2)) : '0.00'}</span></p>
+            <p>${formatDateTime(trade.date, trade.time)} | Close @ ${trade.exitPrice ? escapeHtml(trade.exitPrice.toFixed(5)) : 'N/A'} | P&L: <span class="${plClass}">$${escapeHtml(profitLoss.toFixed(2))}</span></p>
             <img src="${getScreenshotSrc(trade.exitScreenshot)}" alt="Exit Screenshot">
         </div>
         ` : ''}
