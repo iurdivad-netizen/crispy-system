@@ -3247,11 +3247,11 @@ select.form-control {
                     <ul style="margin: 0; padding-left: 1.5rem; display: grid; gap: 0.75rem;">
                         <li><strong>Auto-Save:</strong> Automatically saves your data every 30 seconds (toggle on/off)</li>
                         <li><strong>Manual Save:</strong> Save your data instantly at any time</li>
-                        <li><strong>Storage Info:</strong> Monitor your data usage (100MB limit with IndexedDB)</li>
-                        <li><strong>Import CSV:</strong> Import trades from CSV files (cTrader, MT4, MT5 formats)</li>
-                        <li><strong>Import Data:</strong> Import complete journal data from JSON files</li>
-                        <li><strong>Import from API:</strong> Connect to MetaTrader API for automated trade imports</li>
-                        <li><strong>Export Options:</strong> Full export, trades only, without screenshots, screenshots only, or CSV format</li>
+                        <li><strong>Storage Info:</strong> Real-time monitoring of data usage (100MB limit with IndexedDB)</li>
+                        <li><strong>Import CSV:</strong> Import trades from CSV files with smart duplicate detection (cTrader, MT4, MT5 formats)</li>
+                        <li><strong>Import Data:</strong> Import journal data from JSON files with multiple modes (Full Restore, Append, Overwrite, Update, Smart Merge with 90% similarity detection)</li>
+                        <li><strong>Import from API:</strong> Connect to MetaTrader API for automated trade imports with duplicate detection</li>
+                        <li><strong>Export Options:</strong> Full export, trades only, without screenshots, screenshots only, or CSV format with file size estimates</li>
                     </ul>
                 </div>
 
@@ -3264,11 +3264,13 @@ select.form-control {
                         <li><strong>Add Trades:</strong> Manually add new trades with detailed information</li>
                         <li><strong>Edit Trades:</strong> Modify existing trade details at any time</li>
                         <li><strong>Delete Trades:</strong> Remove trades from your history</li>
-                        <li><strong>Trade Details:</strong> Track symbol, direction, entry/exit prices, volume, commission, swap</li>
-                        <li><strong>Journal Notes:</strong> Add setup type, market condition, emotional state, and notes</li>
-                        <li><strong>Rule Adherence:</strong> Track which trading rules you followed</li>
-                        <li><strong>Screenshots:</strong> Attach entry and exit screenshots to trades</li>
+                        <li><strong>Trade Details:</strong> Track symbol, direction, entry/exit prices, volume, commission, swap, balance, pips</li>
+                        <li><strong>Journal Notes:</strong> Add setup type, market condition, emotional state, and detailed notes</li>
+                        <li><strong>Rule Adherence:</strong> Track up to 10 custom trading rules you followed per trade</li>
+                        <li><strong>Screenshots:</strong> Upload or paste entry/exit screenshots with automatic compression (60-80% size reduction)</li>
                         <li><strong>TradingView Integration:</strong> Paste TradingView URLs to automatically capture chart snapshots</li>
+                        <li><strong>Screenshot Gallery:</strong> Full-page modal viewer with pagination, keyboard shortcuts (← → arrows, Escape), and thumbnail navigation</li>
+                        <li><strong>Customizable Columns:</strong> Show/hide specific columns in trade history table</li>
                     </ul>
                 </div>
 
@@ -3278,14 +3280,18 @@ select.form-control {
                         <span>📈</span> Analytics & Statistics
                     </h4>
                     <ul style="margin: 0; padding-left: 1.5rem; display: grid; gap: 0.75rem;">
-                        <li><strong>Performance Metrics:</strong> Win rate, total P&L, average win/loss, profit factor, expectancy</li>
+                        <li><strong>Core Metrics:</strong> Win rate, total P&L, average win/loss, profit factor, expectancy, largest win/loss</li>
+                        <li><strong>Advanced Metrics:</strong> Sharpe Ratio, max drawdown ($ and %), recovery factor, risk-reward ratio, streaks</li>
+                        <li><strong>Statistics Configuration:</strong> Show/hide individual statistics with gear icon ⚙️</li>
+                        <li><strong>Monthly Filtering:</strong> Filter all statistics and breakdowns by specific month or view all-time data</li>
                         <li><strong>Monthly Performance:</strong> Track profit/loss by month with visual charts</li>
                         <li><strong>Daily Performance:</strong> Analyze performance by day of the week</li>
-                        <li><strong>Hourly Performance:</strong> Identify your most profitable trading hours</li>
-                        <li><strong>Rule Performance:</strong> See which trading rules contribute to your success</li>
-                        <li><strong>Setup Performance:</strong> Analyze performance by setup type</li>
-                        <li><strong>Market Condition Analysis:</strong> Compare performance across different market conditions</li>
-                        <li><strong>Equity Curve:</strong> Visualize your account balance over time</li>
+                        <li><strong>Hourly Performance:</strong> Track both entry hour and exit hour performance separately</li>
+                        <li><strong>Rule Performance:</strong> See which trading rules contribute to your success with detailed P&L</li>
+                        <li><strong>Rule Combinations:</strong> Analyze all possible rule combinations to identify winning patterns by P/L, win rate, and expectancy</li>
+                        <li><strong>Setup Performance:</strong> Analyze performance by setup type (Breakout, Pullback, Reversal, Range, Trend Following)</li>
+                        <li><strong>Market Condition Analysis:</strong> Compare performance across Trending, Ranging, and Volatile markets</li>
+                        <li><strong>Emotional State Analysis:</strong> Track performance by psychological state</li>
                     </ul>
                 </div>
 
@@ -3295,11 +3301,15 @@ select.form-control {
                         <span>🎲</span> Advanced Analysis
                     </h4>
                     <ul style="margin: 0; padding-left: 1.5rem; display: grid; gap: 0.75rem;">
-                        <li><strong>Monte Carlo Simulation:</strong> Run 1000-5000 simulations to project potential outcomes</li>
+                        <li><strong>Monte Carlo Simulation:</strong> Run 100-10,000 simulations with configurable trades and position sizing</li>
+                        <li><strong>Prop Firm Challenge Mode:</strong> Simulate prop firm challenges with profit targets, max drawdown limits, daily loss limits, minimum trading days, and customizable parameters</li>
+                        <li><strong>Win Rate Override:</strong> Test different win rates in simulations</li>
+                        <li><strong>R:R Calculator:</strong> Automatic risk-to-reward ratio calculation</li>
                         <li><strong>Risk of Ruin:</strong> Calculate probability of losing a percentage of your account</li>
                         <li><strong>Drawdown Analysis:</strong> Track maximum drawdown and recovery periods</li>
-                        <li><strong>Confidence Intervals:</strong> 10th, 50th, and 90th percentile projections</li>
-                        <li><strong>Probability Analysis:</strong> Understand the range of possible trading outcomes</li>
+                        <li><strong>Percentile Analysis:</strong> 5th, 50th, and 95th percentile projections</li>
+                        <li><strong>Success Rate Tracking:</strong> Violation analysis for profit targets, max DD, and daily loss limits</li>
+                        <li><strong>AI-Powered Analysis:</strong> Generate detailed prompts for ChatGPT/Claude with customizable sections and 7 pre-written strategy templates (ICT, Supply/Demand, Price Action, Breakout, Trend Following, Scalping, Swing Trading)</li>
                     </ul>
                 </div>
 
@@ -3309,26 +3319,45 @@ select.form-control {
                         <span>⚙️</span> Customization
                     </h4>
                     <ul style="margin: 0; padding-left: 1.5rem; display: grid; gap: 0.75rem;">
-                        <li><strong>Custom Rules:</strong> Create and manage your own trading rules</li>
+                        <li><strong>Custom Rules:</strong> Create and manage up to 10 custom trading rules</li>
                         <li><strong>Starting Balance:</strong> Set your initial account equity</li>
                         <li><strong>Platform Selection:</strong> Choose between cTrader, MT4, or MT5</li>
-                        <li><strong>Import Modes:</strong> Overwrite, append, or update existing data</li>
+                        <li><strong>Import Modes:</strong> Full Restore, Append, Overwrite, Update, or Smart Merge (90% similarity detection)</li>
+                        <li><strong>Statistics Configuration:</strong> Show/hide individual statistics to customize your dashboard</li>
+                        <li><strong>Charts Configuration:</strong> Toggle individual charts on/off</li>
+                        <li><strong>Columns Configuration:</strong> Customize which columns appear in trade history table</li>
                         <li><strong>Dark Mode:</strong> Automatic dark mode based on system preferences</li>
-                        <li><strong>Collapsible Sections:</strong> Customize your view by expanding/collapsing sections</li>
+                        <li><strong>Collapsible Sections:</strong> Customize your view by expanding/collapsing all major sections</li>
                     </ul>
                 </div>
 
                 <!-- Visualization -->
                 <div style="margin-bottom: 2rem;">
                     <h4 style="color: var(--color-primary); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
-                        <span>📊</span> Visualization Tools
+                        <span>📊</span> Visualization & Charts
                     </h4>
                     <ul style="margin: 0; padding-left: 1.5rem; display: grid; gap: 0.75rem;">
                         <li><strong>Interactive Charts:</strong> Powered by Chart.js for rich visualizations</li>
-                        <li><strong>Calendar View:</strong> See your P&L on a monthly calendar</li>
-                        <li><strong>Performance Graphs:</strong> Multiple chart types for different metrics</li>
-                        <li><strong>Screenshot Lightbox:</strong> View trade screenshots in full screen</li>
-                        <li><strong>Color-Coded Data:</strong> Green for profits, red for losses, visual indicators</li>
+                        <li><strong>Chart Types:</strong> Equity Curve, Daily P/L, Win/Loss Distribution pie chart, plus Monte Carlo simulation charts</li>
+                        <li><strong>Chart Zoom Levels:</strong> 1 month, 3 months, 6 months, 1 year, or all-time views</li>
+                        <li><strong>Calendar View:</strong> Monthly calendar grid with color-coded P/L per day</li>
+                        <li><strong>Screenshot Gallery:</strong> Full-page modal viewer with pagination, keyboard shortcuts, and thumbnail navigation</li>
+                        <li><strong>Color-Coded Data:</strong> Green for profits, red for losses, visual indicators throughout</li>
+                        <li><strong>Dark Mode Support:</strong> All charts and visualizations adapt to dark mode</li>
+                    </ul>
+                </div>
+
+                <!-- Print & Export -->
+                <div style="margin-bottom: 2rem;">
+                    <h4 style="color: var(--color-primary); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <span>🖨️</span> Print & Export
+                    </h4>
+                    <ul style="margin: 0; padding-left: 1.5rem; display: grid; gap: 0.75rem;">
+                        <li><strong>Print Trade:</strong> Compact single-page landscape layout for individual trades</li>
+                        <li><strong>Print w/ Screenshots:</strong> Multi-page layout with dedicated screenshot pages and automatic page breaks</li>
+                        <li><strong>Print All Trades:</strong> Batch print with optimized layouts</li>
+                        <li><strong>TradingView Preloading:</strong> Automatic chart image loading before printing</li>
+                        <li><strong>Custom Rules in Prints:</strong> Proper display of custom rules followed in all print formats</li>
                     </ul>
                 </div>
 
@@ -3341,10 +3370,14 @@ select.form-control {
                         <li>Click the <strong>ℹ️ (i) icons</strong> next to each section for detailed help</li>
                         <li>Use <strong>auto-save</strong> to prevent data loss</li>
                         <li>Export your data regularly as a backup</li>
-                        <li>Attach screenshots to trades for better review and analysis</li>
-                        <li>Define custom rules to track your strategy adherence</li>
-                        <li>Use Monte Carlo simulations to set realistic expectations</li>
-                        <li>Review your performance by time of day to optimize your trading schedule</li>
+                        <li>Screenshots are automatically compressed to save space (60-80% reduction)</li>
+                        <li>Use <strong>Screenshot Gallery</strong> to review all trade screenshots with keyboard shortcuts (← → arrows)</li>
+                        <li>Define custom rules and analyze <strong>Rule Combinations</strong> to identify winning patterns</li>
+                        <li>Use <strong>Prop Firm Challenge Mode</strong> in Monte Carlo to test if your strategy can pass funded challenges</li>
+                        <li>Try <strong>AI-Powered Analysis</strong> to get insights from ChatGPT or Claude about your trading performance</li>
+                        <li>Use <strong>Monthly Filtering</strong> to compare your performance across different months</li>
+                        <li>Customize your dashboard with <strong>Statistics, Charts, and Columns Configuration</strong> (⚙️ icons)</li>
+                        <li>Review performance by <strong>entry hour</strong> and <strong>exit hour</strong> separately to optimize your schedule</li>
                     </ul>
                 </div>
             </div>
