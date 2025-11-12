@@ -5973,8 +5973,9 @@ select.form-control {
                     </div>
                 </div>
 
-                <div style="margin-top: 1rem;">
-                    <button class="btn btn-secondary" onclick="printTrade(${tradeIndex})">🖨️ Print This Trade</button>
+                <div style="margin-top: 1rem; display: flex; gap: var(--space-8); flex-wrap: wrap;">
+                    <button class="btn btn-secondary" onclick="printTrade(${tradeIndex})">🖨️ Print Trade</button>
+                    <button class="btn btn-secondary" onclick="printTradeWithScreenshots(${tradeIndex})">📄 Print w/ Screenshots</button>
                 </div>
             `;
         }
@@ -11886,6 +11887,339 @@ select.form-control {
     </div>
     <div class="print-content">
         ${generateTradeHtml(trade, true)}
+    </div>
+</body>
+</html>`;
+
+            printWindow.document.open();
+            printWindow.document.write(htmlContent);
+            printWindow.document.close();
+
+            // Wait for all images to load before making print available
+            await waitForImagesToLoad(printWindow);
+        }
+
+        // Print trade with screenshots on separate pages
+        async function printTradeWithScreenshots(tradeIndex) {
+            const trade = appState.trades[tradeIndex];
+
+            // Check and warn about TradingView images
+            await checkTradingViewImages([trade]);
+
+            const printWindow = window.open('', '', 'width=1200,height=800');
+
+            if (!printWindow) {
+                showNotification('Unable to open print window. Please check pop-up blocker settings.', 'error');
+                return;
+            }
+
+            // Generate trade details HTML (without screenshots)
+            const pipClass = trade.pips >= 0 ? 'positive' : 'negative';
+            const plClass = (trade.netPL || trade.profitLoss) >= 0 ? 'positive' : 'negative';
+
+            let notesHtml = '';
+            if (trade.notes) {
+                notesHtml = `<div class="section"><h3>Notes</h3><p style="white-space: pre-wrap;">${escapeHtml(trade.notes)}</p></div>`;
+            }
+
+            let rulesHtml = '';
+            if (trade.rulesFollowed && trade.rulesFollowed.length > 0) {
+                const ruleNames = trade.rulesFollowed.map(ruleId => {
+                    const rule = appState.customRules.find(r => r.id === ruleId);
+                    return rule ? rule.name : ruleId;
+                }).join(', ');
+                rulesHtml = `<div class="section"><h3>Custom Rules Followed</h3><p>${escapeHtml(ruleNames)}</p></div>`;
+            }
+
+            // Format dates
+            const formatDate = (dateStr) => {
+                if (!dateStr) return 'N/A';
+                const date = new Date(dateStr);
+                return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+            };
+
+            const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Print Trade - ${escapeHtml(trade.symbol)}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            color: #000;
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #333;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .trade-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .section {
+            margin: 20px 0;
+        }
+        .positive {
+            color: green;
+            font-weight: bold;
+        }
+        .negative {
+            color: red;
+            font-weight: bold;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .info-item {
+            padding: 8px;
+            background: #f5f5f5;
+            border-left: 3px solid #333;
+        }
+        .info-item strong {
+            display: block;
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 4px;
+        }
+        .info-item span {
+            font-size: 1.1em;
+        }
+
+        /* Print Preview Controls */
+        .print-preview-controls {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: #2c3e50;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 1000;
+        }
+        .print-btn {
+            background: #27ae60;
+            color: white;
+            border: none;
+            padding: 10px 30px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+            margin: 0 10px;
+        }
+        .print-btn:hover {
+            background: #229954;
+        }
+        .close-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 10px 30px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+            margin: 0 10px;
+        }
+        .close-btn:hover {
+            background: #c0392b;
+        }
+        .print-content {
+            margin-top: 90px;
+        }
+
+        /* Screenshot pages */
+        .screenshot-page {
+            page-break-before: always;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            text-align: center;
+        }
+        .screenshot-page h2 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+        .screenshot-page img {
+            max-width: 100%;
+            max-height: 85vh;
+            border: 2px solid #333;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .screenshot-label {
+            background: #333;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+
+        @media print {
+            .print-preview-controls {
+                display: none;
+            }
+            .print-content {
+                margin-top: 0;
+            }
+            body {
+                margin: 15px;
+            }
+            .screenshot-page {
+                page-break-before: always;
+                margin: 0;
+                padding: 20px;
+            }
+            img {
+                page-break-inside: avoid;
+                max-width: 100%;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color-adjust: exact !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="print-preview-controls">
+        <h2 style="margin: 0 0 10px 0;">Print Preview - Trade with Screenshots</h2>
+        <p style="margin: 5px 0; font-size: 14px; color: #ecf0f1;">Trade details on first page, screenshots on following pages. Wait for images to load before printing.</p>
+        <div>
+            <button class="print-btn" onclick="window.print()">🖨️ Print (Ctrl+P)</button>
+            <button class="close-btn" onclick="window.close()">✕ Close</button>
+        </div>
+    </div>
+    <div class="print-content">
+        <!-- Page 1: Trade Details -->
+        <div class="trade-details-page">
+            <div class="header">
+                <h1>📊 Trade Report</h1>
+                <h2>${escapeHtml(trade.symbol || 'N/A')}</h2>
+                <p style="margin: 5px 0; color: #666;">Trade #${tradeIndex + 1}</p>
+            </div>
+
+            <div class="section">
+                <h3>📅 Trade Dates</h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <strong>Entry Date</strong>
+                        <span>${formatDate(trade.entryDate)}</span>
+                    </div>
+                    <div class="info-item">
+                        <strong>Exit Date</strong>
+                        <span>${formatDate(trade.exitDate)}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>💰 Trade Details</h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <strong>Entry Price</strong>
+                        <span>${trade.entryPrice ? escapeHtml(trade.entryPrice.toFixed(5)) : 'N/A'}</span>
+                    </div>
+                    <div class="info-item">
+                        <strong>Exit Price</strong>
+                        <span>${trade.exitPrice ? escapeHtml(trade.exitPrice.toFixed(5)) : 'N/A'}</span>
+                    </div>
+                    <div class="info-item">
+                        <strong>Direction</strong>
+                        <span>${escapeHtml(trade.direction || 'N/A')}</span>
+                    </div>
+                    <div class="info-item">
+                        <strong>Volume</strong>
+                        <span>${escapeHtml(String(trade.volume || 'N/A'))}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>📈 Performance</h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <strong>Pips</strong>
+                        <span class="${pipClass}">${trade.pips ? escapeHtml(trade.pips.toFixed(1)) : 'N/A'}</span>
+                    </div>
+                    <div class="info-item">
+                        <strong>Profit/Loss</strong>
+                        <span class="${plClass}">$${trade.profitLoss ? escapeHtml(trade.profitLoss.toFixed(2)) : '0.00'}</span>
+                    </div>
+                    <div class="info-item">
+                        <strong>Commission</strong>
+                        <span>${trade.commission ? '$' + escapeHtml(trade.commission.toFixed(2)) : '$0.00'}</span>
+                    </div>
+                    <div class="info-item">
+                        <strong>Swap</strong>
+                        <span>${trade.swap ? '$' + escapeHtml(trade.swap.toFixed(2)) : '$0.00'}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>📊 Trade Analysis</h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <strong>Setup Type</strong>
+                        <span>${escapeHtml(trade.setupType || 'Not specified')}</span>
+                    </div>
+                    <div class="info-item">
+                        <strong>Market Condition</strong>
+                        <span>${escapeHtml(trade.marketCondition || 'Not specified')}</span>
+                    </div>
+                    <div class="info-item">
+                        <strong>Emotional State</strong>
+                        <span>${escapeHtml(trade.emotionalState || 'Not specified')}</span>
+                    </div>
+                    <div class="info-item">
+                        <strong>Rule Adherence</strong>
+                        <span>${escapeHtml(trade.ruleAdherence || 'Not specified')}</span>
+                    </div>
+                </div>
+            </div>
+
+            ${rulesHtml}
+            ${notesHtml}
+        </div>
+
+        ${trade.entryScreenshot ? `
+        <!-- Page 2: Entry Screenshot -->
+        <div class="screenshot-page">
+            <div class="screenshot-label">📸 Entry Screenshot</div>
+            <h2>${escapeHtml(trade.symbol || 'N/A')} - Entry</h2>
+            <p style="color: #666; margin-bottom: 20px;">${formatDate(trade.entryDate)} | ${escapeHtml(trade.direction || 'N/A')} @ ${trade.entryPrice ? escapeHtml(trade.entryPrice.toFixed(5)) : 'N/A'}</p>
+            <img src="${getScreenshotSrc(trade.entryScreenshot)}" alt="Entry Screenshot">
+        </div>
+        ` : ''}
+
+        ${trade.exitScreenshot ? `
+        <!-- Page 3: Exit Screenshot -->
+        <div class="screenshot-page">
+            <div class="screenshot-label">📸 Exit Screenshot</div>
+            <h2>${escapeHtml(trade.symbol || 'N/A')} - Exit</h2>
+            <p style="color: #666; margin-bottom: 20px;">${formatDate(trade.exitDate)} | Close @ ${trade.exitPrice ? escapeHtml(trade.exitPrice.toFixed(5)) : 'N/A'} | P&L: <span class="${plClass}">$${trade.profitLoss ? escapeHtml(trade.profitLoss.toFixed(2)) : '0.00'}</span></p>
+            <img src="${getScreenshotSrc(trade.exitScreenshot)}" alt="Exit Screenshot">
+        </div>
+        ` : ''}
+
+        ${!trade.entryScreenshot && !trade.exitScreenshot ? `
+        <div class="screenshot-page">
+            <h2 style="color: #999;">No Screenshots Available</h2>
+            <p style="color: #666;">Upload screenshots to see them in print preview.</p>
+        </div>
+        ` : ''}
     </div>
 </body>
 </html>`;
