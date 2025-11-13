@@ -6837,10 +6837,9 @@ select.form-control {
             
             switch(exportType) {
                 case 'full':
-                    // Complete export with everything
+                    // Complete export with everything (screenshots are embedded in trades)
                     exportData = {
                         trades: appState.trades,
-                        screenshots: getScreenshotsObject(),
                         startingBalance: appState.startingBalance,
                         finalBalance: appState.currentBalance,
                         customRules: appState.customRules,
@@ -7068,7 +7067,6 @@ select.form-control {
         function estimateFullSize() {
             const fullData = {
                 trades: appState.trades,
-                screenshots: getScreenshotsObject(),
                 startingBalance: appState.startingBalance,
                 customRules: appState.customRules,
                 strategyContext: appState.strategyContext,
