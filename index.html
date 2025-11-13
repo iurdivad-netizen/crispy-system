@@ -3552,6 +3552,9 @@ select.form-control {
             chartInstances: {},
             activeTradeIndex: null,
             activePasteTarget: 'entry', // 'entry' or 'exit'
+            // Performance optimization: statistics caching
+            statsCache: { version: 0, data: null },
+            tradesVersion: 0,
             viewSettings: {
                 showStats: {
                     totalTrades: true,
@@ -3688,6 +3691,15 @@ select.form-control {
         const marketConditions = ['Trending', 'Ranging', 'Volatile'];
         const emotionalStates = ['Confident', 'Uncertain', 'Fearful', 'Greedy', 'Disciplined', 'Impulsive'];
         const ruleAdherence = ['Perfect', 'Custom', 'Partial', 'None'];
+
+        // ============================================================================
+        // PERFORMANCE OPTIMIZATION UTILITIES
+        // ============================================================================
+
+        // Invalidate statistics cache when trades are modified
+        function invalidateStatsCache() {
+            appState.tradesVersion++;
+        }
 
         // ============================================================================
         // DATA PERSISTENCE & AUTO-SAVE SYSTEM
@@ -4125,12 +4137,14 @@ select.form-control {
                 // Import trades using existing logic
                 if (mode === 'overwrite') {
                     appState.trades = trades;
+                    invalidateStatsCache();
                     showMessage(`✅ Imported ${trades.length} trades from ${platform} API`);
                 } else if (mode === 'append') {
                     // Append with duplicate detection
                     const existingFingerprints = new Set(appState.trades.map(t => getTradeFingerprint(t)));
                     const newTrades = trades.filter(t => !existingFingerprints.has(getTradeFingerprint(t)));
                     appState.trades = [...appState.trades, ...newTrades];
+                    invalidateStatsCache();
                     showMessage(`✅ Added ${newTrades.length} new trades from ${platform} API (${trades.length - newTrades.length} duplicates skipped)`);
                 } else {
                     throw new Error('Invalid import mode');
@@ -4309,6 +4323,7 @@ select.form-control {
                 // Restore data
                 if (data.trades && Array.isArray(data.trades)) {
                     appState.trades = data.trades;
+                    invalidateStatsCache();
                 }
                 if (data.startingBalance !== undefined) {
                     appState.startingBalance = data.startingBalance;
@@ -5100,6 +5115,7 @@ select.form-control {
 
                         if (newTrades.length > 0) {
                             appState.trades = [...appState.trades, ...newTrades];
+                            invalidateStatsCache();
                             if (result.skippedCount > 0) {
                                 showMessage(`✅ Smart merge: Added ${newTrades.length} new trades (${result.trades.length - newTrades.length} existing, ${result.skippedCount} invalid symbols skipped)`);
                             } else {
@@ -5111,6 +5127,7 @@ select.form-control {
                     } else if (mode === 'overwrite') {
                         // Overwrite mode: replace all trades
                         appState.trades = result.trades;
+                        invalidateStatsCache();
                         appState.startingBalance = result.startingBalance || 10000;
                         // Update import mode to match the selected radio button
                         const checkedMode = document.querySelector('input[name="importModeRadio"]:checked');
@@ -6197,6 +6214,14 @@ select.form-control {
                 return;
             }
 
+            // Performance optimization: Check cache first
+            const cacheKey = `${appState.tradesVersion}_${appState.selectedSetup}`;
+            if (appState.statsCache.version === cacheKey && appState.statsCache.data) {
+                appState.statistics = appState.statsCache.data;
+                appState.currentBalance = appState.statsCache.data.currentBalance;
+                return;
+            }
+
             // Apply setup filter if selected
             let trades = appState.trades;
             if (appState.selectedSetup !== 'all') {
@@ -6349,6 +6374,12 @@ select.form-control {
             };
 
             appState.currentBalance = currentBalance;
+
+            // Performance optimization: Cache the calculated statistics
+            appState.statsCache = {
+                version: cacheKey,
+                data: appState.statistics
+            };
 
             // Update Monte Carlo baseline data if section is visible
             if (appState.showMonteCarlo) {
@@ -6646,41 +6677,43 @@ select.form-control {
         }
 
         function updateChartsDisplay() {
-            if (appState.trades.length === 0) return;
-            
-            // Clear existing charts
-            Object.values(appState.chartInstances).forEach(chart => {
-                if (chart) chart.destroy();
-            });
-            
+            if (appState.trades.length === 0) {
+                // Clear all charts when no data
+                Object.values(appState.chartInstances).forEach(chart => {
+                    if (chart) chart.destroy();
+                });
+                appState.chartInstances = {};
+                return;
+            }
+
             // Show/hide chart containers based on settings
             document.getElementById('equityContainer').style.display = appState.visibleCharts.equityCurve ? 'block' : 'none';
             document.getElementById('dailyPLContainer').style.display = appState.visibleCharts.dailyPL ? 'block' : 'none';
             document.getElementById('winLossContainer').style.display = appState.visibleCharts.winLoss ? 'block' : 'none';
-            
+
+            // Performance optimization: Update charts if they exist, only recreate if necessary
             if (appState.visibleCharts.equityCurve) drawEquityCurve();
             if (appState.visibleCharts.dailyPL) drawDailyPLChart();
             if (appState.visibleCharts.winLoss) drawWinLossChart();
         }
 
         function drawEquityCurve() {
-            const ctx = document.getElementById('equityChart').getContext('2d');
             const trades = [...appState.trades]; // Create copy to avoid mutation
-            
+
             // CORRECTED: Sort trades by date/time for proper equity curve
             trades.sort((a, b) => {
                 const dateA = new Date(a.closeTime || `${a.date}T${a.time}:00`);
                 const dateB = new Date(b.closeTime || `${b.date}T${b.time}:00`);
                 return dateA - dateB;
             });
-            
+
             // CORRECTED: Calculate cumulative balance properly using netPL
             let cumulative = 0;
             const cumulativeData = [];
-            
+
             // Add starting point at trade 0
             cumulativeData.push({ x: 0, y: appState.startingBalance });
-            
+
             trades.forEach((trade, index) => {
                 // Use netPL consistently for P/L calculations
                 const tradePL = parseFloat(trade.netPL) || parseFloat(trade.profit) || 0;
@@ -6691,7 +6724,16 @@ select.form-control {
                     y: parseFloat(balance.toFixed(2)) // Cumulative balance
                 });
             });
-            
+
+            // Performance optimization: Update existing chart if possible
+            if (appState.chartInstances.equity) {
+                appState.chartInstances.equity.data.datasets[0].data = cumulativeData;
+                appState.chartInstances.equity.update('none'); // 'none' mode = no animation, faster
+                return;
+            }
+
+            // Create new chart if it doesn't exist
+            const ctx = document.getElementById('equityChart').getContext('2d');
             appState.chartInstances.equity = new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -6780,9 +6822,8 @@ select.form-control {
         }
 
         function drawDailyPLChart() {
-            const ctx = document.getElementById('dailyPLChart').getContext('2d');
             const trades = appState.trades;
-            
+
             // Group trades by date using correct P/L field
             const dailyPL = {};
             trades.forEach(trade => {
@@ -6791,10 +6832,22 @@ select.form-control {
                 }
                 dailyPL[trade.date] += (trade.netPL || trade.profit);
             });
-            
+
             const dates = Object.keys(dailyPL).sort();
             const values = dates.map(date => dailyPL[date]);
-            
+
+            // Performance optimization: Update existing chart if possible
+            if (appState.chartInstances.dailyPL) {
+                appState.chartInstances.dailyPL.data.labels = dates;
+                appState.chartInstances.dailyPL.data.datasets[0].data = values;
+                appState.chartInstances.dailyPL.data.datasets[0].backgroundColor = values.map(v => v >= 0 ? '#10b981' : '#ef4444');
+                appState.chartInstances.dailyPL.data.datasets[0].borderColor = values.map(v => v >= 0 ? '#10b981' : '#ef4444');
+                appState.chartInstances.dailyPL.update('none');
+                return;
+            }
+
+            // Create new chart if it doesn't exist
+            const ctx = document.getElementById('dailyPLChart').getContext('2d');
             appState.chartInstances.dailyPL = new Chart(ctx, {
                 type: 'bar',
                 data: {
@@ -6848,9 +6901,17 @@ select.form-control {
         }
 
         function drawWinLossChart() {
-            const ctx = document.getElementById('winLossChart').getContext('2d');
             const stats = appState.statistics;
-            
+
+            // Performance optimization: Update existing chart if possible
+            if (appState.chartInstances.winLoss) {
+                appState.chartInstances.winLoss.data.datasets[0].data = [stats.winningTrades, stats.losingTrades];
+                appState.chartInstances.winLoss.update('none');
+                return;
+            }
+
+            // Create new chart if it doesn't exist
+            const ctx = document.getElementById('winLossChart').getContext('2d');
             appState.chartInstances.winLoss = new Chart(ctx, {
                 type: 'pie',
                 data: {
@@ -7446,7 +7507,7 @@ select.form-control {
                             }
                         });
                         const skippedCount = data.trades.length - validTrades.length;
-                        
+
                         // Full journal restore
                         appState.trades = validTrades.map(trade => {
                             // Parse date/time from closeTime if available
@@ -7515,7 +7576,8 @@ select.form-control {
                                 swap: trade.swap || 0
                             };
                         });
-                        
+                        invalidateStatsCache();
+
                         // CRITICAL FIX: Import screenshots with array format handling
                         if (data.screenshots && typeof data.screenshots === 'object' && !Array.isArray(data.screenshots)) {
                             const screenshotsObj = {};
@@ -7682,7 +7744,8 @@ select.form-control {
                                 exitScreenshot: exitScreenshot
                             };
                         });
-                        
+                        invalidateStatsCache();
+
                         // CRITICAL FIX: Import screenshots with array format handling (simple format)
                         if (data.screenshots && typeof data.screenshots === 'object' && !Array.isArray(data.screenshots)) {
                             const screenshotsObj = {};
@@ -7808,6 +7871,7 @@ select.form-control {
         function clearScreenshot(tradeIndex, type) {
             const field = type === 'entry' ? 'entryScreenshot' : 'exitScreenshot';
             appState.trades[tradeIndex][field] = null;
+            invalidateStatsCache();
             renderTradeDetails(tradeIndex); // Refresh the details view
             showMessage(`${type.charAt(0).toUpperCase() + type.slice(1)} screenshot removed`, 'success');
         }
@@ -7815,6 +7879,7 @@ select.form-control {
         // Enhanced updateTradeField to handle button state updates
         function updateTradeField(tradeIndex, field, value) {
             appState.trades[tradeIndex][field] = value;
+            invalidateStatsCache();
             calculateStatistics();
             updateUI();
 
@@ -8002,6 +8067,8 @@ select.form-control {
             } else {
                 trade.rulesFollowed = trade.rulesFollowed.filter(id => id !== ruleId);
             }
+
+            invalidateStatsCache();
 
             // Log for debugging
             console.log('toggleTradeRule - Updated:', {
@@ -8437,6 +8504,7 @@ select.form-control {
                 }
             });
 
+            invalidateStatsCache();
             updateCustomRulesDisplay();
             saveToLocalStorage();
         }
@@ -8451,6 +8519,44 @@ select.form-control {
             return trades.length > 0 ? (wins.length / trades.length * 100) : 0;
         }
         
+        // Performance optimization: Generate combinations efficiently
+        function generateCombinations(array, size) {
+            const results = [];
+            const n = array.length;
+
+            if (size > n || size <= 0) return results;
+            if (size === 1) {
+                return array.map(item => [item]);
+            }
+
+            // Use bit manipulation for efficient combination generation
+            const indices = new Array(size);
+            for (let i = 0; i < size; i++) {
+                indices[i] = i;
+            }
+
+            while (true) {
+                // Add current combination
+                results.push(indices.map(i => array[i]));
+
+                // Find rightmost index that can be incremented
+                let i = size - 1;
+                while (i >= 0 && indices[i] === n - size + i) {
+                    i--;
+                }
+
+                if (i < 0) break; // All combinations generated
+
+                // Increment and reset subsequent indices
+                indices[i]++;
+                for (let j = i + 1; j < size; j++) {
+                    indices[j] = indices[j - 1] + 1;
+                }
+            }
+
+            return results;
+        }
+
         // RULE COMBINATIONS ANALYSIS - NEW FEATURE
         function calculateRuleCombinations(year = null, month = null) {
             if (!appState.trades.length || !appState.customRules.length) return [];
@@ -8469,49 +8575,21 @@ select.form-control {
                     return tradeDate.getMonth() === month && tradeDate.getFullYear() === year;
                 });
             }
-            
+
             if (customTrades.length === 0) return [];
-            
-            // Generate all possible combinations
+
+            // Generate all possible combinations efficiently
             const combinations = [];
             const ruleIds = appState.customRules.map(r => r.id);
-            
-            // Single rules
-            ruleIds.forEach(ruleId => {
-                combinations.push([ruleId]);
-            });
-            
-            // Pairs (2 rules)
-            for (let i = 0; i < ruleIds.length; i++) {
-                for (let j = i + 1; j < ruleIds.length; j++) {
-                    combinations.push([ruleIds[i], ruleIds[j]]);
-                }
+
+            // Generate combinations for sizes 1 to 4 (or all rules if less than 4)
+            const maxSize = Math.min(4, ruleIds.length);
+            for (let size = 1; size <= maxSize; size++) {
+                combinations.push(...generateCombinations(ruleIds, size));
             }
-            
-            // Triplets (3 rules)
-            for (let i = 0; i < ruleIds.length; i++) {
-                for (let j = i + 1; j < ruleIds.length; j++) {
-                    for (let k = j + 1; k < ruleIds.length; k++) {
-                        combinations.push([ruleIds[i], ruleIds[j], ruleIds[k]]);
-                    }
-                }
-            }
-            
-            // Quads (4 rules) - if applicable
-            if (ruleIds.length >= 4) {
-                for (let i = 0; i < ruleIds.length; i++) {
-                    for (let j = i + 1; j < ruleIds.length; j++) {
-                        for (let k = j + 1; k < ruleIds.length; k++) {
-                            for (let l = k + 1; l < ruleIds.length; l++) {
-                                combinations.push([ruleIds[i], ruleIds[j], ruleIds[k], ruleIds[l]]);
-                            }
-                        }
-                    }
-                }
-            }
-            
-            // All rules together
-            if (ruleIds.length > 1) {
+
+            // Add all rules together if not already included
+            if (ruleIds.length > maxSize) {
                 combinations.push(ruleIds);
             }
             
@@ -13170,6 +13248,7 @@ select.form-control {
         function clearAllData() {
             if (window.confirm('⚠️ This will delete ALL trades, screenshots, and settings. This cannot be undone!\n\nAre you sure?')) {
                 appState.trades = [];
+                invalidateStatsCache();
                 appState.customRules = [];
                 appState.startingBalance = 10000;
                 appState.strategyContext = '';
