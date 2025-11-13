@@ -4600,6 +4600,101 @@ select.form-control {
                     });
                 }
 
+                // Calculate image sizes and analyze compression opportunities
+                let imageStats = {
+                    totalSize: 0,
+                    count: 0,
+                    images: [],
+                    compressionOpportunities: []
+                };
+
+                if (data && data.trades) {
+                    data.trades.forEach((trade, index) => {
+                        // Check entry screenshot
+                        if (trade.entryScreenshot && typeof trade.entryScreenshot === 'string') {
+                            const size = trade.entryScreenshot.length;
+                            const sizeKB = size / 1024;
+                            imageStats.totalSize += size;
+                            imageStats.count++;
+
+                            const imageInfo = {
+                                tradeIndex: index,
+                                type: 'entry',
+                                size: size,
+                                sizeKB: sizeKB,
+                                isPNG: trade.entryScreenshot.startsWith('data:image/png'),
+                                isJPEG: trade.entryScreenshot.startsWith('data:image/jpeg')
+                            };
+                            imageStats.images.push(imageInfo);
+
+                            // Detect compression opportunities
+                            // PNG images should be JPEG for better compression
+                            if (imageInfo.isPNG) {
+                                imageStats.compressionOpportunities.push({
+                                    tradeIndex: index,
+                                    type: 'entry',
+                                    reason: 'PNG format (convert to JPEG could reduce size by 50-70%)',
+                                    potentialSavingsKB: sizeKB * 0.6 // Estimate 60% savings
+                                });
+                            }
+                            // Large images (over 500KB) could potentially be compressed more
+                            else if (sizeKB > 500) {
+                                imageStats.compressionOpportunities.push({
+                                    tradeIndex: index,
+                                    type: 'entry',
+                                    reason: 'Large image (could reduce quality/size further)',
+                                    potentialSavingsKB: sizeKB * 0.3 // Estimate 30% savings
+                                });
+                            }
+                        }
+
+                        // Check exit screenshot
+                        if (trade.exitScreenshot && typeof trade.exitScreenshot === 'string') {
+                            const size = trade.exitScreenshot.length;
+                            const sizeKB = size / 1024;
+                            imageStats.totalSize += size;
+                            imageStats.count++;
+
+                            const imageInfo = {
+                                tradeIndex: index,
+                                type: 'exit',
+                                size: size,
+                                sizeKB: sizeKB,
+                                isPNG: trade.exitScreenshot.startsWith('data:image/png'),
+                                isJPEG: trade.exitScreenshot.startsWith('data:image/jpeg')
+                            };
+                            imageStats.images.push(imageInfo);
+
+                            // Detect compression opportunities
+                            if (imageInfo.isPNG) {
+                                imageStats.compressionOpportunities.push({
+                                    tradeIndex: index,
+                                    type: 'exit',
+                                    reason: 'PNG format (convert to JPEG could reduce size by 50-70%)',
+                                    potentialSavingsKB: sizeKB * 0.6
+                                });
+                            }
+                            else if (sizeKB > 500) {
+                                imageStats.compressionOpportunities.push({
+                                    tradeIndex: index,
+                                    type: 'exit',
+                                    reason: 'Large image (could reduce quality/size further)',
+                                    potentialSavingsKB: sizeKB * 0.3
+                                });
+                            }
+                        }
+                    });
+                }
+
+                // Add images to breakdown if present
+                if (imageStats.totalSize > 0) {
+                    breakdown.push({
+                        name: 'Images/Screenshots',
+                        size: imageStats.totalSize,
+                        percentage: 0  // Will calculate after total
+                    });
+                }
+
                 // Calculate percentages
                 breakdown.forEach(item => {
                     item.percentage = totalSize > 0 ? ((item.size / totalSize) * 100).toFixed(1) : 0;
@@ -4609,7 +4704,7 @@ select.form-control {
                 const limitMB = STORAGE_LIMIT_MB; // 100MB limit with IndexedDB
                 const usagePercent = ((totalSize / (limitMB * 1024 * 1024)) * 100).toFixed(1);
 
-                let html = '<div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: 500px; width: 90%; padding: 1.5rem; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); z-index: 10000;">';
+                let html = '<div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: 550px; width: 90%; padding: 1.5rem; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); z-index: 10000; max-height: 90vh; overflow-y: auto;">';
                 html += '<h3 style="margin-top: 0;">📊 Storage Information</h3>';
                 html += '<p style="color: var(--color-text-secondary); font-size: var(--font-size-xs); margin-bottom: 1rem;">Using IndexedDB for expanded storage capacity</p>';
 
@@ -4638,6 +4733,53 @@ select.form-control {
                         html += `<span style="font-size: var(--font-size-sm); color: var(--color-text-secondary);">${sizeMB} MB (${item.percentage}%)</span>`;
                         html += '</div>';
                     });
+                    html += '</div>';
+                }
+
+                // Image/Screenshot Information
+                if (imageStats.count > 0) {
+                    html += '<div style="padding: 1rem; background: var(--color-bg-8); border-radius: var(--radius-base); margin-bottom: 1rem;">';
+                    html += '<h4 style="font-size: var(--font-size-sm); margin-bottom: 0.75rem; margin-top: 0;">📸 Image Information:</h4>';
+
+                    const imageSizeMB = (imageStats.totalSize / (1024 * 1024)).toFixed(2);
+                    const imageSizeKB = (imageStats.totalSize / 1024).toFixed(0);
+                    const avgSizeKB = (imageStats.totalSize / imageStats.count / 1024).toFixed(0);
+
+                    html += `<div style="font-size: var(--font-size-sm);"><strong>Total Images:</strong> ${imageStats.count} screenshots</div>`;
+                    html += `<div style="font-size: var(--font-size-sm); margin-top: 0.25rem;"><strong>Total Size:</strong> ${imageSizeMB} MB (${imageSizeKB} KB)</div>`;
+                    html += `<div style="font-size: var(--font-size-sm); margin-top: 0.25rem;"><strong>Average Size:</strong> ${avgSizeKB} KB per image</div>`;
+
+                    // Show compression opportunities if any
+                    if (imageStats.compressionOpportunities.length > 0) {
+                        const totalPotentialSavingsKB = imageStats.compressionOpportunities.reduce((sum, opp) => sum + opp.potentialSavingsKB, 0);
+                        const totalPotentialSavingsMB = (totalPotentialSavingsKB / 1024).toFixed(2);
+
+                        html += '<div style="margin-top: 0.75rem; padding: 0.75rem; background: rgba(var(--color-warning-rgb), 0.1); border: 1px solid var(--color-warning); border-radius: var(--radius-sm);">';
+                        html += '<div style="font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); margin-bottom: 0.5rem;">💡 Compression Opportunities Detected</div>';
+                        html += `<div style="font-size: var(--font-size-xs); color: var(--color-text-secondary);">`;
+                        html += `${imageStats.compressionOpportunities.length} image(s) could be optimized<br>`;
+                        html += `<strong>Potential savings:</strong> ~${totalPotentialSavingsMB} MB (${totalPotentialSavingsKB.toFixed(0)} KB)<br><br>`;
+
+                        // Group opportunities by reason
+                        const pngCount = imageStats.compressionOpportunities.filter(o => o.reason.includes('PNG')).length;
+                        const largeCount = imageStats.compressionOpportunities.filter(o => o.reason.includes('Large')).length;
+
+                        if (pngCount > 0) {
+                            html += `• ${pngCount} PNG image(s) - converting to JPEG would significantly reduce size<br>`;
+                        }
+                        if (largeCount > 0) {
+                            html += `• ${largeCount} large image(s) - could benefit from additional compression<br>`;
+                        }
+
+                        html += `</div>`;
+                        html += '<div style="font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-top: 0.5rem; font-style: italic;">Tip: Delete and re-upload these images using the 📷 button to apply compression</div>';
+                        html += '</div>';
+                    } else {
+                        html += '<div style="margin-top: 0.5rem; padding: 0.5rem; background: rgba(var(--color-success-rgb), 0.1); border: 1px solid var(--color-success); border-radius: var(--radius-sm); font-size: var(--font-size-xs);">';
+                        html += '✓ All images are well optimized!';
+                        html += '</div>';
+                    }
+
                     html += '</div>';
                 }
 
