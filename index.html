@@ -4258,7 +4258,7 @@ select.form-control {
 
                 lastSaveTimestamp = new Date();
                 updateSaveStatusIndicator();
-                updateStorageInfoButton();
+                await updateStorageInfoButton();
 
                 return true;
             } catch (error) {
@@ -4375,7 +4375,7 @@ select.form-control {
                 const timeAgo = getTimeAgo(lastSaveTimestamp);
                 showMessage(`✅ Loaded ${tradeCount} trade${tradeCount !== 1 ? 's' : ''} from last session (${timeAgo})`, 'success');
 
-                updateStorageInfoButton();
+                await updateStorageInfoButton();
 
                 return true;
             } catch (error) {
@@ -4467,18 +4467,32 @@ select.form-control {
         }
 
         // Update storage info button with current usage
-        function updateStorageInfoButton() {
+        async function updateStorageInfoButton() {
             const button = document.getElementById('storageInfoButton');
             if (!button) return;
 
             try {
-                const savedData = localStorage.getItem(STORAGE_KEYS.APP_STATE);
-                if (!savedData) {
-                    button.innerHTML = '📊 Storage Info (0MB)';
-                    return;
+                // Try to load from IndexedDB first, fallback to localStorage
+                let data = null;
+                try {
+                    data = await loadFromIndexedDB(STORAGE_KEYS.APP_STATE);
+                } catch (idbError) {
+                    console.warn('Failed to load from IndexedDB for size calculation:', idbError);
                 }
 
-                const totalSize = new Blob([savedData]).size;
+                // Fallback to localStorage if IndexedDB fails
+                if (!data) {
+                    const savedData = localStorage.getItem(STORAGE_KEYS.APP_STATE);
+                    if (!savedData) {
+                        button.innerHTML = '📊 Storage Info (0MB)';
+                        return;
+                    }
+                    data = JSON.parse(savedData);
+                }
+
+                // Calculate size from the actual data object
+                const jsonString = JSON.stringify(data);
+                const totalSize = new Blob([jsonString]).size;
                 const totalSizeMB = (totalSize / (1024 * 1024)).toFixed(2);
                 button.innerHTML = `📊 Storage Info (${totalSizeMB}MB)`;
             } catch (error) {
@@ -4515,7 +4529,7 @@ select.form-control {
         }
 
         // Clear all data
-        function clearAllStoredData() {
+        async function clearAllStoredData() {
             const confirmed = confirm(
                 '⚠️ WARNING: This will delete ALL data!\n\n' +
                 'This action cannot be undone. Are you absolutely sure?'
@@ -4524,7 +4538,7 @@ select.form-control {
             if (!confirmed) return false;
 
             try {
-                // Remove all trading journal keys
+                // Remove all trading journal keys from localStorage
                 const keysToRemove = [];
                 for (let i = 0; i < localStorage.length; i++) {
                     const key = localStorage.key(i);
@@ -4535,8 +4549,15 @@ select.form-control {
 
                 keysToRemove.forEach(key => localStorage.removeItem(key));
 
+                // Also clear from IndexedDB
+                try {
+                    await deleteFromIndexedDB(STORAGE_KEYS.APP_STATE);
+                } catch (idbError) {
+                    console.warn('Failed to clear IndexedDB:', idbError);
+                }
+
                 showMessage(`✅ Cleared all stored data (${keysToRemove.length} items)`, 'success');
-                updateStorageInfoButton();
+                await updateStorageInfoButton();
                 return true;
             } catch (error) {
                 console.error('Error clearing storage:', error);
@@ -4546,16 +4567,31 @@ select.form-control {
         }
 
         // Show storage information
-        function showStorageInfo() {
+        async function showStorageInfo() {
             try {
-                const savedData = localStorage.getItem(STORAGE_KEYS.APP_STATE);
+                // Try to load from IndexedDB first, fallback to localStorage
+                let data = null;
+                try {
+                    data = await loadFromIndexedDB(STORAGE_KEYS.APP_STATE);
+                } catch (idbError) {
+                    console.warn('Failed to load from IndexedDB for storage info:', idbError);
+                }
+
+                // Fallback to localStorage if IndexedDB fails
+                if (!data) {
+                    const savedData = localStorage.getItem(STORAGE_KEYS.APP_STATE);
+                    if (savedData) {
+                        data = JSON.parse(savedData);
+                    }
+                }
 
                 let totalSize = 0;
                 let breakdown = [];
 
                 // Calculate main app state size
-                if (savedData) {
-                    const appStateSize = new Blob([savedData]).size;
+                if (data) {
+                    const jsonString = JSON.stringify(data);
+                    const appStateSize = new Blob([jsonString]).size;
                     totalSize += appStateSize;
                     breakdown.push({
                         name: 'Current Data',
@@ -4695,7 +4731,7 @@ select.form-control {
             startAutoSave();
             startSaveStatusUpdates();
             updateSaveStatusIndicator();
-            updateStorageInfoButton();
+            await updateStorageInfoButton();
         });
         
         function initializeUIStates() {
