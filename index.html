@@ -3456,7 +3456,7 @@ select.form-control {
         }
 
         // Security: File size validation constant
-        const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+        const MAX_FILE_SIZE = 50 * BYTES_PER_MB; // 50MB
 
         // Security: Trade data validation
         function validateTrade(trade) {
@@ -3686,6 +3686,51 @@ select.form-control {
             }
         };
 
+        // ============================================================================
+        // DOM CACHE - Performance optimization to avoid repeated DOM queries
+        // ============================================================================
+        const domCache = {
+            sections: {},
+            buttons: {},
+            inputs: {},
+            containers: {}
+        };
+
+        function initDomCache() {
+            // Cache frequently accessed section elements
+            domCache.sections.emptyState = document.getElementById('emptyState');
+            domCache.sections.statistics = document.getElementById('statisticsSection');
+            domCache.sections.charts = document.getElementById('chartsSection');
+            domCache.sections.tradeHistory = document.getElementById('tradeHistorySection');
+            domCache.sections.ruleCombinations = document.getElementById('ruleCombinationsSection');
+            domCache.sections.rules = document.getElementById('rulesSection');
+            domCache.sections.breakdowns = document.getElementById('breakdownsSection');
+            domCache.sections.timeAnalytics = document.getElementById('timeAnalyticsSection');
+            domCache.sections.calendar = document.getElementById('calendarSection');
+            domCache.sections.monteCarlo = document.getElementById('monteCarloSection');
+            domCache.sections.ai = document.getElementById('aiSection');
+
+            // Cache button elements
+            domCache.buttons.export = document.getElementById('exportBtn');
+            domCache.buttons.print = document.getElementById('printBtn');
+            domCache.buttons.storageInfo = document.getElementById('storageInfoButton');
+
+            // Cache input elements
+            domCache.inputs.csv = document.getElementById('csvInput');
+            domCache.inputs.json = document.getElementById('jsonInput');
+            domCache.inputs.chartZoom = document.getElementById('chartZoomSelect');
+            domCache.inputs.autoSaveToggle = document.getElementById('autoSaveToggle');
+
+            // Cache container elements
+            domCache.containers.statsGrid = document.getElementById('statsGrid');
+            domCache.containers.tableHeader = document.getElementById('tableHeader');
+            domCache.containers.tableBody = document.getElementById('tradesTableBody');
+            domCache.containers.exportDropdown = document.getElementById('exportDropdown');
+            domCache.containers.messages = document.getElementById('messages');
+            domCache.containers.saveStatus = document.getElementById('saveStatusIndicator');
+            domCache.containers.autoSaveStatus = document.getElementById('autoSaveStatus');
+        }
+
         // Setup type options
         const setupTypes = ['Breakout', 'Pullback', 'Reversal', 'Range', 'Trend Following'];
         const marketConditions = ['Trending', 'Ranging', 'Volatile'];
@@ -3695,6 +3740,26 @@ select.form-control {
         // ============================================================================
         // PERFORMANCE OPTIMIZATION UTILITIES
         // ============================================================================
+
+        // Byte conversion constants
+        const BYTES_PER_KB = 1024;
+        const BYTES_PER_MB = 1024 * 1024;
+
+        // Format bytes to human-readable format (B, KB, or MB)
+        function formatBytes(bytes, decimals = 1) {
+            if (bytes < BYTES_PER_KB) {
+                return bytes + ' B';
+            }
+            if (bytes < BYTES_PER_MB) {
+                return (bytes / BYTES_PER_KB).toFixed(decimals) + ' KB';
+            }
+            return (bytes / BYTES_PER_MB).toFixed(decimals) + ' MB';
+        }
+
+        // Convert bytes to MB
+        function bytesToMB(bytes, decimals = 2) {
+            return (bytes / BYTES_PER_MB).toFixed(decimals);
+        }
 
         // Invalidate statistics cache when trades are modified
         function invalidateStatsCache() {
@@ -4250,9 +4315,9 @@ select.form-control {
 
                 // Check storage size (now 100MB limit with IndexedDB)
                 const sizeInBytes = new Blob([jsonString]).size;
-                const sizeInMB = (sizeInBytes / (1024 * 1024)).toFixed(2);
+                const sizeInMB = bytesToMB(sizeInBytes);
 
-                if (sizeInBytes > STORAGE_LIMIT_MB * 1024 * 1024) { // 100MB warning
+                if (sizeInBytes > STORAGE_LIMIT_MB * BYTES_PER_MB) { // 100MB warning
                     console.warn(`Data size (${sizeInMB}MB) exceeds ${STORAGE_LIMIT_MB}MB limit. Consider exporting and clearing old data.`);
                     showMessage(`⚠️ Data size (${sizeInMB}MB) is very large! Consider exporting and archiving old trades.`, 'error');
                 }
@@ -4508,7 +4573,7 @@ select.form-control {
                 // Calculate size from the actual data object
                 const jsonString = JSON.stringify(data);
                 const totalSize = new Blob([jsonString]).size;
-                const totalSizeMB = (totalSize / (1024 * 1024)).toFixed(2);
+                const totalSizeMB = bytesToMB(totalSize);
                 button.innerHTML = `📊 Storage Info (${totalSizeMB}MB)`;
             } catch (error) {
                 console.error('Error updating storage info button:', error);
@@ -4715,9 +4780,9 @@ select.form-control {
                     item.percentage = totalSize > 0 ? ((item.size / totalSize) * 100).toFixed(1) : 0;
                 });
 
-                const totalSizeMB = (totalSize / (1024 * 1024)).toFixed(2);
+                const totalSizeMB = bytesToMB(totalSize);
                 const limitMB = STORAGE_LIMIT_MB; // 100MB limit with IndexedDB
-                const usagePercent = ((totalSize / (limitMB * 1024 * 1024)) * 100).toFixed(1);
+                const usagePercent = ((totalSize / (limitMB * BYTES_PER_MB)) * 100).toFixed(1);
 
                 let html = '<div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: 550px; width: 90%; padding: 1.5rem; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); z-index: 10000; max-height: 90vh; overflow-y: auto;">';
                 html += '<h3 style="margin-top: 0;">📊 Storage Information</h3>';
@@ -4742,7 +4807,7 @@ select.form-control {
                     html += '<div style="margin-bottom: 1.5rem;">';
                     html += '<h4 style="font-size: var(--font-size-sm); margin-bottom: 0.75rem;">Storage Breakdown:</h4>';
                     breakdown.forEach(item => {
-                        const sizeMB = (item.size / (1024 * 1024)).toFixed(2);
+                        const sizeMB = bytesToMB(item.size);
                         html += '<div style="display: flex; justify-content: space-between; padding: 0.5rem; background: var(--color-secondary); border-radius: var(--radius-sm); margin-bottom: 0.5rem;">';
                         html += `<span style="font-size: var(--font-size-sm);">${item.name}</span>`;
                         html += `<span style="font-size: var(--font-size-sm); color: var(--color-text-secondary);">${sizeMB} MB (${item.percentage}%)</span>`;
@@ -4756,9 +4821,9 @@ select.form-control {
                     html += '<div style="padding: 1rem; background: var(--color-bg-8); border-radius: var(--radius-base); margin-bottom: 1rem;">';
                     html += '<h4 style="font-size: var(--font-size-sm); margin-bottom: 0.75rem; margin-top: 0;">📸 Image Information:</h4>';
 
-                    const imageSizeMB = (imageStats.totalSize / (1024 * 1024)).toFixed(2);
-                    const imageSizeKB = (imageStats.totalSize / 1024).toFixed(0);
-                    const avgSizeKB = (imageStats.totalSize / imageStats.count / 1024).toFixed(0);
+                    const imageSizeMB = bytesToMB(imageStats.totalSize);
+                    const imageSizeKB = (imageStats.totalSize / BYTES_PER_KB).toFixed(0);
+                    const avgSizeKB = (imageStats.totalSize / imageStats.count / BYTES_PER_KB).toFixed(0);
 
                     html += `<div style="font-size: var(--font-size-sm);"><strong>Total Images:</strong> ${imageStats.count} screenshots</div>`;
                     html += `<div style="font-size: var(--font-size-sm); margin-top: 0.25rem;"><strong>Total Size:</strong> ${imageSizeMB} MB (${imageSizeKB} KB)</div>`;
@@ -4872,6 +4937,9 @@ select.form-control {
             loadAPICredentials();
             populateAPICredentialsUI();
 
+            // Initialize DOM cache for performance
+            initDomCache();
+
             setupEventListeners();
             initializeDefaultRules();
             initializeUIStates();
@@ -4918,12 +4986,18 @@ select.form-control {
             }
         }
 
+        // Event handler references for cleanup
+        const eventHandlers = {
+            globalClick: null,
+            globalKeydown: null
+        };
+
         function setupEventListeners() {
-            document.getElementById('csvInput').addEventListener('change', handleCSVImport);
-            document.getElementById('jsonInput').addEventListener('change', handleJSONImport);
-            
+            domCache.inputs.csv.addEventListener('change', handleCSVImport);
+            domCache.inputs.json.addEventListener('change', handleJSONImport);
+
             // Click outside to close export menu and info tooltips
-            document.addEventListener('click', function(e) {
+            eventHandlers.globalClick = function(e) {
                 if (appState.showExportMenu && !e.target.closest('.export-menu-container')) {
                     setShowExportMenu(false);
                 }
@@ -4932,17 +5006,60 @@ select.form-control {
                 if (!e.target.closest('.section-info-container')) {
                     closeAllInfoTooltips();
                 }
-            });
-            
+            };
+            document.addEventListener('click', eventHandlers.globalClick);
+
             // Keyboard shortcuts
-            document.addEventListener('keydown', function(e) {
+            eventHandlers.globalKeydown = function(e) {
                 if (e.key === 'Escape') {
                     closeLightbox();
                 }
-            });
-            
+            };
+            document.addEventListener('keydown', eventHandlers.globalKeydown);
+
             // Paste event for screenshots
             document.addEventListener('paste', handlePaste);
+        }
+
+        // Cleanup event listeners to prevent memory leaks
+        function cleanupEventListeners() {
+            // Remove global event listeners
+            if (eventHandlers.globalClick) {
+                document.removeEventListener('click', eventHandlers.globalClick);
+            }
+            if (eventHandlers.globalKeydown) {
+                document.removeEventListener('keydown', eventHandlers.globalKeydown);
+            }
+            document.removeEventListener('paste', handlePaste);
+
+            // Note: CSV and JSON input listeners are tied to DOM elements
+            // and will be cleaned up when those elements are garbage collected
+        }
+
+        // Cleanup chart instances to prevent memory leaks
+        function cleanupChartInstances() {
+            Object.values(appState.chartInstances).forEach(chart => {
+                if (chart && typeof chart.destroy === 'function') {
+                    try {
+                        chart.destroy();
+                    } catch (e) {
+                        console.warn('Error destroying chart:', e);
+                    }
+                }
+            });
+            appState.chartInstances = {};
+        }
+
+        // Cleanup timers to prevent memory leaks
+        function cleanupTimers() {
+            if (autoSaveTimer) {
+                clearInterval(autoSaveTimer);
+                autoSaveTimer = null;
+            }
+            if (saveStatusUpdateTimer) {
+                clearInterval(saveStatusUpdateTimer);
+                saveStatusUpdateTimer = null;
+            }
         }
 
         function initializeDefaultRules() {
@@ -4959,13 +5076,13 @@ select.form-control {
 
         // Utility Functions
         function showMessage(message, type = 'success') {
-            const messagesDiv = document.getElementById('messages');
+            const messagesDiv = domCache.containers.messages;
             const messageEl = document.createElement('div');
             messageEl.className = `message ${type}`;
             messageEl.textContent = message;
             messagesDiv.innerHTML = '';
             messagesDiv.appendChild(messageEl);
-            
+
             setTimeout(() => {
                 if (messageEl.parentNode) {
                     messageEl.parentNode.removeChild(messageEl);
@@ -5004,25 +5121,25 @@ select.form-control {
 
         function updateUI() {
             const hasData = appState.trades.length > 0;
-            
-            // Show/hide sections
-            document.getElementById('emptyState').style.display = hasData ? 'none' : 'block';
+
+            // Show/hide sections - using cached DOM elements
+            domCache.sections.emptyState.style.display = hasData ? 'none' : 'block';
             // Account Settings section is always visible after import
-            document.getElementById('statisticsSection').style.display = hasData ? 'block' : 'none';
-            document.getElementById('chartsSection').style.display = hasData ? 'block' : 'none';
-            document.getElementById('tradeHistorySection').style.display = hasData ? 'block' : 'none';
-            document.getElementById('ruleCombinationsSection').style.display = hasData ? 'block' : 'none';
-            document.getElementById('rulesSection').style.display = hasData ? 'block' : 'none';
-            document.getElementById('breakdownsSection').style.display = hasData ? 'block' : 'none';
-            document.getElementById('timeAnalyticsSection').style.display = hasData ? 'block' : 'none';
-            document.getElementById('calendarSection').style.display = hasData ? 'block' : 'none';
-            document.getElementById('monteCarloSection').style.display = hasData ? 'block' : 'none';
-            document.getElementById('aiSection').style.display = hasData ? 'block' : 'none';
-            
-            // Enable buttons
-            document.getElementById('exportBtn').disabled = !hasData;
-            document.getElementById('printBtn').disabled = !hasData;
-            
+            domCache.sections.statistics.style.display = hasData ? 'block' : 'none';
+            domCache.sections.charts.style.display = hasData ? 'block' : 'none';
+            domCache.sections.tradeHistory.style.display = hasData ? 'block' : 'none';
+            domCache.sections.ruleCombinations.style.display = hasData ? 'block' : 'none';
+            domCache.sections.rules.style.display = hasData ? 'block' : 'none';
+            domCache.sections.breakdowns.style.display = hasData ? 'block' : 'none';
+            domCache.sections.timeAnalytics.style.display = hasData ? 'block' : 'none';
+            domCache.sections.calendar.style.display = hasData ? 'block' : 'none';
+            domCache.sections.monteCarlo.style.display = hasData ? 'block' : 'none';
+            domCache.sections.ai.style.display = hasData ? 'block' : 'none';
+
+            // Enable buttons - using cached DOM elements
+            domCache.buttons.export.disabled = !hasData;
+            domCache.buttons.print.disabled = !hasData;
+
             if (hasData) {
                 calculateStatistics();
                 updateStatisticsDisplay();
@@ -5035,9 +5152,9 @@ select.form-control {
                 updateRuleCombinationsMonthDisplay();
                 updateRuleCombinationsAnalysis();
 
-                // Initialize chart zoom selector
-                document.getElementById('chartZoomSelect').value = appState.chartZoom;
-                
+                // Initialize chart zoom selector - using cached DOM element
+                domCache.inputs.chartZoom.value = appState.chartZoom;
+
                 // Update collapse states
                 updateTradeHistoryCollapseState();
                 updateAccountSettingsCollapseState();
@@ -5071,7 +5188,7 @@ select.form-control {
 
             // Security: File size validation
             if (file.size > MAX_FILE_SIZE) {
-                showMessage(`File too large. Maximum size: ${MAX_FILE_SIZE / (1024 * 1024)}MB`, 'error');
+                showMessage(`File too large. Maximum size: ${MAX_FILE_SIZE / BYTES_PER_MB}MB`, 'error');
                 return;
             }
 
@@ -6252,36 +6369,12 @@ select.form-control {
                 return dateA - dateB;
             });
 
-            // Build equity curve and calculate max drawdown
+            // PERFORMANCE OPTIMIZATION: Combined loop for drawdown and streak calculations
+            // Build equity curve, calculate max drawdown, and calculate streaks in a single pass
             let runningBalance = appState.startingBalance;
             let peak = appState.startingBalance;
             let maxDrawdown = 0;
             let maxDrawdownPercent = 0;
-
-            sortedTrades.forEach(trade => {
-                const tradePL = parseFloat(trade.netPL) || parseFloat(trade.profit) || 0;
-                runningBalance += tradePL;
-
-                // Update peak if we've reached a new high
-                if (runningBalance > peak) {
-                    peak = runningBalance;
-                }
-
-                // Calculate current drawdown
-                const drawdown = peak - runningBalance;
-                const drawdownPercent = peak > 0 ? (drawdown / peak * 100) : 0;
-
-                // Update max drawdown
-                if (drawdown > maxDrawdown) {
-                    maxDrawdown = drawdown;
-                    maxDrawdownPercent = drawdownPercent;
-                }
-            });
-
-            // Recovery Factor = Net P/L / Max Drawdown
-            const recoveryFactor = maxDrawdown > 0 ? (netPL / maxDrawdown) : 0;
-
-            // PHASE 1 STATS: Calculate Consecutive Win/Loss Streaks
             let currentStreak = 0;
             let longestWinStreak = 0;
             let longestLossStreak = 0;
@@ -6290,8 +6383,21 @@ select.form-control {
 
             sortedTrades.forEach((trade, index) => {
                 const tradePL = parseFloat(trade.netPL) || parseFloat(trade.profit) || 0;
-                const isWin = tradePL > 0;
 
+                // Drawdown calculation
+                runningBalance += tradePL;
+                if (runningBalance > peak) {
+                    peak = runningBalance;
+                }
+                const drawdown = peak - runningBalance;
+                const drawdownPercent = peak > 0 ? (drawdown / peak * 100) : 0;
+                if (drawdown > maxDrawdown) {
+                    maxDrawdown = drawdown;
+                    maxDrawdownPercent = drawdownPercent;
+                }
+
+                // Streak calculation
+                const isWin = tradePL > 0;
                 if (isWin) {
                     currentWinStreak++;
                     currentLossStreak = 0;
@@ -6315,6 +6421,9 @@ select.form-control {
                     currentStreak = isWin ? currentWinStreak : (tradePL < 0 ? -currentLossStreak : 0);
                 }
             });
+
+            // Recovery Factor = Net P/L / Max Drawdown
+            const recoveryFactor = maxDrawdown > 0 ? (netPL / maxDrawdown) : 0;
 
             // PHASE 1 STATS: Risk-Reward Ratio
             const avgWin = wins.length > 0 ? (totalProfit / wins.length) : 0;
@@ -6574,7 +6683,7 @@ select.form-control {
         function updateStatisticsDisplay() {
             if (appState.trades.length === 0) return;
 
-            const statsGrid = document.getElementById('statsGrid');
+            const statsGrid = domCache.containers.statsGrid;
             const statsConfig = appState.visibleStats;
 
             // Get stats based on selected view: TOTAL (-1) or specific month
@@ -6960,7 +7069,7 @@ select.form-control {
         }
         
         function updateTableHeader() {
-            const header = document.getElementById('tableHeader');
+            const header = domCache.containers.tableHeader;
             const columns = appState.visibleColumns;
 
             let html = '';
@@ -6981,7 +7090,7 @@ select.form-control {
         }
         
         function updateTableBody() {
-            const tbody = document.getElementById('tradesTableBody');
+            const tbody = domCache.containers.tableBody;
             tbody.innerHTML = '';
 
             appState.trades.forEach((trade, index) => {
@@ -7028,8 +7137,7 @@ select.form-control {
 
         function setShowExportMenu(show) {
             appState.showExportMenu = show;
-            const dropdown = document.getElementById('exportDropdown');
-            dropdown.style.display = show ? 'block' : 'none';
+            domCache.containers.exportDropdown.style.display = show ? 'block' : 'none';
         }
 
         // Info Tooltip Functions
@@ -7178,7 +7286,7 @@ select.form-control {
                     
                     // Calculate approximate size
                     const dataSize = JSON.stringify(screenshots).length;
-                    const sizeMB = (dataSize / (1024 * 1024)).toFixed(2);
+                    const sizeMB = bytesToMB(dataSize);
                     
                     filename = `trading-journal-screenshots-${timestamp}.json`;
                     
@@ -7347,11 +7455,8 @@ select.form-control {
             return formatBytes(size);
         }
         
-        function formatBytes(bytes) {
-            if (bytes < 1024) return bytes + ' B';
-            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-        }
+        // formatBytes function moved to PERFORMANCE OPTIMIZATION UTILITIES section (line ~3749)
+        // This duplicate has been removed to avoid code duplication
         
         function updateSizeEstimates() {
             if (appState.trades.length === 0) {
@@ -7444,7 +7549,7 @@ select.form-control {
 
             // Security: File size validation
             if (file.size > MAX_FILE_SIZE) {
-                showMessage(`File too large. Maximum size: ${MAX_FILE_SIZE / (1024 * 1024)}MB`, 'error');
+                showMessage(`File too large. Maximum size: ${MAX_FILE_SIZE / BYTES_PER_MB}MB`, 'error');
                 return;
             }
 
@@ -13254,6 +13359,9 @@ select.form-control {
                 appState.strategyContext = '';
                 document.getElementById('strategyContextTextarea').value = '';
                 updateStrategyContextCounter();
+
+                // Cleanup chart instances to free memory
+                cleanupChartInstances();
 
                 // Also clear localStorage data
                 clearAllStoredData();
