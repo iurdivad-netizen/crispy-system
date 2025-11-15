@@ -11590,12 +11590,35 @@ select.form-control {
                 prompt += `\n`;
             }
             
-            prompt += `PLEASE ANALYZE AND PROVIDE:\n`;
+            prompt += `PLEASE ANALYZE AND PROVIDE:\n\n`;
+            prompt += `PERFORMANCE & STRATEGY:\n`;
             prompt += `1. Overall performance assessment\n`;
             prompt += `2. Strengths and areas for improvement\n`;
-            prompt += `3. Risk management evaluation\n`;
-            prompt += `4. Specific recommendations for better results\n`;
-            prompt += `5. Trading psychology insights\n`;
+            prompt += `3. Setup effectiveness ranking - which setups have the best risk-adjusted returns and which to avoid/refine\n`;
+            prompt += `4. Market condition adaptation - how well the strategy performs in different conditions and adaptation recommendations\n\n`;
+
+            prompt += `PATTERN & TIMING ANALYSIS:\n`;
+            prompt += `5. Pattern recognition - identify recurring winning and losing patterns across setups, market conditions, and timing\n`;
+            prompt += `6. Trade timing optimization - analysis of entry/exit timing quality, best performing hours/days to focus on\n`;
+            prompt += `7. Trade duration analysis - whether holding periods are optimal or if closing too early/late\n\n`;
+
+            prompt += `RISK MANAGEMENT:\n`;
+            prompt += `8. Risk management evaluation - overall risk control assessment\n`;
+            prompt += `9. Position sizing assessment - whether position sizing is appropriate and consistent\n`;
+            prompt += `10. Risk-reward analysis - average risk-reward ratios and optimization opportunities\n`;
+            prompt += `11. Consistency evaluation - result consistency vs. volatility/erratic performance\n\n`;
+
+            prompt += `BEHAVIORAL & PSYCHOLOGICAL:\n`;
+            prompt += `12. Trading psychology insights - emotional and mental factors affecting performance\n`;
+            prompt += `13. Behavioral bias detection - signs of revenge trading, overtrading, FOMO, or other biases\n`;
+            prompt += `14. Emotional state correlation - how emotions correlate with performance\n`;
+            prompt += `15. Rule adherence impact - specific rule violations and their measurable impact on performance\n\n`;
+
+            prompt += `ACTIONABLE RECOMMENDATIONS:\n`;
+            prompt += `16. Specific recommendations for better results\n`;
+            prompt += `17. Prioritized action plan - top 3-5 specific, measurable actions to take immediately\n`;
+            prompt += `18. Focus areas - what to START doing, STOP doing, and CONTINUE doing\n`;
+            prompt += `19. Performance benchmarks - suggested targets for next month based on current performance\n`;
             
             return prompt;
         }
