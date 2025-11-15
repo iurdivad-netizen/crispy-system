@@ -2014,12 +2014,15 @@ select.form-control {
                 <div class="section-content">
                     <div id="statsConfigPanel" style="display: none; margin-bottom: 1rem; padding: 1rem; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-base);">
                         <h4 style="font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); margin-bottom: var(--space-12); color: var(--color-text);">📋 Configure Statistics Display</h4>
-                        <p style="font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: var(--space-12);">Check which statistics to display. Drag to reorder (future feature).</p>
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-8);" id="statsConfigGrid">
+                        <p style="font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: var(--space-12);">Check which statistics to display. Use ▲▼ arrows to reorder statistics.</p>
+                        <div style="display: grid; grid-template-columns: 1fr; gap: var(--space-4);" id="statsConfigGrid">
                             <!-- Stats checkboxes will be generated here -->
                         </div>
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: var(--space-12); padding-top: var(--space-12); border-top: 1px solid var(--color-border);">
-                            <button onclick="showAllStats()" style="background: none; border: none; color: var(--color-primary); font-size: var(--font-size-xs); cursor: pointer; padding: 0;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">Show All</button>
+                            <div style="display: flex; gap: var(--space-12);">
+                                <button onclick="showAllStats()" style="background: none; border: none; color: var(--color-primary); font-size: var(--font-size-xs); cursor: pointer; padding: 0;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">Show All</button>
+                                <button onclick="resetStatsOrder()" style="background: none; border: none; color: var(--color-primary); font-size: var(--font-size-xs); cursor: pointer; padding: 0;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">Reset Order</button>
+                            </div>
                             <button onclick="toggleStatsConfig()" class="btn btn--sm">Done</button>
                         </div>
                     </div>
@@ -3716,6 +3719,8 @@ select.form-control {
                 expectedMaxWinStreak: true,
                 expectedMaxLossStreak: true
             },
+            // Custom order for statistics display (null = use default order)
+            statsOrder: null,
             visibleCharts: {
                 equityCurve: true,
                 dailyPL: true,
@@ -4278,6 +4283,7 @@ select.form-control {
                     customRules: appState.customRules,
                     strategyContext: appState.strategyContext,
                     visibleStats: appState.visibleStats,
+                    statsOrder: appState.statsOrder,
                     visibleCharts: appState.visibleCharts,
                     visibleColumns: appState.visibleColumns,
                     aiPromptInclusions: appState.aiPromptInclusions,
@@ -4386,6 +4392,9 @@ select.form-control {
                 }
                 if (data.visibleStats) {
                     Object.assign(appState.visibleStats, data.visibleStats);
+                }
+                if (data.statsOrder) {
+                    appState.statsOrder = data.statsOrder;
                 }
                 if (data.visibleCharts) {
                     Object.assign(appState.visibleCharts, data.visibleCharts);
@@ -7221,8 +7230,36 @@ select.form-control {
 
             let html = '';
 
+            // Apply custom order if available
+            let orderedStatsDefinitions = statsDefinitions;
+            if (appState.statsOrder && Array.isArray(appState.statsOrder)) {
+                // Create a map for quick lookup
+                const statsMap = new Map(statsDefinitions.map(stat => [stat.key, stat]));
+
+                // Reorder based on statsOrder, and append any new stats not in the order
+                const orderedStats = [];
+                const usedKeys = new Set();
+
+                // Add stats in custom order
+                appState.statsOrder.forEach(key => {
+                    if (statsMap.has(key)) {
+                        orderedStats.push(statsMap.get(key));
+                        usedKeys.add(key);
+                    }
+                });
+
+                // Add any remaining stats that weren't in the custom order
+                statsDefinitions.forEach(stat => {
+                    if (!usedKeys.has(stat.key)) {
+                        orderedStats.push(stat);
+                    }
+                });
+
+                orderedStatsDefinitions = orderedStats;
+            }
+
             // Generate cards for each visible stat showing only one value
-            statsDefinitions.filter(stat => statsConfig[stat.key]).forEach(stat => {
+            orderedStatsDefinitions.filter(stat => statsConfig[stat.key]).forEach(stat => {
                 const value = stats[stat.key];
 
                 // Adjust values that need absolute formatting
@@ -13566,7 +13603,7 @@ select.form-control {
                 winRate: 'Win Rate',
                 rulesWinRate: 'Rules Win Rate',
                 profitFactor: 'Profit Factor',
-                netPL: 'Net P/L',
+                netPL: 'Net P&L',
                 avgWin: 'Average Win',
                 avgLoss: 'Average Loss',
                 largestWin: 'Largest Win',
@@ -13581,7 +13618,41 @@ select.form-control {
                 longestWinStreak: 'Longest Win Streak',
                 longestLossStreak: 'Longest Loss Streak',
                 riskRewardRatio: 'Risk/Reward Ratio',
-                avgTradeDuration: 'Avg Trade Duration'
+                avgTradeDuration: 'Avg Trade Duration',
+                // Phase 2 New Stats
+                stdDevReturns: 'Std Dev Returns',
+                sharpeRatio: 'Sharpe Ratio',
+                sqn: 'System Quality Number',
+                breakEvenWinRate: 'Break-Even Win Rate',
+                avgDrawdownDuration: 'Avg Drawdown Duration',
+                avgDrawdownDays: 'Avg Drawdown Days',
+                avgDrawdownTrades: 'Avg Drawdown Trades',
+                profitConsistencyScore: 'Profit Consistency',
+                // Market Session Performance
+                asianSessionTrades: 'Asian Session Trades',
+                asianSessionWinRate: 'Asian Win Rate',
+                asianSessionPL: 'Asian P&L',
+                londonSessionTrades: 'London Session Trades',
+                londonSessionWinRate: 'London Win Rate',
+                londonSessionPL: 'London P&L',
+                newYorkSessionTrades: 'New York Session Trades',
+                newYorkSessionWinRate: 'New York Win Rate',
+                newYorkSessionPL: 'New York P&L',
+                overlapSessionTrades: 'Overlap Session Trades',
+                overlapSessionWinRate: 'Overlap Win Rate',
+                overlapSessionPL: 'Overlap P&L',
+                tradeTimingScore: 'Trade Timing Score',
+                // Phase 3 Streak Probability Stats
+                prob2WinsRow: 'Prob 2 Wins in a Row',
+                prob3WinsRow: 'Prob 3 Wins in a Row',
+                prob4WinsRow: 'Prob 4 Wins in a Row',
+                prob5WinsRow: 'Prob 5 Wins in a Row',
+                prob2LossesRow: 'Prob 2 Losses in a Row',
+                prob3LossesRow: 'Prob 3 Losses in a Row',
+                prob4LossesRow: 'Prob 4 Losses in a Row',
+                prob5LossesRow: 'Prob 5 Losses in a Row',
+                expectedMaxWinStreak: 'Expected Max Win Streak',
+                expectedMaxLossStreak: 'Expected Max Loss Streak'
             };
             return labels[key] || key;
         }
@@ -13616,16 +13687,41 @@ select.form-control {
         function renderStatsConfig() {
             const grid = document.getElementById('statsConfigGrid');
             let html = '';
-            
-            Object.keys(appState.visibleStats).forEach(statKey => {
+
+            // Use custom order if available, otherwise use default order
+            const displayOrder = appState.statsOrder || getDefaultStatsOrder();
+
+            // Render stats in the specified order
+            displayOrder.forEach((statKey, index) => {
+                const isFirst = index === 0;
+                const isLast = index === displayOrder.length - 1;
+
                 html += `
-                    <label style="display: flex; align-items: center; gap: var(--space-8); font-size: var(--font-size-sm); color: var(--color-text);">
-                        <input type="checkbox" ${appState.visibleStats[statKey] ? 'checked' : ''} onchange="toggleStat('${statKey}', this.checked)" style="border-radius: var(--radius-sm);">
-                        <span>${getStatLabel(statKey)}</span>
-                    </label>
+                    <div style="display: flex; align-items: center; gap: var(--space-8); font-size: var(--font-size-sm); color: var(--color-text); padding: var(--space-4) 0;">
+                        <div style="display: flex; flex-direction: column; gap: 2px;">
+                            <button
+                                onclick="moveStatUp('${statKey}')"
+                                ${isFirst ? 'disabled' : ''}
+                                style="padding: 2px 6px; font-size: 10px; cursor: ${isFirst ? 'not-allowed' : 'pointer'}; opacity: ${isFirst ? '0.3' : '1'}; background: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: 3px; color: var(--color-text);"
+                                title="Move up">
+                                ▲
+                            </button>
+                            <button
+                                onclick="moveStatDown('${statKey}')"
+                                ${isLast ? 'disabled' : ''}
+                                style="padding: 2px 6px; font-size: 10px; cursor: ${isLast ? 'not-allowed' : 'pointer'}; opacity: ${isLast ? '0.3' : '1'}; background: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: 3px; color: var(--color-text);"
+                                title="Move down">
+                                ▼
+                            </button>
+                        </div>
+                        <label style="display: flex; align-items: center; gap: var(--space-8); flex: 1;">
+                            <input type="checkbox" ${appState.visibleStats[statKey] ? 'checked' : ''} onchange="toggleStat('${statKey}', this.checked)" style="border-radius: var(--radius-sm);">
+                            <span>${getStatLabel(statKey)}</span>
+                        </label>
+                    </div>
                 `;
             });
-            
+
             grid.innerHTML = html;
         }
         
@@ -13633,13 +13729,61 @@ select.form-control {
             appState.visibleStats[statKey] = checked;
             updateStatisticsDisplay();
         }
-        
+
         function showAllStats() {
             Object.keys(appState.visibleStats).forEach(key => {
                 appState.visibleStats[key] = true;
             });
             renderStatsConfig();
             updateStatisticsDisplay();
+        }
+
+        // Get the default stats order from statsDefinitions
+        function getDefaultStatsOrder() {
+            return ['totalTrades', 'winningTrades', 'losingTrades', 'winRate', 'rulesWinRate', 'netPL', 'totalFees', 'profitFactor', 'avgWin', 'avgLoss', 'largestWin', 'largestLoss', 'expectancy', 'accountGrowth', 'currentBalance', 'startingBalance', 'maxDrawdown', 'maxDrawdownPercent', 'recoveryFactor', 'currentStreak', 'longestWinStreak', 'longestLossStreak', 'riskRewardRatio', 'avgTradeDuration', 'stdDevReturns', 'sharpeRatio', 'sqn', 'breakEvenWinRate', 'avgDrawdownDuration', 'avgDrawdownDays', 'avgDrawdownTrades', 'profitConsistencyScore', 'asianSessionTrades', 'asianSessionWinRate', 'asianSessionPL', 'londonSessionTrades', 'londonSessionWinRate', 'londonSessionPL', 'newYorkSessionTrades', 'newYorkSessionWinRate', 'newYorkSessionPL', 'overlapSessionTrades', 'overlapSessionWinRate', 'overlapSessionPL', 'tradeTimingScore', 'prob2WinsRow', 'prob3WinsRow', 'prob4WinsRow', 'prob5WinsRow', 'prob2LossesRow', 'prob3LossesRow', 'prob4LossesRow', 'prob5LossesRow', 'expectedMaxWinStreak', 'expectedMaxLossStreak'];
+        }
+
+        function moveStatUp(statKey) {
+            // Initialize statsOrder if it doesn't exist
+            if (!appState.statsOrder) {
+                appState.statsOrder = getDefaultStatsOrder();
+            }
+
+            const currentIndex = appState.statsOrder.indexOf(statKey);
+            if (currentIndex > 0) {
+                // Swap with previous item
+                [appState.statsOrder[currentIndex - 1], appState.statsOrder[currentIndex]] =
+                [appState.statsOrder[currentIndex], appState.statsOrder[currentIndex - 1]];
+
+                renderStatsConfig();
+                updateStatisticsDisplay();
+                saveToLocalStorage();
+            }
+        }
+
+        function moveStatDown(statKey) {
+            // Initialize statsOrder if it doesn't exist
+            if (!appState.statsOrder) {
+                appState.statsOrder = getDefaultStatsOrder();
+            }
+
+            const currentIndex = appState.statsOrder.indexOf(statKey);
+            if (currentIndex < appState.statsOrder.length - 1 && currentIndex !== -1) {
+                // Swap with next item
+                [appState.statsOrder[currentIndex], appState.statsOrder[currentIndex + 1]] =
+                [appState.statsOrder[currentIndex + 1], appState.statsOrder[currentIndex]];
+
+                renderStatsConfig();
+                updateStatisticsDisplay();
+                saveToLocalStorage();
+            }
+        }
+
+        function resetStatsOrder() {
+            appState.statsOrder = null;
+            renderStatsConfig();
+            updateStatisticsDisplay();
+            saveToLocalStorage();
         }
         
         function toggleChartsConfig() {
