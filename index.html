@@ -11580,7 +11580,7 @@ select.form-control {
                 
                 prompt += `💼 INDIVIDUAL TRADES (${selectionText} - ${data.trades.count} trades):\n`;
                 data.trades.data.forEach((trade, index) => {
-                    prompt += `• ${trade.date} ${trade.time}: ${trade.symbol} ${trade.direction}, Entry: ${trade.entryPrice}, Exit: ${trade.exitPrice}, ${trade.pips} pips, ${formatCurrency(trade.netPL)} P&L`;
+                    prompt += `• ${trade.symbol} ${trade.direction}, Opened: ${trade.openDate} ${trade.openTime}, Closed: ${trade.date} ${trade.time}, Entry: ${trade.entryPrice}, Exit: ${trade.exitPrice}, ${trade.pips} pips, ${formatCurrency(trade.netPL)} P&L`;
                     if (trade.setupType && trade.setupType !== '—') prompt += `, Setup: ${trade.setupType}`;
                     if (trade.emotionalState && trade.emotionalState !== '—') prompt += `, Emotion: ${trade.emotionalState}`;
                     if (trade.ruleAdherence && trade.ruleAdherence !== '—') prompt += `, Rules: ${trade.ruleAdherence}`;
