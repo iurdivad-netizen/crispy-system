@@ -3664,7 +3664,30 @@ select.form-control {
                 longestWinStreak: true,
                 longestLossStreak: true,
                 riskRewardRatio: true,
-                avgTradeDuration: true
+                avgTradeDuration: true,
+                // Phase 2 New Stats
+                stdDevReturns: true,
+                sharpeRatio: true,
+                sqn: true,
+                breakEvenWinRate: true,
+                avgDrawdownDuration: true,
+                avgDrawdownDays: true,
+                avgDrawdownTrades: true,
+                profitConsistencyScore: true,
+                // Market Session Performance
+                asianSessionTrades: true,
+                asianSessionWinRate: true,
+                asianSessionPL: true,
+                londonSessionTrades: true,
+                londonSessionWinRate: true,
+                londonSessionPL: true,
+                newYorkSessionTrades: true,
+                newYorkSessionWinRate: true,
+                newYorkSessionPL: true,
+                overlapSessionTrades: true,
+                overlapSessionWinRate: true,
+                overlapSessionPL: true,
+                tradeTimingScore: true
             },
             visibleCharts: {
                 equityCurve: true,
@@ -6343,6 +6366,177 @@ select.form-control {
 
             const avgTradeDuration = tradesWithDuration > 0 ? (totalDuration / tradesWithDuration) : 0;
 
+            // PHASE 2 STATS: Standard Deviation of Returns
+            const returns = sortedTrades.map(t => (parseFloat(t.netPL) || parseFloat(t.profit) || 0));
+            const avgReturn = returns.length > 0 ? (returns.reduce((sum, r) => sum + r, 0) / returns.length) : 0;
+            const squaredDiffs = returns.map(r => Math.pow(r - avgReturn, 2));
+            const variance = squaredDiffs.length > 0 ? (squaredDiffs.reduce((sum, d) => sum + d, 0) / squaredDiffs.length) : 0;
+            const stdDevReturns = Math.sqrt(variance);
+
+            // PHASE 2 STATS: Sharpe Ratio (annualized, assuming ~252 trading days, risk-free rate = 0)
+            // Using simplified calculation: (Average Return / Std Dev) * sqrt(252)
+            // For more accurate results, consider actual trading frequency
+            const riskFreeRate = 0; // Can be adjusted based on current rates
+            const sharpeRatio = stdDevReturns > 0 ? ((avgReturn - riskFreeRate) / stdDevReturns) * Math.sqrt(252) : 0;
+
+            // PHASE 2 STATS: System Quality Number (SQN) - Van Tharp metric
+            // SQN = (Average Win - Average Loss) / StdDev * sqrt(N)
+            const sqn = stdDevReturns > 0 ? (expectancy / stdDevReturns) * Math.sqrt(trades.length) : 0;
+
+            // PHASE 2 STATS: Break-Even Win Rate
+            // The win rate needed to break even given current avg win/loss
+            const breakEvenWinRate = (avgWin + avgLoss) > 0 ? (avgLoss / (avgWin + avgLoss) * 100) : 0;
+
+            // PHASE 2 STATS: Average Drawdown Duration
+            // Calculate how long (in days and number of trades) drawdowns typically last
+            let drawdownPeriods = [];
+            let currentDrawdownStart = null;
+            let currentDrawdownStartIndex = null;
+            let inDrawdown = false;
+
+            runningBalance = appState.startingBalance;
+            peak = appState.startingBalance;
+
+            sortedTrades.forEach((trade, index) => {
+                const tradePL = parseFloat(trade.netPL) || parseFloat(trade.profit) || 0;
+                runningBalance += tradePL;
+
+                if (runningBalance > peak) {
+                    // New peak - end of drawdown if we were in one
+                    if (inDrawdown && currentDrawdownStart) {
+                        const endDate = new Date(trade.closeTime || `${trade.date}T${trade.time}:00`);
+                        const durationMs = endDate - currentDrawdownStart;
+                        const durationDays = durationMs / (1000 * 60 * 60 * 24);
+                        const tradeCount = index - currentDrawdownStartIndex;
+                        drawdownPeriods.push({ durationMs, durationDays, tradeCount });
+                        inDrawdown = false;
+                        currentDrawdownStart = null;
+                        currentDrawdownStartIndex = null;
+                    }
+                    peak = runningBalance;
+                } else if (runningBalance < peak) {
+                    // In drawdown
+                    if (!inDrawdown) {
+                        // Start of new drawdown
+                        inDrawdown = true;
+                        currentDrawdownStart = new Date(trade.closeTime || `${trade.date}T${trade.time}:00`);
+                        currentDrawdownStartIndex = index;
+                    }
+                }
+            });
+
+            const avgDrawdownDuration = drawdownPeriods.length > 0
+                ? drawdownPeriods.reduce((sum, d) => sum + d.durationMs, 0) / drawdownPeriods.length
+                : 0;
+            const avgDrawdownDays = drawdownPeriods.length > 0
+                ? drawdownPeriods.reduce((sum, d) => sum + d.durationDays, 0) / drawdownPeriods.length
+                : 0;
+            const avgDrawdownTrades = drawdownPeriods.length > 0
+                ? drawdownPeriods.reduce((sum, d) => sum + d.tradeCount, 0) / drawdownPeriods.length
+                : 0;
+
+            // PHASE 2 STATS: Profit Consistency Score
+            // Calculate percentage of profitable days/weeks
+            const dailyPL = {};
+            sortedTrades.forEach(trade => {
+                const tradeDate = trade.date;
+                const tradePL = parseFloat(trade.netPL) || parseFloat(trade.profit) || 0;
+                dailyPL[tradeDate] = (dailyPL[tradeDate] || 0) + tradePL;
+            });
+
+            const days = Object.keys(dailyPL);
+            const profitableDays = days.filter(day => dailyPL[day] > 0).length;
+            const profitConsistencyScore = days.length > 0 ? (profitableDays / days.length * 100) : 0;
+
+            // PHASE 2 STATS: Performance by Market Session
+            // Forex market sessions (UTC times):
+            // Asian: 00:00-09:00 UTC, London: 08:00-17:00 UTC, New York: 13:00-22:00 UTC
+            const sessionStats = {
+                asian: { trades: [], wins: 0, totalPL: 0 },
+                london: { trades: [], wins: 0, totalPL: 0 },
+                newYork: { trades: [], wins: 0, totalPL: 0 },
+                overlap: { trades: [], wins: 0, totalPL: 0 }
+            };
+
+            sortedTrades.forEach(trade => {
+                const tradeTime = trade.time || '00:00:00';
+                const hours = parseInt(tradeTime.split(':')[0]);
+                const tradePL = parseFloat(trade.netPL) || parseFloat(trade.profit) || 0;
+                const isWin = tradePL > 0;
+
+                // Determine which session(s) the trade belongs to
+                const inAsian = hours >= 0 && hours < 9;
+                const inLondon = hours >= 8 && hours < 17;
+                const inNewYork = hours >= 13 && hours < 22;
+
+                // Check for overlaps
+                if ((inLondon && inAsian) || (inLondon && inNewYork)) {
+                    sessionStats.overlap.trades.push(trade);
+                    if (isWin) sessionStats.overlap.wins++;
+                    sessionStats.overlap.totalPL += tradePL;
+                } else if (inAsian) {
+                    sessionStats.asian.trades.push(trade);
+                    if (isWin) sessionStats.asian.wins++;
+                    sessionStats.asian.totalPL += tradePL;
+                } else if (inNewYork) {
+                    sessionStats.newYork.trades.push(trade);
+                    if (isWin) sessionStats.newYork.wins++;
+                    sessionStats.newYork.totalPL += tradePL;
+                } else if (inLondon) {
+                    sessionStats.london.trades.push(trade);
+                    if (isWin) sessionStats.london.wins++;
+                    sessionStats.london.totalPL += tradePL;
+                }
+            });
+
+            // Calculate win rates for each session
+            const asianWinRate = sessionStats.asian.trades.length > 0
+                ? (sessionStats.asian.wins / sessionStats.asian.trades.length * 100) : 0;
+            const londonWinRate = sessionStats.london.trades.length > 0
+                ? (sessionStats.london.wins / sessionStats.london.trades.length * 100) : 0;
+            const newYorkWinRate = sessionStats.newYork.trades.length > 0
+                ? (sessionStats.newYork.wins / sessionStats.newYork.trades.length * 100) : 0;
+            const overlapWinRate = sessionStats.overlap.trades.length > 0
+                ? (sessionStats.overlap.wins / sessionStats.overlap.trades.length * 100) : 0;
+
+            // PHASE 2 STATS: Trade Timing Score
+            // Compare performance during best performing hours vs worst
+            // This will be based on hourly stats that are already calculated elsewhere
+            // For now, we'll create a simplified version
+            const hourlyPerformance = {};
+            sortedTrades.forEach(trade => {
+                const hour = trade.time ? parseInt(trade.time.split(':')[0]) : 0;
+                if (!hourlyPerformance[hour]) {
+                    hourlyPerformance[hour] = { count: 0, wins: 0, totalPL: 0 };
+                }
+                const tradePL = parseFloat(trade.netPL) || parseFloat(trade.profit) || 0;
+                hourlyPerformance[hour].count++;
+                if (tradePL > 0) hourlyPerformance[hour].wins++;
+                hourlyPerformance[hour].totalPL += tradePL;
+            });
+
+            // Find best and worst performing hours
+            let bestHourPL = -Infinity;
+            let worstHourPL = Infinity;
+            let bestHourTrades = 0;
+            let worstHourTrades = 0;
+
+            Object.keys(hourlyPerformance).forEach(hour => {
+                const avgPL = hourlyPerformance[hour].totalPL / hourlyPerformance[hour].count;
+                if (avgPL > bestHourPL && hourlyPerformance[hour].count >= 3) {
+                    bestHourPL = avgPL;
+                    bestHourTrades = hourlyPerformance[hour].count;
+                }
+                if (avgPL < worstHourPL && hourlyPerformance[hour].count >= 3) {
+                    worstHourPL = avgPL;
+                    worstHourTrades = hourlyPerformance[hour].count;
+                }
+            });
+
+            // Trade timing score: ratio of best hour performance to worst hour performance
+            // Higher is better (positive means you're trading well during good hours)
+            const tradeTimingScore = worstHourPL !== 0 && worstHourPL !== Infinity ? (bestHourPL / Math.abs(worstHourPL)) : 0;
+
             appState.statistics = {
                 totalTrades: trades.length,
                 winningTrades: wins.length,
@@ -6370,7 +6564,30 @@ select.form-control {
                 longestWinStreak: longestWinStreak,
                 longestLossStreak: longestLossStreak,
                 riskRewardRatio: riskRewardRatio,
-                avgTradeDuration: avgTradeDuration
+                avgTradeDuration: avgTradeDuration,
+                // Phase 2 New Stats
+                stdDevReturns: stdDevReturns,
+                sharpeRatio: sharpeRatio,
+                sqn: sqn,
+                breakEvenWinRate: breakEvenWinRate,
+                avgDrawdownDuration: avgDrawdownDuration,
+                avgDrawdownDays: avgDrawdownDays,
+                avgDrawdownTrades: avgDrawdownTrades,
+                profitConsistencyScore: profitConsistencyScore,
+                // Market Session Performance
+                asianSessionTrades: sessionStats.asian.trades.length,
+                asianSessionWinRate: asianWinRate,
+                asianSessionPL: sessionStats.asian.totalPL,
+                londonSessionTrades: sessionStats.london.trades.length,
+                londonSessionWinRate: londonWinRate,
+                londonSessionPL: sessionStats.london.totalPL,
+                newYorkSessionTrades: sessionStats.newYork.trades.length,
+                newYorkSessionWinRate: newYorkWinRate,
+                newYorkSessionPL: sessionStats.newYork.totalPL,
+                overlapSessionTrades: sessionStats.overlap.trades.length,
+                overlapSessionWinRate: overlapWinRate,
+                overlapSessionPL: sessionStats.overlap.totalPL,
+                tradeTimingScore: tradeTimingScore
             };
 
             appState.currentBalance = currentBalance;
@@ -6429,7 +6646,30 @@ select.form-control {
                     longestWinStreak: 0,
                     longestLossStreak: 0,
                     riskRewardRatio: 0,
-                    avgTradeDuration: 0
+                    avgTradeDuration: 0,
+                    // Phase 2 New Stats
+                    stdDevReturns: 0,
+                    sharpeRatio: 0,
+                    sqn: 0,
+                    breakEvenWinRate: 0,
+                    avgDrawdownDuration: 0,
+                    avgDrawdownDays: 0,
+                    avgDrawdownTrades: 0,
+                    profitConsistencyScore: 0,
+                    // Market Session Performance
+                    asianSessionTrades: 0,
+                    asianSessionWinRate: 0,
+                    asianSessionPL: 0,
+                    londonSessionTrades: 0,
+                    londonSessionWinRate: 0,
+                    londonSessionPL: 0,
+                    newYorkSessionTrades: 0,
+                    newYorkSessionWinRate: 0,
+                    newYorkSessionPL: 0,
+                    overlapSessionTrades: 0,
+                    overlapSessionWinRate: 0,
+                    overlapSessionPL: 0,
+                    tradeTimingScore: 0
                 };
             }
 
@@ -6541,6 +6781,147 @@ select.form-control {
 
             const avgTradeDuration = tradesWithDuration > 0 ? (totalDuration / tradesWithDuration) : 0;
 
+            // Phase 2 stats for monthly view
+            const returns = sortedTrades.map(t => (parseFloat(t.netPL) || parseFloat(t.profit) || 0));
+            const avgReturn = returns.length > 0 ? (returns.reduce((sum, r) => sum + r, 0) / returns.length) : 0;
+            const squaredDiffs = returns.map(r => Math.pow(r - avgReturn, 2));
+            const variance = squaredDiffs.length > 0 ? (squaredDiffs.reduce((sum, d) => sum + d, 0) / squaredDiffs.length) : 0;
+            const stdDevReturns = Math.sqrt(variance);
+
+            const riskFreeRate = 0;
+            const sharpeRatio = stdDevReturns > 0 ? ((avgReturn - riskFreeRate) / stdDevReturns) * Math.sqrt(252) : 0;
+            const sqn = stdDevReturns > 0 ? (expectancy / stdDevReturns) * Math.sqrt(trades.length) : 0;
+            const breakEvenWinRate = (avgWin + avgLoss) > 0 ? (avgLoss / (avgWin + avgLoss) * 100) : 0;
+
+            // Average Drawdown Duration for month
+            let drawdownPeriods = [];
+            let currentDrawdownStart = null;
+            let currentDrawdownStartIndex = null;
+            let inDrawdown = false;
+            let monthRunningBalance = appState.startingBalance;
+            let monthPeak = appState.startingBalance;
+
+            sortedTrades.forEach((trade, index) => {
+                const tradePL = parseFloat(trade.netPL) || parseFloat(trade.profit) || 0;
+                monthRunningBalance += tradePL;
+
+                if (monthRunningBalance > monthPeak) {
+                    if (inDrawdown && currentDrawdownStart) {
+                        const endDate = new Date(trade.closeTime || `${trade.date}T${trade.time}:00`);
+                        const durationMs = endDate - currentDrawdownStart;
+                        const durationDays = durationMs / (1000 * 60 * 60 * 24);
+                        const tradeCount = index - currentDrawdownStartIndex;
+                        drawdownPeriods.push({ durationMs, durationDays, tradeCount });
+                        inDrawdown = false;
+                        currentDrawdownStart = null;
+                        currentDrawdownStartIndex = null;
+                    }
+                    monthPeak = monthRunningBalance;
+                } else if (monthRunningBalance < monthPeak) {
+                    if (!inDrawdown) {
+                        inDrawdown = true;
+                        currentDrawdownStart = new Date(trade.closeTime || `${trade.date}T${trade.time}:00`);
+                        currentDrawdownStartIndex = index;
+                    }
+                }
+            });
+
+            const avgDrawdownDuration = drawdownPeriods.length > 0
+                ? drawdownPeriods.reduce((sum, d) => sum + d.durationMs, 0) / drawdownPeriods.length
+                : 0;
+            const avgDrawdownDays = drawdownPeriods.length > 0
+                ? drawdownPeriods.reduce((sum, d) => sum + d.durationDays, 0) / drawdownPeriods.length
+                : 0;
+            const avgDrawdownTrades = drawdownPeriods.length > 0
+                ? drawdownPeriods.reduce((sum, d) => sum + d.tradeCount, 0) / drawdownPeriods.length
+                : 0;
+
+            // Profit Consistency Score
+            const dailyPL = {};
+            sortedTrades.forEach(trade => {
+                const tradeDate = trade.date;
+                const tradePL = parseFloat(trade.netPL) || parseFloat(trade.profit) || 0;
+                dailyPL[tradeDate] = (dailyPL[tradeDate] || 0) + tradePL;
+            });
+
+            const days = Object.keys(dailyPL);
+            const profitableDays = days.filter(day => dailyPL[day] > 0).length;
+            const profitConsistencyScore = days.length > 0 ? (profitableDays / days.length * 100) : 0;
+
+            // Market Session Performance
+            const sessionStats = {
+                asian: { trades: [], wins: 0, totalPL: 0 },
+                london: { trades: [], wins: 0, totalPL: 0 },
+                newYork: { trades: [], wins: 0, totalPL: 0 },
+                overlap: { trades: [], wins: 0, totalPL: 0 }
+            };
+
+            sortedTrades.forEach(trade => {
+                const tradeTime = trade.time || '00:00:00';
+                const hours = parseInt(tradeTime.split(':')[0]);
+                const tradePL = parseFloat(trade.netPL) || parseFloat(trade.profit) || 0;
+                const isWin = tradePL > 0;
+
+                const inAsian = hours >= 0 && hours < 9;
+                const inLondon = hours >= 8 && hours < 17;
+                const inNewYork = hours >= 13 && hours < 22;
+
+                if ((inLondon && inAsian) || (inLondon && inNewYork)) {
+                    sessionStats.overlap.trades.push(trade);
+                    if (isWin) sessionStats.overlap.wins++;
+                    sessionStats.overlap.totalPL += tradePL;
+                } else if (inAsian) {
+                    sessionStats.asian.trades.push(trade);
+                    if (isWin) sessionStats.asian.wins++;
+                    sessionStats.asian.totalPL += tradePL;
+                } else if (inNewYork) {
+                    sessionStats.newYork.trades.push(trade);
+                    if (isWin) sessionStats.newYork.wins++;
+                    sessionStats.newYork.totalPL += tradePL;
+                } else if (inLondon) {
+                    sessionStats.london.trades.push(trade);
+                    if (isWin) sessionStats.london.wins++;
+                    sessionStats.london.totalPL += tradePL;
+                }
+            });
+
+            const asianWinRate = sessionStats.asian.trades.length > 0
+                ? (sessionStats.asian.wins / sessionStats.asian.trades.length * 100) : 0;
+            const londonWinRate = sessionStats.london.trades.length > 0
+                ? (sessionStats.london.wins / sessionStats.london.trades.length * 100) : 0;
+            const newYorkWinRate = sessionStats.newYork.trades.length > 0
+                ? (sessionStats.newYork.wins / sessionStats.newYork.trades.length * 100) : 0;
+            const overlapWinRate = sessionStats.overlap.trades.length > 0
+                ? (sessionStats.overlap.wins / sessionStats.overlap.trades.length * 100) : 0;
+
+            // Trade Timing Score
+            const hourlyPerformance = {};
+            sortedTrades.forEach(trade => {
+                const hour = trade.time ? parseInt(trade.time.split(':')[0]) : 0;
+                if (!hourlyPerformance[hour]) {
+                    hourlyPerformance[hour] = { count: 0, wins: 0, totalPL: 0 };
+                }
+                const tradePL = parseFloat(trade.netPL) || parseFloat(trade.profit) || 0;
+                hourlyPerformance[hour].count++;
+                if (tradePL > 0) hourlyPerformance[hour].wins++;
+                hourlyPerformance[hour].totalPL += tradePL;
+            });
+
+            let bestHourPL = -Infinity;
+            let worstHourPL = Infinity;
+
+            Object.keys(hourlyPerformance).forEach(hour => {
+                const avgPL = hourlyPerformance[hour].totalPL / hourlyPerformance[hour].count;
+                if (avgPL > bestHourPL && hourlyPerformance[hour].count >= 3) {
+                    bestHourPL = avgPL;
+                }
+                if (avgPL < worstHourPL && hourlyPerformance[hour].count >= 3) {
+                    worstHourPL = avgPL;
+                }
+            });
+
+            const tradeTimingScore = worstHourPL !== 0 && worstHourPL !== Infinity ? (bestHourPL / Math.abs(worstHourPL)) : 0;
+
             return {
                 totalTrades: trades.length,
                 winningTrades: wins.length,
@@ -6567,7 +6948,30 @@ select.form-control {
                 longestWinStreak: longestWinStreak,
                 longestLossStreak: longestLossStreak,
                 riskRewardRatio: riskRewardRatio,
-                avgTradeDuration: avgTradeDuration
+                avgTradeDuration: avgTradeDuration,
+                // Phase 2 New Stats
+                stdDevReturns: stdDevReturns,
+                sharpeRatio: sharpeRatio,
+                sqn: sqn,
+                breakEvenWinRate: breakEvenWinRate,
+                avgDrawdownDuration: avgDrawdownDuration,
+                avgDrawdownDays: avgDrawdownDays,
+                avgDrawdownTrades: avgDrawdownTrades,
+                profitConsistencyScore: profitConsistencyScore,
+                // Market Session Performance
+                asianSessionTrades: sessionStats.asian.trades.length,
+                asianSessionWinRate: asianWinRate,
+                asianSessionPL: sessionStats.asian.totalPL,
+                londonSessionTrades: sessionStats.london.trades.length,
+                londonSessionWinRate: londonWinRate,
+                londonSessionPL: sessionStats.london.totalPL,
+                newYorkSessionTrades: sessionStats.newYork.trades.length,
+                newYorkSessionWinRate: newYorkWinRate,
+                newYorkSessionPL: sessionStats.newYork.totalPL,
+                overlapSessionTrades: sessionStats.overlap.trades.length,
+                overlapSessionWinRate: overlapWinRate,
+                overlapSessionPL: sessionStats.overlap.totalPL,
+                tradeTimingScore: tradeTimingScore
             };
         }
 
@@ -6613,14 +7017,35 @@ select.form-control {
                     case 'maxDrawdown':
                     case 'maxDrawdownPercent':
                     case 'longestLossStreak':
+                    case 'stdDevReturns':
+                    case 'avgDrawdownDuration':
+                    case 'avgDrawdownDays':
+                    case 'avgDrawdownTrades':
+                    case 'breakEvenWinRate':
                         return 'negative';
                     case 'netPL':
                     case 'expectancy':
                     case 'accountGrowth':
+                    case 'asianSessionPL':
+                    case 'londonSessionPL':
+                    case 'newYorkSessionPL':
+                    case 'overlapSessionPL':
                         return value >= 0 ? 'positive' : 'negative';
                     case 'recoveryFactor':
                     case 'riskRewardRatio':
+                    case 'profitFactor':
                         return value >= 1 ? 'positive' : 'negative';
+                    case 'sharpeRatio':
+                    case 'sqn':
+                    case 'tradeTimingScore':
+                        return value > 0 ? 'positive' : 'negative';
+                    case 'profitConsistencyScore':
+                    case 'winRate':
+                    case 'asianSessionWinRate':
+                    case 'londonSessionWinRate':
+                    case 'newYorkSessionWinRate':
+                    case 'overlapSessionWinRate':
+                        return value >= 50 ? 'positive' : 'negative';
                     default:
                         return '';
                 }
@@ -6650,7 +7075,30 @@ select.form-control {
                 { key: 'longestWinStreak', label: 'Longest Win Streak', format: 'number' },
                 { key: 'longestLossStreak', label: 'Longest Loss Streak', format: 'number' },
                 { key: 'riskRewardRatio', label: 'Risk/Reward Ratio', format: 'decimal' },
-                { key: 'avgTradeDuration', label: 'Avg Trade Duration', format: 'duration' }
+                { key: 'avgTradeDuration', label: 'Avg Trade Duration', format: 'duration' },
+                // Phase 2 New Stats
+                { key: 'stdDevReturns', label: 'Std Dev Returns', format: 'currency' },
+                { key: 'sharpeRatio', label: 'Sharpe Ratio', format: 'decimal' },
+                { key: 'sqn', label: 'System Quality Number', format: 'decimal' },
+                { key: 'breakEvenWinRate', label: 'Break-Even Win Rate', format: 'percentage' },
+                { key: 'avgDrawdownDuration', label: 'Avg Drawdown Duration', format: 'duration' },
+                { key: 'avgDrawdownDays', label: 'Avg Drawdown Days', format: 'decimal' },
+                { key: 'avgDrawdownTrades', label: 'Avg Drawdown Trades', format: 'decimal' },
+                { key: 'profitConsistencyScore', label: 'Profit Consistency', format: 'percentage' },
+                // Market Session Performance
+                { key: 'asianSessionTrades', label: 'Asian Session Trades', format: 'number' },
+                { key: 'asianSessionWinRate', label: 'Asian Win Rate', format: 'percentage' },
+                { key: 'asianSessionPL', label: 'Asian P&L', format: 'currency' },
+                { key: 'londonSessionTrades', label: 'London Session Trades', format: 'number' },
+                { key: 'londonSessionWinRate', label: 'London Win Rate', format: 'percentage' },
+                { key: 'londonSessionPL', label: 'London P&L', format: 'currency' },
+                { key: 'newYorkSessionTrades', label: 'New York Session Trades', format: 'number' },
+                { key: 'newYorkSessionWinRate', label: 'New York Win Rate', format: 'percentage' },
+                { key: 'newYorkSessionPL', label: 'New York P&L', format: 'currency' },
+                { key: 'overlapSessionTrades', label: 'Overlap Session Trades', format: 'number' },
+                { key: 'overlapSessionWinRate', label: 'Overlap Win Rate', format: 'percentage' },
+                { key: 'overlapSessionPL', label: 'Overlap P&L', format: 'currency' },
+                { key: 'tradeTimingScore', label: 'Trade Timing Score', format: 'decimal' }
             ];
 
             let html = '';
