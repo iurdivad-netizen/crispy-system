@@ -3703,7 +3703,18 @@ select.form-control {
                 overlapSessionTrades: true,
                 overlapSessionWinRate: true,
                 overlapSessionPL: true,
-                tradeTimingScore: true
+                tradeTimingScore: true,
+                // Phase 3 Streak Probability Stats
+                prob2WinsRow: true,
+                prob3WinsRow: true,
+                prob4WinsRow: true,
+                prob5WinsRow: true,
+                prob2LossesRow: true,
+                prob3LossesRow: true,
+                prob4LossesRow: true,
+                prob5LossesRow: true,
+                expectedMaxWinStreak: true,
+                expectedMaxLossStreak: true
             },
             visibleCharts: {
                 equityCurve: true,
@@ -6553,6 +6564,32 @@ select.form-control {
             // Higher is better (positive means you're trading well during good hours)
             const tradeTimingScore = worstHourPL !== 0 && worstHourPL !== Infinity ? (bestHourPL / Math.abs(worstHourPL)) : 0;
 
+            // PHASE 3 STATS: Streak Probability Analysis
+            // Calculate probability of consecutive wins/losses based on current win rate
+            const winRateDecimal = trades.length > 0 ? (wins.length / trades.length) : 0;
+            const lossRateDecimal = 1 - winRateDecimal;
+
+            // Probability of N consecutive wins = winRate^N
+            const prob2WinsRow = Math.pow(winRateDecimal, 2) * 100;
+            const prob3WinsRow = Math.pow(winRateDecimal, 3) * 100;
+            const prob4WinsRow = Math.pow(winRateDecimal, 4) * 100;
+            const prob5WinsRow = Math.pow(winRateDecimal, 5) * 100;
+
+            // Probability of N consecutive losses = lossRate^N
+            const prob2LossesRow = Math.pow(lossRateDecimal, 2) * 100;
+            const prob3LossesRow = Math.pow(lossRateDecimal, 3) * 100;
+            const prob4LossesRow = Math.pow(lossRateDecimal, 4) * 100;
+            const prob5LossesRow = Math.pow(lossRateDecimal, 5) * 100;
+
+            // Expected maximum streak in next 100 trades (using logarithmic formula)
+            // Expected max streak ≈ log(N) / log(1/p) where N is number of trials, p is probability
+            const expectedMaxWinStreak = trades.length > 0 && winRateDecimal > 0
+                ? Math.log(100) / Math.log(1 / winRateDecimal)
+                : 0;
+            const expectedMaxLossStreak = trades.length > 0 && lossRateDecimal > 0
+                ? Math.log(100) / Math.log(1 / lossRateDecimal)
+                : 0;
+
             appState.statistics = {
                 totalTrades: trades.length,
                 winningTrades: wins.length,
@@ -6603,7 +6640,18 @@ select.form-control {
                 overlapSessionTrades: sessionStats.overlap.trades.length,
                 overlapSessionWinRate: overlapWinRate,
                 overlapSessionPL: sessionStats.overlap.totalPL,
-                tradeTimingScore: tradeTimingScore
+                tradeTimingScore: tradeTimingScore,
+                // Phase 3 Streak Probability Stats
+                prob2WinsRow: prob2WinsRow,
+                prob3WinsRow: prob3WinsRow,
+                prob4WinsRow: prob4WinsRow,
+                prob5WinsRow: prob5WinsRow,
+                prob2LossesRow: prob2LossesRow,
+                prob3LossesRow: prob3LossesRow,
+                prob4LossesRow: prob4LossesRow,
+                prob5LossesRow: prob5LossesRow,
+                expectedMaxWinStreak: expectedMaxWinStreak,
+                expectedMaxLossStreak: expectedMaxLossStreak
             };
 
             appState.currentBalance = currentBalance;
@@ -6685,7 +6733,18 @@ select.form-control {
                     overlapSessionTrades: 0,
                     overlapSessionWinRate: 0,
                     overlapSessionPL: 0,
-                    tradeTimingScore: 0
+                    tradeTimingScore: 0,
+                    // Phase 3 Streak Probability Stats
+                    prob2WinsRow: 0,
+                    prob3WinsRow: 0,
+                    prob4WinsRow: 0,
+                    prob5WinsRow: 0,
+                    prob2LossesRow: 0,
+                    prob3LossesRow: 0,
+                    prob4LossesRow: 0,
+                    prob5LossesRow: 0,
+                    expectedMaxWinStreak: 0,
+                    expectedMaxLossStreak: 0
                 };
             }
 
@@ -6938,6 +6997,27 @@ select.form-control {
 
             const tradeTimingScore = worstHourPL !== 0 && worstHourPL !== Infinity ? (bestHourPL / Math.abs(worstHourPL)) : 0;
 
+            // Phase 3 Streak Probability Analysis for monthly view
+            const monthWinRateDecimal = trades.length > 0 ? (wins.length / trades.length) : 0;
+            const monthLossRateDecimal = 1 - monthWinRateDecimal;
+
+            const monthProb2WinsRow = Math.pow(monthWinRateDecimal, 2) * 100;
+            const monthProb3WinsRow = Math.pow(monthWinRateDecimal, 3) * 100;
+            const monthProb4WinsRow = Math.pow(monthWinRateDecimal, 4) * 100;
+            const monthProb5WinsRow = Math.pow(monthWinRateDecimal, 5) * 100;
+
+            const monthProb2LossesRow = Math.pow(monthLossRateDecimal, 2) * 100;
+            const monthProb3LossesRow = Math.pow(monthLossRateDecimal, 3) * 100;
+            const monthProb4LossesRow = Math.pow(monthLossRateDecimal, 4) * 100;
+            const monthProb5LossesRow = Math.pow(monthLossRateDecimal, 5) * 100;
+
+            const monthExpectedMaxWinStreak = trades.length > 0 && monthWinRateDecimal > 0
+                ? Math.log(100) / Math.log(1 / monthWinRateDecimal)
+                : 0;
+            const monthExpectedMaxLossStreak = trades.length > 0 && monthLossRateDecimal > 0
+                ? Math.log(100) / Math.log(1 / monthLossRateDecimal)
+                : 0;
+
             return {
                 totalTrades: trades.length,
                 winningTrades: wins.length,
@@ -6987,7 +7067,18 @@ select.form-control {
                 overlapSessionTrades: sessionStats.overlap.trades.length,
                 overlapSessionWinRate: overlapWinRate,
                 overlapSessionPL: sessionStats.overlap.totalPL,
-                tradeTimingScore: tradeTimingScore
+                tradeTimingScore: tradeTimingScore,
+                // Phase 3 Streak Probability Stats
+                prob2WinsRow: monthProb2WinsRow,
+                prob3WinsRow: monthProb3WinsRow,
+                prob4WinsRow: monthProb4WinsRow,
+                prob5WinsRow: monthProb5WinsRow,
+                prob2LossesRow: monthProb2LossesRow,
+                prob3LossesRow: monthProb3LossesRow,
+                prob4LossesRow: monthProb4LossesRow,
+                prob5LossesRow: monthProb5LossesRow,
+                expectedMaxWinStreak: monthExpectedMaxWinStreak,
+                expectedMaxLossStreak: monthExpectedMaxLossStreak
             };
         }
 
@@ -7114,7 +7205,18 @@ select.form-control {
                 { key: 'overlapSessionTrades', label: 'Overlap Session Trades', format: 'number', tooltip: 'Trades during session overlaps (London-Asian or London-NY). Often highest volatility' },
                 { key: 'overlapSessionWinRate', label: 'Overlap Win Rate', format: 'percentage', tooltip: 'Win rate during overlap periods. These often have the most movement' },
                 { key: 'overlapSessionPL', label: 'Overlap P&L', format: 'currency', tooltip: 'Total profit/loss during overlap sessions. Can indicate ability to trade volatile periods' },
-                { key: 'tradeTimingScore', label: 'Trade Timing Score', format: 'decimal', tooltip: 'Ratio of best hour performance to worst hour (min 3 trades/hour). Higher means better timing' }
+                { key: 'tradeTimingScore', label: 'Trade Timing Score', format: 'decimal', tooltip: 'Ratio of best hour performance to worst hour (min 3 trades/hour). Higher means better timing' },
+                // Phase 3 Streak Probability Stats
+                { key: 'prob2WinsRow', label: 'Prob 2 Wins in a Row', format: 'percentage', tooltip: 'Statistical probability of getting 2 consecutive wins based on your current win rate. Helps identify when streaks are normal vs exceptional' },
+                { key: 'prob3WinsRow', label: 'Prob 3 Wins in a Row', format: 'percentage', tooltip: 'Statistical probability of getting 3 consecutive wins. Lower probability = more impressive streak' },
+                { key: 'prob4WinsRow', label: 'Prob 4 Wins in a Row', format: 'percentage', tooltip: 'Statistical probability of getting 4 consecutive wins. Rare streaks indicate strong performance or favorable conditions' },
+                { key: 'prob5WinsRow', label: 'Prob 5 Wins in a Row', format: 'percentage', tooltip: 'Statistical probability of getting 5 consecutive wins. Very rare - achieving this suggests exceptional edge or luck' },
+                { key: 'prob2LossesRow', label: 'Prob 2 Losses in a Row', format: 'percentage', tooltip: 'Statistical probability of getting 2 consecutive losses. Normal even for profitable traders' },
+                { key: 'prob3LossesRow', label: 'Prob 3 Losses in a Row', format: 'percentage', tooltip: 'Statistical probability of getting 3 consecutive losses. Expect this to happen regularly' },
+                { key: 'prob4LossesRow', label: 'Prob 4 Losses in a Row', format: 'percentage', tooltip: 'Statistical probability of getting 4 consecutive losses. Important for psychological preparation' },
+                { key: 'prob5LossesRow', label: 'Prob 5 Losses in a Row', format: 'percentage', tooltip: 'Statistical probability of getting 5 consecutive losses. Helps set realistic expectations for drawdown periods' },
+                { key: 'expectedMaxWinStreak', label: 'Expected Max Win Streak', format: 'decimal', tooltip: 'Expected maximum winning streak in next 100 trades based on your win rate. Actual results will vary' },
+                { key: 'expectedMaxLossStreak', label: 'Expected Max Loss Streak', format: 'decimal', tooltip: 'Expected maximum losing streak in next 100 trades. Critical for risk management and emotional preparation' }
             ];
 
             let html = '';
