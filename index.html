@@ -11413,6 +11413,8 @@ select.form-control {
                     count: tradesToInclude.length,
                     selection: inclusions.tradesOption,
                     data: tradesToInclude.map(t => ({
+                        openDate: t.openDate,
+                        openTime: t.openTime,
                         date: t.date,
                         time: t.time,
                         symbol: t.symbol,
