@@ -850,6 +850,22 @@ select.form-control {
         .stat-label {
             font-size: 0.875rem;
             color: #94a3b8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.25rem;
+        }
+
+        .stat-info-icon {
+            font-size: 0.75rem;
+            color: #60a5fa;
+            opacity: 0.7;
+            cursor: help;
+            transition: opacity 0.2s;
+        }
+
+        .stat-info-icon:hover {
+            opacity: 1;
         }
 
         .positive { color: #10b981; }
@@ -7052,53 +7068,53 @@ select.form-control {
             };
 
             const statsDefinitions = [
-                { key: 'totalTrades', label: 'Total Trades', format: 'number' },
-                { key: 'winningTrades', label: 'Winning Trades', format: 'number' },
-                { key: 'losingTrades', label: 'Losing Trades', format: 'number' },
-                { key: 'winRate', label: 'Win Rate', format: 'percentage' },
-                { key: 'rulesWinRate', label: 'Rules Win Rate', format: 'percentage' },
-                { key: 'netPL', label: 'Net P&L', format: 'currency' },
-                { key: 'totalFees', label: 'Total Fees', format: 'currency' },
-                { key: 'profitFactor', label: 'Profit Factor', format: 'decimal' },
-                { key: 'avgWin', label: 'Average Win', format: 'currency' },
-                { key: 'avgLoss', label: 'Average Loss', format: 'currency' },
-                { key: 'largestWin', label: 'Largest Win', format: 'currency' },
-                { key: 'largestLoss', label: 'Largest Loss', format: 'currency' },
-                { key: 'expectancy', label: 'Expectancy', format: 'currency' },
-                { key: 'accountGrowth', label: 'Account Growth', format: 'percentage' },
-                { key: 'currentBalance', label: 'Current Balance', format: 'currency' },
-                { key: 'startingBalance', label: 'Starting Balance', format: 'currency' },
-                { key: 'maxDrawdown', label: 'Max Drawdown', format: 'currency' },
-                { key: 'maxDrawdownPercent', label: 'Max Drawdown %', format: 'percentage' },
-                { key: 'recoveryFactor', label: 'Recovery Factor', format: 'decimal' },
-                { key: 'currentStreak', label: 'Current Streak', format: 'streak' },
-                { key: 'longestWinStreak', label: 'Longest Win Streak', format: 'number' },
-                { key: 'longestLossStreak', label: 'Longest Loss Streak', format: 'number' },
-                { key: 'riskRewardRatio', label: 'Risk/Reward Ratio', format: 'decimal' },
-                { key: 'avgTradeDuration', label: 'Avg Trade Duration', format: 'duration' },
+                { key: 'totalTrades', label: 'Total Trades', format: 'number', tooltip: 'Total number of completed trades in the selected period' },
+                { key: 'winningTrades', label: 'Winning Trades', format: 'number', tooltip: 'Number of trades that closed with a profit' },
+                { key: 'losingTrades', label: 'Losing Trades', format: 'number', tooltip: 'Number of trades that closed with a loss' },
+                { key: 'winRate', label: 'Win Rate', format: 'percentage', tooltip: 'Percentage of winning trades. Formula: (Winning Trades / Total Trades) × 100' },
+                { key: 'rulesWinRate', label: 'Rules Win Rate', format: 'percentage', tooltip: 'Win rate for trades where custom trading rules were followed' },
+                { key: 'netPL', label: 'Net P&L', format: 'currency', tooltip: 'Total profit/loss after all fees. This is your bottom line performance' },
+                { key: 'totalFees', label: 'Total Fees', format: 'currency', tooltip: 'Sum of all commissions and swap fees paid across all trades' },
+                { key: 'profitFactor', label: 'Profit Factor', format: 'decimal', tooltip: 'Gross profit divided by gross loss. Values > 1.0 indicate profitability. Higher is better' },
+                { key: 'avgWin', label: 'Average Win', format: 'currency', tooltip: 'Average profit per winning trade. Indicates how much you make when you win' },
+                { key: 'avgLoss', label: 'Average Loss', format: 'currency', tooltip: 'Average loss per losing trade. Indicates how much you lose when you lose' },
+                { key: 'largestWin', label: 'Largest Win', format: 'currency', tooltip: 'Your biggest winning trade. Helps identify outliers in performance' },
+                { key: 'largestLoss', label: 'Largest Loss', format: 'currency', tooltip: 'Your biggest losing trade. Important for risk management assessment' },
+                { key: 'expectancy', label: 'Expectancy', format: 'currency', tooltip: 'Average profit/loss per trade. Positive expectancy means profitable system. Formula: Net P&L / Total Trades' },
+                { key: 'accountGrowth', label: 'Account Growth', format: 'percentage', tooltip: 'Percentage change in account balance. Formula: ((Current - Starting) / Starting) × 100' },
+                { key: 'currentBalance', label: 'Current Balance', format: 'currency', tooltip: 'Current account balance including all profits, losses, and fees' },
+                { key: 'startingBalance', label: 'Starting Balance', format: 'currency', tooltip: 'Initial account balance at the start of trading' },
+                { key: 'maxDrawdown', label: 'Max Drawdown', format: 'currency', tooltip: 'Largest peak-to-trough decline in account balance. Measures worst-case scenario' },
+                { key: 'maxDrawdownPercent', label: 'Max Drawdown %', format: 'percentage', tooltip: 'Max drawdown as a percentage of peak balance. Critical for risk assessment' },
+                { key: 'recoveryFactor', label: 'Recovery Factor', format: 'decimal', tooltip: 'Net profit divided by max drawdown. Values > 1.0 indicate good recovery ability' },
+                { key: 'currentStreak', label: 'Current Streak', format: 'streak', tooltip: 'Current consecutive wins (+) or losses (-). Helps identify hot/cold streaks' },
+                { key: 'longestWinStreak', label: 'Longest Win Streak', format: 'number', tooltip: 'Maximum number of consecutive winning trades achieved' },
+                { key: 'longestLossStreak', label: 'Longest Loss Streak', format: 'number', tooltip: 'Maximum number of consecutive losing trades. Important for psychological preparation' },
+                { key: 'riskRewardRatio', label: 'Risk/Reward Ratio', format: 'decimal', tooltip: 'Average win divided by average loss. Ratios > 1.0 mean wins are bigger than losses' },
+                { key: 'avgTradeDuration', label: 'Avg Trade Duration', format: 'duration', tooltip: 'Average time between trade entry and exit. Helps identify your trading style' },
                 // Phase 2 New Stats
-                { key: 'stdDevReturns', label: 'Std Dev Returns', format: 'currency' },
-                { key: 'sharpeRatio', label: 'Sharpe Ratio', format: 'decimal' },
-                { key: 'sqn', label: 'System Quality Number', format: 'decimal' },
-                { key: 'breakEvenWinRate', label: 'Break-Even Win Rate', format: 'percentage' },
-                { key: 'avgDrawdownDuration', label: 'Avg Drawdown Duration', format: 'duration' },
-                { key: 'avgDrawdownDays', label: 'Avg Drawdown Days', format: 'decimal' },
-                { key: 'avgDrawdownTrades', label: 'Avg Drawdown Trades', format: 'decimal' },
-                { key: 'profitConsistencyScore', label: 'Profit Consistency', format: 'percentage' },
+                { key: 'stdDevReturns', label: 'Std Dev Returns', format: 'currency', tooltip: 'Standard deviation of trade returns. Measures volatility and consistency. Lower is more consistent' },
+                { key: 'sharpeRatio', label: 'Sharpe Ratio', format: 'decimal', tooltip: 'Risk-adjusted return metric (annualized). >1 is good, >2 is very good, >3 is excellent' },
+                { key: 'sqn', label: 'System Quality Number', format: 'decimal', tooltip: 'Van Tharp metric for system quality. 1.6-2.0=Below Avg, 2.0-2.5=Avg, 2.5-3.0=Good, 3.0-5.0=Excellent, 5.0+=Superb' },
+                { key: 'breakEvenWinRate', label: 'Break-Even Win Rate', format: 'percentage', tooltip: 'Win rate needed to break even given your avg win/loss. Your actual win rate should exceed this' },
+                { key: 'avgDrawdownDuration', label: 'Avg Drawdown Duration', format: 'duration', tooltip: 'Average time spent in drawdown periods. Helps set recovery expectations' },
+                { key: 'avgDrawdownDays', label: 'Avg Drawdown Days', format: 'decimal', tooltip: 'Average number of days in drawdown. Lower is better for psychological management' },
+                { key: 'avgDrawdownTrades', label: 'Avg Drawdown Trades', format: 'decimal', tooltip: 'Average number of trades during drawdown periods. Indicates recovery speed' },
+                { key: 'profitConsistencyScore', label: 'Profit Consistency', format: 'percentage', tooltip: 'Percentage of profitable trading days. Higher values indicate more consistent daily performance' },
                 // Market Session Performance
-                { key: 'asianSessionTrades', label: 'Asian Session Trades', format: 'number' },
-                { key: 'asianSessionWinRate', label: 'Asian Win Rate', format: 'percentage' },
-                { key: 'asianSessionPL', label: 'Asian P&L', format: 'currency' },
-                { key: 'londonSessionTrades', label: 'London Session Trades', format: 'number' },
-                { key: 'londonSessionWinRate', label: 'London Win Rate', format: 'percentage' },
-                { key: 'londonSessionPL', label: 'London P&L', format: 'currency' },
-                { key: 'newYorkSessionTrades', label: 'New York Session Trades', format: 'number' },
-                { key: 'newYorkSessionWinRate', label: 'New York Win Rate', format: 'percentage' },
-                { key: 'newYorkSessionPL', label: 'New York P&L', format: 'currency' },
-                { key: 'overlapSessionTrades', label: 'Overlap Session Trades', format: 'number' },
-                { key: 'overlapSessionWinRate', label: 'Overlap Win Rate', format: 'percentage' },
-                { key: 'overlapSessionPL', label: 'Overlap P&L', format: 'currency' },
-                { key: 'tradeTimingScore', label: 'Trade Timing Score', format: 'decimal' }
+                { key: 'asianSessionTrades', label: 'Asian Session Trades', format: 'number', tooltip: 'Trades taken during Asian session (00:00-09:00 UTC). Typically lower volatility' },
+                { key: 'asianSessionWinRate', label: 'Asian Win Rate', format: 'percentage', tooltip: 'Win rate during Asian session. Compare across sessions to find your best time' },
+                { key: 'asianSessionPL', label: 'Asian P&L', format: 'currency', tooltip: 'Total profit/loss during Asian session. Helps identify session-specific performance' },
+                { key: 'londonSessionTrades', label: 'London Session Trades', format: 'number', tooltip: 'Trades taken during London session (08:00-17:00 UTC). High volume and volatility' },
+                { key: 'londonSessionWinRate', label: 'London Win Rate', format: 'percentage', tooltip: 'Win rate during London session. Often the most active trading period' },
+                { key: 'londonSessionPL', label: 'London P&L', format: 'currency', tooltip: 'Total profit/loss during London session. Critical for European market traders' },
+                { key: 'newYorkSessionTrades', label: 'New York Session Trades', format: 'number', tooltip: 'Trades taken during New York session (13:00-22:00 UTC). High liquidity period' },
+                { key: 'newYorkSessionWinRate', label: 'New York Win Rate', format: 'percentage', tooltip: 'Win rate during New York session. Important for USD pair traders' },
+                { key: 'newYorkSessionPL', label: 'New York P&L', format: 'currency', tooltip: 'Total profit/loss during New York session. Key metric for US market hours' },
+                { key: 'overlapSessionTrades', label: 'Overlap Session Trades', format: 'number', tooltip: 'Trades during session overlaps (London-Asian or London-NY). Often highest volatility' },
+                { key: 'overlapSessionWinRate', label: 'Overlap Win Rate', format: 'percentage', tooltip: 'Win rate during overlap periods. These often have the most movement' },
+                { key: 'overlapSessionPL', label: 'Overlap P&L', format: 'currency', tooltip: 'Total profit/loss during overlap sessions. Can indicate ability to trade volatile periods' },
+                { key: 'tradeTimingScore', label: 'Trade Timing Score', format: 'decimal', tooltip: 'Ratio of best hour performance to worst hour (min 3 trades/hour). Higher means better timing' }
             ];
 
             let html = '';
@@ -7114,8 +7130,11 @@ select.form-control {
                 const valueClass = getStatClass(stat.key, displayValue, stat.format);
 
                 html += `
-                    <div class="stat-card">
-                        <div class="stat-label">${stat.label}</div>
+                    <div class="stat-card" title="${stat.tooltip || ''}">
+                        <div class="stat-label">
+                            ${stat.label}
+                            ${stat.tooltip ? '<span class="stat-info-icon">ⓘ</span>' : ''}
+                        </div>
                         <div class="stat-value ${valueClass}">${formattedValue}</div>
                     </div>
                 `;
