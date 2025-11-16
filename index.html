@@ -1546,6 +1546,7 @@ select.form-control {
                     <option value="overwrite">Overwrite</option>
                     <option value="append">Append</option>
                     <option value="update-open-datetime">Update Open Date/Time</option>
+                    <option value="update-entry-exit-times">Update Entry/Exit Times</option>
                 </select>
 
                 <input type="file" id="jsonInput" class="file-input" accept=".json" />
@@ -1813,6 +1814,18 @@ select.form-control {
                                 <div>
                                     <div style="font-size: var(--font-size-sm); font-weight: var(--font-weight-medium);">Update Open Date/Time</div>
                                     <div style="font-size: var(--font-size-xs); color: var(--color-text-secondary);">Add opening date/time to existing trades without replacing data</div>
+                                </div>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: var(--space-8); padding: var(--space-8); background: var(--color-secondary); border-radius: var(--radius-base); cursor: pointer; transition: background-color var(--duration-fast) var(--ease-standard);" onmouseover="this.style.backgroundColor='var(--color-secondary-hover)'" onmouseout="this.style.backgroundColor='var(--color-secondary)'">
+                                <input
+                                    type="radio"
+                                    name="importModeRadio"
+                                    value="update-entry-exit-times"
+                                    onchange="updateImportMode('update-entry-exit-times')"
+                                    style="accent-color: var(--color-primary);">
+                                <div>
+                                    <div style="font-size: var(--font-size-sm); font-weight: var(--font-weight-medium);">Update Entry/Exit Times</div>
+                                    <div style="font-size: var(--font-size-xs); color: var(--color-text-secondary);">Update entry and exit times for existing trades by matching symbol, prices, and volume</div>
                                 </div>
                             </label>
                         </div>
@@ -5240,6 +5253,65 @@ select.form-control {
                                 showMessage(`✅ Updated ${updatedCount} trades with opening date/time (${notFoundCount} not matched, ${result.skippedCount} invalid symbols skipped)`);
                             } else {
                                 showMessage(`✅ Updated ${updatedCount} trades with opening date/time (${notFoundCount} not matched)`);
+                            }
+                        } else {
+                            showMessage(`ℹ️ No matching trades found to update. Processed ${result.trades.length} trades from CSV.`);
+                        }
+                    } else if (mode === 'update-entry-exit-times') {
+                        // Update Entry/Exit Times mode: update both entry and exit times for existing trades
+                        let updatedCount = 0;
+                        let notFoundCount = 0;
+
+                        // Create a map of existing trades using a fingerprint WITHOUT any date/time fields
+                        // Match only on: symbol, entry price, exit price, and volume
+                        const existingTradesMap = new Map();
+                        appState.trades.forEach(trade => {
+                            const key = `${trade.symbol}_${trade.entryPrice}_${trade.exitPrice}_${trade.volume}`;
+                            // Store as array since multiple trades could have same key
+                            if (!existingTradesMap.has(key)) {
+                                existingTradesMap.set(key, []);
+                            }
+                            existingTradesMap.get(key).push(trade);
+                        });
+
+                        // Update matching trades with new entry and exit times
+                        result.trades.forEach(newTrade => {
+                            const key = `${newTrade.symbol}_${newTrade.entryPrice}_${newTrade.exitPrice}_${newTrade.volume}`;
+                            const matchingTrades = existingTradesMap.get(key);
+
+                            if (matchingTrades && matchingTrades.length > 0) {
+                                // Find best match by comparing existing times with new times
+                                // Or just use the first unmatched trade
+                                const existingTrade = matchingTrades.find(t => !t._timeUpdated) || matchingTrades[0];
+
+                                // Update entry times (open date/time)
+                                existingTrade.openDate = newTrade.openDate;
+                                existingTrade.openTime = newTrade.openTime;
+
+                                // Update exit times (close date/time)
+                                existingTrade.date = newTrade.date;
+                                existingTrade.time = newTrade.time;
+                                existingTrade.closeTime = newTrade.closeTime;
+
+                                // Mark as updated to avoid updating the same trade twice
+                                existingTrade._timeUpdated = true;
+                                updatedCount++;
+                            } else {
+                                notFoundCount++;
+                            }
+                        });
+
+                        // Clean up temporary markers
+                        appState.trades.forEach(trade => {
+                            delete trade._timeUpdated;
+                        });
+
+                        if (updatedCount > 0) {
+                            invalidateStatsCache();
+                            if (result.skippedCount > 0) {
+                                showMessage(`✅ Updated ${updatedCount} trades with entry/exit times (${notFoundCount} not matched, ${result.skippedCount} invalid symbols skipped)`);
+                            } else {
+                                showMessage(`✅ Updated ${updatedCount} trades with entry/exit times (${notFoundCount} not matched)`);
                             }
                         } else {
                             showMessage(`ℹ️ No matching trades found to update. Processed ${result.trades.length} trades from CSV.`);
