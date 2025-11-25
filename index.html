@@ -1761,6 +1761,7 @@ select.form-control {
                                         <li><strong>Starting Balance:</strong> Set your initial account equity</li>
                                         <li><strong>Platform:</strong> Choose between cTrader, MT4, or MT5</li>
                                         <li><strong>Import Mode:</strong> Control how imported data is handled</li>
+                                        <li><strong>Theme:</strong> Choose between System, Light, or Dark mode</li>
                                         <li><strong>Clear Data:</strong> Reset your trading history</li>
                                     </ul>
                                 </div>
@@ -1897,6 +1898,53 @@ select.form-control {
                                 <div>
                                     <div style="font-size: var(--font-size-sm); font-weight: var(--font-weight-medium);">Update Entry/Exit Times</div>
                                     <div style="font-size: var(--font-size-xs); color: var(--color-text-secondary);">Update entry and exit times for existing trades by matching symbol, prices, and volume</div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Theme Selection -->
+                    <div style="margin-bottom: 1rem;">
+                        <label class="form-label" style="display: flex; align-items: center; gap: var(--space-8); margin-bottom: var(--space-8); font-weight: var(--font-weight-medium);">
+                            <span>🎨</span>
+                            <span>Theme</span>
+                        </label>
+                        <div style="display: flex; gap: var(--space-8);">
+                            <label style="display: flex; align-items: center; gap: var(--space-8); flex: 1; padding: var(--space-8); background: var(--color-secondary); border-radius: var(--radius-base); cursor: pointer; transition: background-color var(--duration-fast) var(--ease-standard);" onmouseover="this.style.backgroundColor='var(--color-secondary-hover)'" onmouseout="this.style.backgroundColor='var(--color-secondary)'">
+                                <input
+                                    type="radio"
+                                    name="themeRadio"
+                                    value="system"
+                                    checked
+                                    onchange="updateTheme('system')"
+                                    style="accent-color: var(--color-primary);">
+                                <div>
+                                    <div style="font-size: var(--font-size-sm); font-weight: var(--font-weight-medium);">System</div>
+                                    <div style="font-size: var(--font-size-xs); color: var(--color-text-secondary);">Auto</div>
+                                </div>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: var(--space-8); flex: 1; padding: var(--space-8); background: var(--color-secondary); border-radius: var(--radius-base); cursor: pointer; transition: background-color var(--duration-fast) var(--ease-standard);" onmouseover="this.style.backgroundColor='var(--color-secondary-hover)'" onmouseout="this.style.backgroundColor='var(--color-secondary)'">
+                                <input
+                                    type="radio"
+                                    name="themeRadio"
+                                    value="light"
+                                    onchange="updateTheme('light')"
+                                    style="accent-color: var(--color-primary);">
+                                <div>
+                                    <div style="font-size: var(--font-size-sm); font-weight: var(--font-weight-medium);">Light</div>
+                                    <div style="font-size: var(--font-size-xs); color: var(--color-text-secondary);">☀️</div>
+                                </div>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: var(--space-8); flex: 1; padding: var(--space-8); background: var(--color-secondary); border-radius: var(--radius-base); cursor: pointer; transition: background-color var(--duration-fast) var(--ease-standard);" onmouseover="this.style.backgroundColor='var(--color-secondary-hover)'" onmouseout="this.style.backgroundColor='var(--color-secondary)'">
+                                <input
+                                    type="radio"
+                                    name="themeRadio"
+                                    value="dark"
+                                    onchange="updateTheme('dark')"
+                                    style="accent-color: var(--color-primary);">
+                                <div>
+                                    <div style="font-size: var(--font-size-sm); font-weight: var(--font-weight-medium);">Dark</div>
+                                    <div style="font-size: var(--font-size-xs); color: var(--color-text-secondary);">🌙</div>
                                 </div>
                             </label>
                         </div>
@@ -3685,6 +3733,7 @@ select.form-control {
             trades: [],
             startingBalance: 10000,
             currentBalance: 10000,
+            themeMode: 'system', // 'system', 'light', or 'dark'
             customRules: [],
             statistics: {},
             chartInstances: {},
@@ -4399,6 +4448,7 @@ select.form-control {
                     timestamp: new Date().toISOString(),
                     trades: appState.trades,
                     startingBalance: appState.startingBalance,
+                    themeMode: appState.themeMode,
                     customRules: appState.customRules,
                     strategyContext: appState.strategyContext,
                     visibleStats: appState.visibleStats,
@@ -4502,6 +4552,11 @@ select.form-control {
                 }
                 if (data.startingBalance !== undefined) {
                     appState.startingBalance = data.startingBalance;
+                }
+                if (data.themeMode !== undefined) {
+                    appState.themeMode = data.themeMode;
+                    // Apply the saved theme
+                    applyTheme(data.themeMode);
                 }
                 if (data.customRules && Array.isArray(data.customRules)) {
                     appState.customRules = data.customRules;
@@ -5044,7 +5099,12 @@ select.form-control {
             }
 
             // Load saved data
-            await loadFromLocalStorage();
+            const dataLoaded = await loadFromLocalStorage();
+
+            // If no saved data, apply default theme
+            if (!dataLoaded) {
+                applyTheme(appState.themeMode);
+            }
 
             // Load API credentials
             loadAPICredentials();
@@ -14160,6 +14220,37 @@ select.form-control {
 
         function updatePlatform(platform) {
             document.getElementById('platform').value = platform;
+        }
+
+        function applyTheme(theme) {
+            // Apply theme to document without saving
+            if (theme === 'system') {
+                // Remove data-color-scheme attribute to use system preference
+                document.documentElement.removeAttribute('data-color-scheme');
+            } else {
+                // Set data-color-scheme to 'light' or 'dark'
+                document.documentElement.setAttribute('data-color-scheme', theme);
+            }
+
+            // Update the radio button selection
+            const radioButtons = document.querySelectorAll('input[name="themeRadio"]');
+            radioButtons.forEach(radio => {
+                radio.checked = radio.value === theme;
+            });
+        }
+
+        function updateTheme(theme) {
+            // Update app state
+            appState.themeMode = theme;
+
+            // Apply theme to document
+            applyTheme(theme);
+
+            // Update all charts to use new theme colors
+            updateAllCharts();
+
+            // Save preference
+            saveToLocalStorage();
         }
 
         function clearAllData() {
