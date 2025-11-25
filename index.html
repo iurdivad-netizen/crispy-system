@@ -64,8 +64,23 @@
   --color-red-500: rgba(192, 21, 47, 1);
   --color-orange-400: rgba(230, 129, 97, 1);
   --color-orange-500: rgba(168, 75, 47, 1);
+  --color-blue-400: rgba(96, 165, 250, 1);
+  --color-blue-500: rgba(59, 130, 246, 1);
+  --color-purple-400: rgba(167, 139, 250, 1);
+  --color-green-500: rgba(16, 185, 129, 1);
+  --color-slate-200: rgba(226, 232, 240, 1);
+  --color-slate-300: rgba(203, 213, 225, 1);
+  --color-slate-400: rgba(148, 163, 184, 1);
+  --color-slate-600: rgba(71, 85, 105, 1);
+  --color-slate-700: rgba(51, 65, 85, 1);
+  --color-slate-800: rgba(30, 41, 59, 1);
+  --color-gray-500: rgba(107, 116, 128, 1);
+  --color-gray-600: rgba(75, 85, 99, 1);
+  --color-gray-700: rgba(55, 65, 81, 1);
 
   /* RGB versions for opacity control */
+  --color-black-rgb: 0, 0, 0;
+  --color-white-rgb: 255, 255, 255;
   --color-brown-600-rgb: 94, 82, 64;
   --color-teal-500-rgb: 33, 128, 141;
   --color-slate-900-rgb: 19, 52, 59;
@@ -74,6 +89,17 @@
   --color-red-400-rgb: 255, 84, 89;
   --color-orange-500-rgb: 168, 75, 47;
   --color-orange-400-rgb: 230, 129, 97;
+  --color-blue-400-rgb: 96, 165, 250;
+  --color-blue-500-rgb: 59, 130, 246;
+  --color-purple-400-rgb: 167, 139, 250;
+  --color-green-500-rgb: 16, 185, 129;
+  --color-slate-400-rgb: 148, 163, 184;
+  --color-slate-600-rgb: 71, 85, 105;
+  --color-slate-700-rgb: 51, 65, 85;
+  --color-slate-800-rgb: 30, 41, 59;
+  --color-gray-500-rgb: 107, 116, 128;
+  --color-gray-600-rgb: 75, 85, 99;
+  --color-gray-700-rgb: 55, 65, 81;
 
   /* Background color tokens (Light Mode) */
   --color-bg-1: rgba(59, 130, 246, 0.08); /* Light blue */
@@ -782,12 +808,12 @@ select.form-control {
         /* Comprehensive Trading Journal Styles */
         .trading-journal {
             min-height: 100vh;
-            background: #0f172a;
-            color: #f8fafc;
+            background: var(--color-background);
+            color: var(--color-text);
         }
 
         .gradient-header {
-            background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
+            background: linear-gradient(135deg, var(--color-blue-400) 0%, var(--color-purple-400) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -796,16 +822,16 @@ select.form-control {
         }
 
         .section {
-            background: #1e293b;
+            background: var(--color-surface);
             border-radius: 12px;
-            border: 1px solid #334155;
+            border: 1px solid var(--color-border);
             margin-bottom: 2rem;
             overflow: visible;
         }
 
         .section-header {
             position: relative;
-            background: linear-gradient(90deg, #60a5fa 0%, #a78bfa 100%);
+            background: linear-gradient(90deg, var(--color-blue-400) 0%, var(--color-purple-400) 100%);
             padding: 1rem 1.5rem;
             display: flex;
             justify-content: space-between;
@@ -828,8 +854,8 @@ select.form-control {
         }
 
         .stat-card {
-            background: #1e293b;
-            border: 1px solid #334155;
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
             border-radius: 8px;
             padding: 1rem;
             text-align: center;
@@ -838,7 +864,7 @@ select.form-control {
 
         .stat-card:hover {
             transform: translateY(-2px);
-            border-color: #60a5fa;
+            border-color: var(--color-primary);
         }
 
         .stat-value {
@@ -849,7 +875,7 @@ select.form-control {
 
         .stat-label {
             font-size: 0.875rem;
-            color: #94a3b8;
+            color: var(--color-text-secondary);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -858,7 +884,7 @@ select.form-control {
 
         .stat-info-icon {
             font-size: 0.75rem;
-            color: #60a5fa;
+            color: var(--color-primary);
             opacity: 0.7;
             cursor: help;
             transition: opacity 0.2s;
@@ -868,9 +894,9 @@ select.form-control {
             opacity: 1;
         }
 
-        .positive { color: #10b981; }
-        .negative { color: #ef4444; }
-        .neutral { color: #6b7280; }
+        .positive { color: var(--color-success); }
+        .negative { color: var(--color-error); }
+        .neutral { color: var(--color-info); }
 
         .charts-grid {
             display: grid;
@@ -879,8 +905,8 @@ select.form-control {
         }
 
         .chart-container {
-            background: #1e293b;
-            border: 1px solid #334155;
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
             border-radius: 8px;
             padding: 1rem;
         }
@@ -902,23 +928,23 @@ select.form-control {
             padding: 0.5rem 1rem;
             border: none;
             border-radius: 6px;
-            background: #60a5fa;
-            color: white;
+            background: var(--color-primary);
+            color: var(--color-btn-primary-text);
             cursor: pointer;
             font-size: 0.875rem;
             transition: all 0.2s;
         }
 
         .btn:hover {
-            background: #3b82f6;
+            background: var(--color-primary-hover);
         }
 
         .btn-secondary {
-            background: #6b7280;
+            background: var(--color-secondary);
         }
 
         .btn-secondary:hover {
-            background: #4b5563;
+            background: var(--color-secondary-hover);
         }
 
         .btn:disabled {
@@ -936,13 +962,13 @@ select.form-control {
         }
 
         .trade-row:hover {
-            background: #334155;
+            background: var(--color-secondary);
         }
 
         .trade-details {
-            background: #0f172a;
+            background: var(--color-background);
             padding: 1.5rem;
-            border-top: 1px solid #334155;
+            border-top: 1px solid var(--color-border);
         }
 
         .form-grid {
@@ -960,21 +986,21 @@ select.form-control {
             display: block;
             margin-bottom: 0.5rem;
             font-size: 0.875rem;
-            color: #94a3b8;
+            color: var(--color-text-secondary);
         }
 
         .form-control {
             width: 100%;
             padding: 0.5rem;
-            background: #1e293b;
-            border: 1px solid #334155;
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
             border-radius: 4px;
-            color: white;
+            color: var(--color-text);
         }
 
         .form-control:focus {
             outline: none;
-            border-color: #60a5fa;
+            border-color: var(--color-primary);
         }
 
         .screenshot-container {
@@ -1001,7 +1027,7 @@ select.form-control {
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.9);
+            background: rgba(var(--color-black), 0.9);
             z-index: 1000;
             display: flex;
             align-items: center;
@@ -1075,8 +1101,8 @@ select.form-control {
         }
 
         .rule-card {
-            background: #1e293b;
-            border: 1px solid #334155;
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
             border-radius: 8px;
             padding: 1rem;
         }
@@ -1086,7 +1112,7 @@ select.form-control {
             justify-content: space-between;
             margin-top: 0.5rem;
             font-size: 0.875rem;
-            color: #94a3b8;
+            color: var(--color-text-secondary);
         }
 
         .calendar {
@@ -1111,7 +1137,7 @@ select.form-control {
         }
         
         .calendar-day:hover {
-            border-color: #60a5fa;
+            border-color: var(--color-primary);
         }
 
         .calendar-day.has-trades {
@@ -1119,13 +1145,13 @@ select.form-control {
         }
 
         .calendar-day.profit {
-            background: rgba(16, 185, 129, 0.2);
-            color: #10b981;
+            background: rgba(var(--color-success-rgb), 0.2);
+            color: var(--color-success);
         }
 
         .calendar-day.loss {
-            background: rgba(239, 68, 68, 0.2);
-            color: #ef4444;
+            background: rgba(var(--color-error-rgb), 0.2);
+            color: var(--color-error);
         }
 
         .performance-section {
@@ -1139,8 +1165,8 @@ select.form-control {
         }
 
         .breakdown-item {
-            background: #1e293b;
-            border: 1px solid #334155;
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
             border-radius: 8px;
             padding: 1rem;
         }
@@ -1152,13 +1178,13 @@ select.form-control {
 
         .breakdown-stats {
             font-size: 0.875rem;
-            color: #94a3b8;
+            color: var(--color-text-secondary);
         }
 
         .toggle-button {
-            background: #374151;
+            background: var(--color-secondary);
             border: none;
-            color: white;
+            color: var(--color-text);
             padding: 0.25rem 0.5rem;
             border-radius: 4px;
             font-size: 0.75rem;
@@ -1166,7 +1192,7 @@ select.form-control {
         }
 
         .toggle-button.active {
-            background: #60a5fa;
+            background: var(--color-primary);
         }
 
         .message {
@@ -1176,15 +1202,15 @@ select.form-control {
         }
 
         .message.success {
-            background: rgba(16, 185, 129, 0.1);
-            border: 1px solid rgba(16, 185, 129, 0.3);
-            color: #10b981;
+            background: rgba(var(--color-success-rgb), 0.1);
+            border: 1px solid rgba(var(--color-success-rgb), 0.3);
+            color: var(--color-success);
         }
 
         .message.error {
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-            color: #ef4444;
+            background: rgba(var(--color-error-rgb), 0.1);
+            border: 1px solid rgba(var(--color-error-rgb), 0.3);
+            color: var(--color-error);
         }
 
         .collapsible {
@@ -1192,7 +1218,7 @@ select.form-control {
         }
 
         .collapsible-header {
-            background: #374151;
+            background: var(--color-secondary);
             padding: 1rem;
             cursor: pointer;
             display: flex;
@@ -1218,11 +1244,11 @@ select.form-control {
         .table td {
             padding: 0.75rem;
             text-align: left;
-            border-bottom: 1px solid #334155;
+            border-bottom: 1px solid var(--color-border);
         }
 
         .table th {
-            background: #374151;
+            background: var(--color-secondary);
             font-weight: 600;
         }
 
@@ -1298,14 +1324,14 @@ select.form-control {
 
         /* TradingView button specific styling */
         .btn-tradingview {
-            background: linear-gradient(135deg, #2962FF, #1E88E5);
+            background: linear-gradient(135deg, var(--color-blue-500), var(--color-blue-400));
             color: white;
             border: none;
             font-weight: var(--font-weight-medium);
         }
 
         .btn-tradingview:hover:not(:disabled) {
-            background: linear-gradient(135deg, #1E88E5, #1565C0);
+            background: linear-gradient(135deg, var(--color-blue-400), var(--color-primary));
             transform: translateY(-1px);
             box-shadow: var(--shadow-md);
         }
@@ -1318,14 +1344,14 @@ select.form-control {
 
         /* Screenshot upload button styling */
         .btn-screenshot {
-            background: linear-gradient(135deg, #10B981, #059669);
+            background: linear-gradient(135deg, var(--color-green-500), var(--color-success));
             color: white;
             border: none;
             font-weight: var(--font-weight-medium);
         }
 
         .btn-screenshot:hover {
-            background: linear-gradient(135deg, #059669, #047857);
+            background: linear-gradient(135deg, var(--color-success), var(--color-primary));
             transform: translateY(-1px);
             box-shadow: var(--shadow-md);
         }
@@ -1340,7 +1366,7 @@ select.form-control {
         }
 
         .btn-clear:hover {
-            background: #DC2626;
+            background: var(--color-error);
             transform: translateY(-1px);
         }
 
@@ -1489,6 +1515,51 @@ select.form-control {
             margin-bottom: -1px;
         }
 
+        /* Utility Classes for Theme Consistency */
+        .text-muted {
+            color: var(--color-text-secondary);
+        }
+
+        .text-primary {
+            color: var(--color-primary);
+        }
+
+        .text-success {
+            color: var(--color-success);
+        }
+
+        .text-error {
+            color: var(--color-error);
+        }
+
+        .text-warning {
+            color: var(--color-warning);
+        }
+
+        .bg-overlay {
+            background: rgba(var(--color-black-rgb), 0.5);
+        }
+
+        .bg-overlay-light {
+            background: rgba(var(--color-white-rgb), 0.1);
+        }
+
+        .bg-overlay-dark {
+            background: rgba(var(--color-black-rgb), 0.7);
+        }
+
+        .bg-overlay-darker {
+            background: rgba(var(--color-black-rgb), 0.9);
+        }
+
+        .bg-gradient-primary {
+            background: linear-gradient(135deg, var(--color-blue-400), var(--color-purple-400));
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
     </style>
 </head>
 <body>
@@ -1496,7 +1567,7 @@ select.form-control {
         <div style="max-width: 1200px; margin: 0 auto; padding: 2rem;">
             <!-- Header -->
             <h1 class="gradient-header">Z-APP</h1>
-            <h2 style="text-align: center; color: #94a3b8; font-size: 1.25rem; margin-top: -1rem; margin-bottom: 1rem; font-weight: 400;">Comprehensive Trading Journal</h2>
+            <h2 class="text-center text-muted" style="font-size: 1.25rem; margin-top: -1rem; margin-bottom: 1rem; font-weight: 400;">Comprehensive Trading Journal</h2>
 
             <!-- Features Button -->
             <div style="text-align: center; margin-bottom: 2rem;">
@@ -3150,7 +3221,7 @@ select.form-control {
             <!-- Empty State -->
             <div id="emptyState" class="section" style="text-align: center; padding: 4rem 2rem;">
                 <h2>📊 Welcome to Your Trading Journal</h2>
-                <p style="color: #94a3b8; margin: 1rem 0;">Import your trading data to start analyzing your performance</p>
+                <p class="text-muted" style="margin: 1rem 0;">Import your trading data to start analyzing your performance</p>
                 <p style="font-size: 0.875rem; color: #6b7280;">Supported platforms: cTrader, MT4, MT5<br>
                 <em>Note: Trades with numeric-only symbols will be automatically filtered out</em></p>
                 <button class="btn" onclick="document.getElementById('csvInput').click()" style="margin-top: 1rem;">
@@ -3203,7 +3274,7 @@ select.form-control {
     </div>
 
     <!-- API Import Modal -->
-    <div id="apiImportModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); z-index: 10000; justify-content: center; align-items: center;">
+    <div id="apiImportModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(var(--color-black-rgb), 0.7); z-index: 10000; justify-content: center; align-items: center;">
         <div style="background: var(--color-surface); padding: 2rem; border-radius: var(--radius-lg); max-width: 500px; width: 90%; box-shadow: var(--shadow-xl);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
                 <h3 style="margin: 0; color: var(--color-text); display: flex; align-items: center; gap: var(--space-8);">
@@ -3253,7 +3324,7 @@ select.form-control {
     </div>
 
     <!-- Features Modal -->
-    <div id="featuresModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); z-index: 10000; justify-content: center; align-items: center; overflow-y: auto;">
+    <div id="featuresModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(var(--color-black-rgb), 0.7); z-index: 10000; justify-content: center; align-items: center; overflow-y: auto;">
         <div style="background: var(--color-surface); padding: 2rem; border-radius: var(--radius-lg); max-width: 800px; width: 90%; box-shadow: var(--shadow-xl); margin: 2rem auto; max-height: 90vh; overflow-y: auto;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; position: sticky; top: 0; background: var(--color-surface); z-index: 1; padding-bottom: 1rem;">
                 <h3 style="margin: 0; color: var(--color-text); display: flex; align-items: center; gap: var(--space-8);">
@@ -3489,6 +3560,41 @@ select.form-control {
 
         // Security: File size validation constant
         const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+
+        // ============================================================================
+        // THEME HELPER FUNCTIONS
+        // ============================================================================
+
+        /** Get CSS variable value from the root element */
+        function getCSSVar(name) {
+            return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+        }
+
+        /** Get theme colors for charts */
+        function getChartColors() {
+            const rootStyles = getComputedStyle(document.documentElement);
+
+            // Helper to get RGB values from a CSS variable
+            const getRGB = (varName) => rootStyles.getPropertyValue(varName).trim();
+
+            return {
+                primary: `rgba(${getRGB('--color-teal-500-rgb')}, 1)`,
+                primaryLight: `rgba(${getRGB('--color-teal-500-rgb')}, 0.1)`,
+                success: `rgba(${getRGB('--color-success-rgb')}, 1)`,
+                successMedium: `rgba(${getRGB('--color-success-rgb')}, 0.6)`,
+                error: `rgba(${getRGB('--color-error-rgb')}, 1)`,
+                errorMedium: `rgba(${getRGB('--color-error-rgb')}, 0.6)`,
+                warning: `rgba(${getRGB('--color-warning-rgb')}, 1)`,
+                warningMedium: `rgba(${getRGB('--color-warning-rgb')}, 0.6)`,
+                text: rootStyles.getPropertyValue('--color-text').trim(),
+                textSecondary: rootStyles.getPropertyValue('--color-text-secondary').trim(),
+                surface: rootStyles.getPropertyValue('--color-surface').trim(),
+                border: rootStyles.getPropertyValue('--color-border').trim(),
+                blue: `rgba(${getRGB('--color-blue-400-rgb')}, 1)`,
+                blueLight: `rgba(${getRGB('--color-blue-400-rgb')}, 0.1)`,
+                gridColor: `rgba(${getRGB('--color-text-secondary')}, 0.1)`,
+            };
+        }
 
         // Security: Trade data validation
         function validateTrade(trade) {
@@ -4897,7 +5003,7 @@ select.form-control {
                 html += '</div>';
 
                 // Add backdrop
-                html = `<div onclick="document.getElementById('storageInfoPanel').remove();" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999;"></div>` + html;
+                html = `<div onclick="document.getElementById('storageInfoPanel').remove();" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(var(--color-black-rgb), 0.5); z-index: 9999;"></div>` + html;
 
                 // Remove existing panel if any
                 const existingPanel = document.getElementById('storageInfoPanel');
@@ -7412,14 +7518,15 @@ select.form-control {
 
             // Create new chart if it doesn't exist
             const ctx = document.getElementById('equityChart').getContext('2d');
+            const chartColors = getChartColors();
             appState.chartInstances.equity = new Chart(ctx, {
                 type: 'line',
                 data: {
                     datasets: [{
                         label: 'Account Balance',
                         data: cumulativeData,
-                        borderColor: '#60a5fa',
-                        backgroundColor: 'rgba(96, 165, 250, 0.1)',
+                        borderColor: chartColors.blue,
+                        backgroundColor: chartColors.blueLight,
                         borderWidth: 2,
                         fill: true,
                         tension: 0.1,
@@ -7437,14 +7544,14 @@ select.form-control {
                     plugins: {
                         legend: {
                             labels: {
-                                color: '#f8fafc'
+                                color: chartColors.text
                             }
                         },
                         tooltip: {
-                            backgroundColor: '#1e293b',
-                            borderColor: '#475569',
-                            titleColor: '#e2e8f0',
-                            bodyColor: '#60a5fa',
+                            backgroundColor: chartColors.surface,
+                            borderColor: chartColors.border,
+                            titleColor: chartColors.text,
+                            bodyColor: chartColors.blue,
                             callbacks: {
                                 title: function(context) {
                                     return context[0].parsed.x === 0 ? 'Starting Balance' : `Trade ${context[0].parsed.x}`;
@@ -11627,7 +11734,7 @@ select.form-control {
             // Add day headers with week stats header
             const dayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Week'];
             dayHeaders.forEach(day => {
-                html += `<div style="text-align: center; font-weight: bold; padding: 0.5rem; color: #94a3b8;">${day}</div>`;
+                html += `<div class="text-center text-muted" style="font-weight: bold; padding: 0.5rem;">${day}</div>`;
             });
 
             // Track current week stats
