@@ -7680,13 +7680,20 @@ select.form-control {
 
             const dates = Object.keys(dailyPL).sort();
             const values = dates.map(date => dailyPL[date]);
+            const colors = getChartColors();
 
             // Performance optimization: Update existing chart if possible
             if (appState.chartInstances.dailyPL) {
                 appState.chartInstances.dailyPL.data.labels = dates;
                 appState.chartInstances.dailyPL.data.datasets[0].data = values;
-                appState.chartInstances.dailyPL.data.datasets[0].backgroundColor = values.map(v => v >= 0 ? '#10b981' : '#ef4444');
-                appState.chartInstances.dailyPL.data.datasets[0].borderColor = values.map(v => v >= 0 ? '#10b981' : '#ef4444');
+                appState.chartInstances.dailyPL.data.datasets[0].backgroundColor = values.map(v => v >= 0 ? colors.success : colors.error);
+                appState.chartInstances.dailyPL.data.datasets[0].borderColor = values.map(v => v >= 0 ? colors.success : colors.error);
+                appState.chartInstances.dailyPL.options.plugins.legend.labels.color = colors.text;
+                appState.chartInstances.dailyPL.options.scales.x.ticks.color = colors.textSecondary;
+                appState.chartInstances.dailyPL.options.scales.x.grid.color = colors.gridColor;
+                appState.chartInstances.dailyPL.options.scales.y.title.color = colors.textSecondary;
+                appState.chartInstances.dailyPL.options.scales.y.ticks.color = colors.textSecondary;
+                appState.chartInstances.dailyPL.options.scales.y.grid.color = colors.gridColor;
                 appState.chartInstances.dailyPL.update('none');
                 return;
             }
@@ -7700,8 +7707,8 @@ select.form-control {
                     datasets: [{
                         label: 'Daily P&L',
                         data: values,
-                        backgroundColor: values.map(v => v >= 0 ? '#10b981' : '#ef4444'),
-                        borderColor: values.map(v => v >= 0 ? '#10b981' : '#ef4444'),
+                        backgroundColor: values.map(v => v >= 0 ? colors.success : colors.error),
+                        borderColor: values.map(v => v >= 0 ? colors.success : colors.error),
                         borderWidth: 1
                     }]
                 },
@@ -7711,33 +7718,33 @@ select.form-control {
                     plugins: {
                         legend: {
                             labels: {
-                                color: '#f8fafc'
+                                color: colors.text
                             }
                         }
                     },
                     scales: {
                         x: {
                             ticks: {
-                                color: '#94a3b8'
+                                color: colors.textSecondary
                             },
                             grid: {
-                                color: 'rgba(148, 163, 184, 0.1)'
+                                color: colors.gridColor
                             }
                         },
                         y: {
                             title: {
                                 display: true,
                                 text: 'Profit/Loss ($)',
-                                color: '#94a3b8'
+                                color: colors.textSecondary
                             },
                             ticks: {
-                                color: '#94a3b8',
+                                color: colors.textSecondary,
                                 callback: function(value) {
                                     return '$' + value.toFixed(0);
                                 }
                             },
                             grid: {
-                                color: 'rgba(148, 163, 184, 0.1)'
+                                color: colors.gridColor
                             }
                         }
                     }
@@ -7747,10 +7754,14 @@ select.form-control {
 
         function drawWinLossChart() {
             const stats = appState.statistics;
+            const colors = getChartColors();
 
             // Performance optimization: Update existing chart if possible
             if (appState.chartInstances.winLoss) {
                 appState.chartInstances.winLoss.data.datasets[0].data = [stats.winningTrades, stats.losingTrades];
+                appState.chartInstances.winLoss.data.datasets[0].backgroundColor = [colors.success, colors.error];
+                appState.chartInstances.winLoss.data.datasets[0].borderColor = [colors.successMedium, colors.errorMedium];
+                appState.chartInstances.winLoss.options.plugins.legend.labels.color = colors.text;
                 appState.chartInstances.winLoss.update('none');
                 return;
             }
@@ -7763,8 +7774,8 @@ select.form-control {
                     labels: ['Wins', 'Losses'],
                     datasets: [{
                         data: [stats.winningTrades, stats.losingTrades],
-                        backgroundColor: ['#10b981', '#ef4444'],
-                        borderColor: ['#059669', '#dc2626'],
+                        backgroundColor: [colors.success, colors.error],
+                        borderColor: [colors.successMedium, colors.errorMedium],
                         borderWidth: 2
                     }]
                 },
@@ -7775,7 +7786,7 @@ select.form-control {
                         legend: {
                             position: 'bottom',
                             labels: {
-                                color: '#f8fafc',
+                                color: colors.text,
                                 padding: 20
                             }
                         }
@@ -11086,7 +11097,7 @@ select.form-control {
             }
 
             const renderBreakdownCards = (breakdowns, isTotal = false) => Object.entries(breakdowns).map(([setup, data]) => `
-                <div class="breakdown-item" style="${isTotal ? 'border: 2px solid #4a9eff; box-shadow: 0 4px 12px rgba(74, 158, 255, 0.3);' : ''}">
+                <div class="breakdown-item" style="${isTotal ? 'border: 2px solid var(--color-primary); box-shadow: 0 4px 12px rgba(var(--color-teal-500-rgb), 0.3);' : ''}">
                     <div class="breakdown-header">${setup}</div>
                     <div class="breakdown-stats">
                         Trades: ${data.trades}<br>
@@ -11098,7 +11109,7 @@ select.form-control {
 
             container.innerHTML = `
                 <div style="margin-bottom: 1.5rem;">
-                    <h4 style="color: #4a9eff; margin-bottom: 0.75rem;">TOTAL (All Time)</h4>
+                    <h4 style="color: var(--color-primary); margin-bottom: 0.75rem;">TOTAL (All Time)</h4>
                     <div class="breakdown-grid">
                         ${renderBreakdownCards(totalBreakdowns, true)}
                     </div>
@@ -11159,7 +11170,7 @@ select.form-control {
             }
 
             const renderBreakdownCards = (breakdowns, isTotal = false) => Object.entries(breakdowns).map(([condition, data]) => `
-                <div class="breakdown-item" style="${isTotal ? 'border: 2px solid #4a9eff; box-shadow: 0 4px 12px rgba(74, 158, 255, 0.3);' : ''}">
+                <div class="breakdown-item" style="${isTotal ? 'border: 2px solid var(--color-primary); box-shadow: 0 4px 12px rgba(var(--color-teal-500-rgb), 0.3);' : ''}">
                     <div class="breakdown-header">${condition}</div>
                     <div class="breakdown-stats">
                         Trades: ${data.trades}<br>
@@ -11171,7 +11182,7 @@ select.form-control {
 
             container.innerHTML = `
                 <div style="margin-bottom: 1.5rem;">
-                    <h4 style="color: #4a9eff; margin-bottom: 0.75rem;">TOTAL (All Time)</h4>
+                    <h4 style="color: var(--color-primary); margin-bottom: 0.75rem;">TOTAL (All Time)</h4>
                     <div class="breakdown-grid">
                         ${renderBreakdownCards(totalBreakdowns, true)}
                     </div>
@@ -11232,7 +11243,7 @@ select.form-control {
             }
 
             const renderBreakdownCards = (breakdowns, isTotal = false) => Object.entries(breakdowns).map(([state, data]) => `
-                <div class="breakdown-item" style="${isTotal ? 'border: 2px solid #4a9eff; box-shadow: 0 4px 12px rgba(74, 158, 255, 0.3);' : ''}">
+                <div class="breakdown-item" style="${isTotal ? 'border: 2px solid var(--color-primary); box-shadow: 0 4px 12px rgba(var(--color-teal-500-rgb), 0.3);' : ''}">
                     <div class="breakdown-header">${state}</div>
                     <div class="breakdown-stats">
                         Trades: ${data.trades}<br>
@@ -11244,7 +11255,7 @@ select.form-control {
 
             container.innerHTML = `
                 <div style="margin-bottom: 1.5rem;">
-                    <h4 style="color: #4a9eff; margin-bottom: 0.75rem;">TOTAL (All Time)</h4>
+                    <h4 style="color: var(--color-primary); margin-bottom: 0.75rem;">TOTAL (All Time)</h4>
                     <div class="breakdown-grid">
                         ${renderBreakdownCards(totalBreakdowns, true)}
                     </div>
@@ -11305,7 +11316,7 @@ select.form-control {
             }
 
             const renderBreakdownCards = (breakdowns, isTotal = false) => Object.entries(breakdowns).map(([adherence, data]) => `
-                <div class="breakdown-item" style="${isTotal ? 'border: 2px solid #4a9eff; box-shadow: 0 4px 12px rgba(74, 158, 255, 0.3);' : ''}">
+                <div class="breakdown-item" style="${isTotal ? 'border: 2px solid var(--color-primary); box-shadow: 0 4px 12px rgba(var(--color-teal-500-rgb), 0.3);' : ''}">
                     <div class="breakdown-header">${adherence}</div>
                     <div class="breakdown-stats">
                         Trades: ${data.trades}<br>
@@ -11317,7 +11328,7 @@ select.form-control {
 
             container.innerHTML = `
                 <div style="margin-bottom: 1.5rem;">
-                    <h4 style="color: #4a9eff; margin-bottom: 0.75rem;">TOTAL (All Time)</h4>
+                    <h4 style="color: var(--color-primary); margin-bottom: 0.75rem;">TOTAL (All Time)</h4>
                     <div class="breakdown-grid">
                         ${renderBreakdownCards(totalBreakdowns, true)}
                     </div>
@@ -11457,7 +11468,7 @@ select.form-control {
 
             // Render the monthly stats with TOTAL at the top
             const renderMonthCard = (stats, isTotal = false) => `
-                <div class="breakdown-item ${isTotal ? 'total-row' : ''}" style="${isTotal ? 'background: linear-gradient(135deg, #2a2a3e 0%, #1a1a2e 100%); border: 2px solid #4a9eff; box-shadow: 0 4px 12px rgba(74, 158, 255, 0.3);' : ''}">
+                <div class="breakdown-item ${isTotal ? 'total-row' : ''}" style="${isTotal ? 'border: 2px solid var(--color-primary); box-shadow: 0 4px 12px rgba(var(--color-teal-500-rgb), 0.3);' : ''}">
                     <div class="breakdown-header" style="${isTotal ? 'font-size: 1.2em; font-weight: bold; color: #4a9eff;' : ''}">${isTotal ? 'TOTAL (All Time)' : stats.month}</div>
                     <div class="breakdown-stats" style="font-size: 0.9em;">
                         <strong>Trades:</strong> ${stats.totalTrades} (${stats.winCount}W / ${stats.lossCount}L)<br>
@@ -11522,7 +11533,7 @@ select.form-control {
 
             // Render function
             const renderDayCard = (day, data, isTotal = false) => `
-                <div class="breakdown-item ${isTotal ? 'total-row' : ''}" style="${isTotal ? 'background: linear-gradient(135deg, #2a2a3e 0%, #1a1a2e 100%); border: 2px solid #4a9eff; box-shadow: 0 4px 12px rgba(74, 158, 255, 0.3);' : ''}">
+                <div class="breakdown-item ${isTotal ? 'total-row' : ''}" style="${isTotal ? 'border: 2px solid var(--color-primary); box-shadow: 0 4px 12px rgba(var(--color-teal-500-rgb), 0.3);' : ''}">
                     <div class="breakdown-header" style="${isTotal ? 'font-size: 1.1em; font-weight: bold; color: #4a9eff;' : ''}">${isTotal ? 'TOTAL - ' : ''}${day}</div>
                     <div class="breakdown-stats">
                         Trades: ${data.trades}<br>
@@ -11536,7 +11547,7 @@ select.form-control {
 
             container.innerHTML = `
                 <div style="margin-bottom: 1.5rem;">
-                    <h4 style="color: #4a9eff; margin-bottom: 0.75rem;">TOTAL (All Time)</h4>
+                    <h4 style="color: var(--color-primary); margin-bottom: 0.75rem;">TOTAL (All Time)</h4>
                     <div class="breakdown-grid">
                         ${daysOfWeek.map(day => renderDayCard(day, totalDailyData[day], true)).join('')}
                     </div>
@@ -11596,7 +11607,7 @@ select.form-control {
 
             // Render function
             const renderHourCard = (hour, data, isTotal = false) => `
-                <div class="breakdown-item ${isTotal ? 'total-row' : ''}" style="${isTotal ? 'background: linear-gradient(135deg, #2a2a3e 0%, #1a1a2e 100%); border: 2px solid #4a9eff; box-shadow: 0 4px 12px rgba(74, 158, 255, 0.3);' : ''}">
+                <div class="breakdown-item ${isTotal ? 'total-row' : ''}" style="${isTotal ? 'border: 2px solid var(--color-primary); box-shadow: 0 4px 12px rgba(var(--color-teal-500-rgb), 0.3);' : ''}">
                     <div class="breakdown-header" style="${isTotal ? 'font-size: 1.1em; font-weight: bold; color: #4a9eff;' : ''}">${isTotal ? 'TOTAL - ' : ''}${hour}:00</div>
                     <div class="breakdown-stats">
                         Trades: ${data.trades}<br>
@@ -11612,7 +11623,7 @@ select.form-control {
 
             container.innerHTML = `
                 <div style="margin-bottom: 1.5rem;">
-                    <h4 style="color: #4a9eff; margin-bottom: 0.75rem;">TOTAL (All Time)</h4>
+                    <h4 style="color: var(--color-primary); margin-bottom: 0.75rem;">TOTAL (All Time)</h4>
                     <div class="breakdown-grid">
                         ${activeTotalHours.map(([hour, data]) => renderHourCard(hour, data, true)).join('')}
                     </div>
@@ -11668,7 +11679,7 @@ select.form-control {
 
             // Render function
             const renderHourCard = (hour, data, isTotal = false) => `
-                <div class="breakdown-item ${isTotal ? 'total-row' : ''}" style="${isTotal ? 'background: linear-gradient(135deg, #2a2a3e 0%, #1a1a2e 100%); border: 2px solid #4a9eff; box-shadow: 0 4px 12px rgba(74, 158, 255, 0.3);' : ''}">
+                <div class="breakdown-item ${isTotal ? 'total-row' : ''}" style="${isTotal ? 'border: 2px solid var(--color-primary); box-shadow: 0 4px 12px rgba(var(--color-teal-500-rgb), 0.3);' : ''}">
                     <div class="breakdown-header" style="${isTotal ? 'font-size: 1.1em; font-weight: bold; color: #4a9eff;' : ''}">${isTotal ? 'TOTAL - ' : ''}${hour}:00</div>
                     <div class="breakdown-stats">
                         Trades: ${data.trades}<br>
@@ -11684,7 +11695,7 @@ select.form-control {
 
             container.innerHTML = `
                 <div style="margin-bottom: 1.5rem;">
-                    <h4 style="color: #4a9eff; margin-bottom: 0.75rem;">TOTAL (All Time)</h4>
+                    <h4 style="color: var(--color-primary); margin-bottom: 0.75rem;">TOTAL (All Time)</h4>
                     <div class="breakdown-grid">
                         ${activeTotalHours.map(([hour, data]) => renderHourCard(hour, data, true)).join('')}
                     </div>
@@ -12821,18 +12832,18 @@ select.form-control {
                 return `
                     <div style="margin: 10px 0; page-break-inside: avoid;">
                         <strong>${escapeHtml(label)}:</strong><br>
-                        <div style="padding: 15px; background: #f8f9fa; border: 2px dashed #dee2e6; border-radius: 4px; margin: 10px 0; text-align: center;">
-                            <p style="margin: 0 0 10px 0; color: #495057; font-size: 14px; font-weight: bold;">📊 TradingView Chart (Link Only)</p>
-                            <p style="margin: 0 0 10px 0; color: #6c757d; font-size: 12px;">TradingView charts cannot be printed directly. Please save a screenshot from TradingView.</p>
-                            <div style="background: white; padding: 10px; border-radius: 4px; margin: 10px 0;">
-                                <a href="${sanitizedUrl}" target="_blank" style="color: #2962ff; text-decoration: none; word-break: break-all; font-size: 12px; font-family: monospace;">${sanitizedUrl}</a>
+                        <div style="padding: 15px; background: var(--color-surface); border: 2px dashed var(--color-border); border-radius: 4px; margin: 10px 0; text-align: center;">
+                            <p style="margin: 0 0 10px 0; color: var(--color-text); font-size: 14px; font-weight: bold;">📊 TradingView Chart (Link Only)</p>
+                            <p style="margin: 0 0 10px 0; color: var(--color-text-secondary); font-size: 12px;">TradingView charts cannot be printed directly. Please save a screenshot from TradingView.</p>
+                            <div style="background: var(--color-background); padding: 10px; border-radius: 4px; margin: 10px 0;">
+                                <a href="${sanitizedUrl}" target="_blank" style="color: var(--color-primary); text-decoration: none; word-break: break-all; font-size: 12px; font-family: monospace;">${sanitizedUrl}</a>
                             </div>
-                            <p style="margin: 10px 0 0 0; color: #6c757d; font-size: 11px; font-style: italic;">💡 Tip: In TradingView, right-click the chart → "Save image" → Upload as screenshot for printable reports</p>
+                            <p style="margin: 10px 0 0 0; color: var(--color-text-secondary); font-size: 11px; font-style: italic;">💡 Tip: In TradingView, right-click the chart → "Save image" → Upload as screenshot for printable reports</p>
                         </div>
                     </div>`;
             } else {
                 // For data URIs and regular images
-                return `<div><strong>${escapeHtml(label)}:</strong><br><img src="${sanitizedUrl}" alt="${escapeHtml(label)} Screenshot" style="max-width: 400px; margin: 10px 0; border: 1px solid #ccc;"></div>`;
+                return `<div><strong>${escapeHtml(label)}:</strong><br><img src="${sanitizedUrl}" alt="${escapeHtml(label)} Screenshot" style="max-width: 400px; margin: 10px 0; border: 1px solid var(--color-border);"></div>`;
             }
         }
 
@@ -13048,7 +13059,7 @@ select.form-control {
 <body>
     <div class="print-preview-controls">
         <h2 style="margin: 0 0 10px 0;">Print Preview</h2>
-        <p style="margin: 5px 0; font-size: 14px; color: #ecf0f1;">Review the content below. Wait for charts to load before printing.</p>
+        <p style="margin: 5px 0; font-size: 14px; color: var(--color-text-secondary);">Review the content below. Wait for charts to load before printing.</p>
         <div>
             <button class="print-btn" onclick="window.print()">🖨️ Print (Ctrl+P)</button>
             <button class="close-btn" onclick="window.close()">✕ Close</button>
@@ -13323,7 +13334,7 @@ select.form-control {
 <body>
     <div class="print-preview-controls">
         <h2 style="margin: 0 0 10px 0;">Print Preview - Trade with Screenshots</h2>
-        <p style="margin: 5px 0; font-size: 14px; color: #ecf0f1;">Trade details on first page, screenshots on following pages. Wait for images to load before printing.</p>
+        <p style="margin: 5px 0; font-size: 14px; color: var(--color-text-secondary);">Trade details on first page, screenshots on following pages. Wait for images to load before printing.</p>
         <div>
             <button class="print-btn" onclick="window.print()">🖨️ Print (Ctrl+P)</button>
             <button class="close-btn" onclick="window.close()">✕ Close</button>
@@ -13810,7 +13821,7 @@ select.form-control {
 <body>
     <div class="print-preview-controls">
         <h2 style="margin: 0 0 10px 0;">Print Preview - ${appState.trades.length} Trades</h2>
-        <p style="margin: 5px 0; font-size: 14px; color: #ecf0f1;">All trades with screenshots on separate pages. Wait for images to load before printing.</p>
+        <p style="margin: 5px 0; font-size: 14px; color: var(--color-text-secondary);">All trades with screenshots on separate pages. Wait for images to load before printing.</p>
         <div>
             <button class="print-btn" onclick="window.print()">🖨️ Print (Ctrl+P)</button>
             <button class="close-btn" onclick="window.close()">✕ Close</button>
