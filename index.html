@@ -965,6 +965,42 @@ select.form-control {
             background: var(--color-secondary);
         }
 
+        .month-group-header {
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .month-group-header td {
+            background: var(--color-secondary);
+            padding: 0.6rem 0.75rem;
+            font-weight: 600;
+            font-size: var(--font-size-sm);
+            border-bottom: 2px solid var(--color-border);
+        }
+
+        .month-group-header:hover td {
+            background: var(--color-border);
+        }
+
+        .month-group-toggle {
+            display: inline-block;
+            width: 1.2em;
+            text-align: center;
+            margin-right: 0.4rem;
+            transition: transform 0.2s;
+        }
+
+        .month-group-toggle.collapsed {
+            transform: rotate(-90deg);
+        }
+
+        .month-group-summary {
+            float: right;
+            font-weight: 400;
+            font-size: var(--font-size-xs);
+            color: var(--color-text-secondary);
+        }
+
         .trade-details {
             background: var(--color-background);
             padding: 1.5rem;
@@ -3738,6 +3774,7 @@ select.form-control {
             statistics: {},
             chartInstances: {},
             activeTradeIndex: null,
+            collapsedMonthGroups: {},
             activePasteTarget: 'entry', // 'entry' or 'exit'
             // Performance optimization: statistics caching
             statsCache: { version: 0, data: null },
@@ -7819,11 +7856,13 @@ select.form-control {
             updateTableHeader();
             updateTableBody();
 
-            // Restore the open trade details if there was one
+            // Restore the open trade details if there was one (unless its month group is collapsed)
             if (activeIndex !== null && activeIndex < appState.trades.length) {
                 const detailsRow = document.querySelector(`#details_${activeIndex}`).parentElement.parentElement;
-                detailsRow.style.display = 'table-row';
-                renderTradeDetails(activeIndex);
+                if (!detailsRow.dataset.monthCollapsed) {
+                    detailsRow.style.display = 'table-row';
+                    renderTradeDetails(activeIndex);
+                }
             }
 
             // Update collapse state display after table updates
@@ -7858,39 +7897,118 @@ select.form-control {
             const tbody = document.getElementById('tradesTableBody');
             tbody.innerHTML = '';
 
+            const columns = appState.visibleColumns;
+            const colCount = Object.values(columns).filter(Boolean).length + 1;
+            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                'July', 'August', 'September', 'October', 'November', 'December'];
+
+            // Group trades by month using close date
+            const monthGroups = new Map();
             appState.trades.forEach((trade, index) => {
-                const row = tbody.insertRow();
-                row.className = 'trade-row';
+                const tradeDate = new Date(trade.date || trade.openDate);
+                const key = `${tradeDate.getFullYear()}-${String(tradeDate.getMonth() + 1).padStart(2, '0')}`;
+                if (!monthGroups.has(key)) {
+                    monthGroups.set(key, []);
+                }
+                monthGroups.get(key).push({ trade, index });
+            });
 
-                const columns = appState.visibleColumns;
-                let html = '';
+            // Sort month keys descending (newest first)
+            const sortedKeys = Array.from(monthGroups.keys()).sort((a, b) => b.localeCompare(a));
 
-                if (columns.openDate) html += `<td>${trade.openDate || '-'}</td>`;
-                if (columns.openTime) html += `<td>${trade.openTime || '-'}</td>`;
-                if (columns.date) html += `<td>${trade.date}</td>`;
-                if (columns.time) html += `<td>${trade.time}</td>`;
-                if (columns.timezone) html += `<td>${trade.timezone || '-'}</td>`;
-                if (columns.symbol) html += `<td>${trade.symbol}</td>`;
-                if (columns.direction) html += `<td>${trade.direction}</td>`;
-                if (columns.entry) html += `<td>${trade.entryPrice.toFixed(5)}</td>`;
-                if (columns.exit) html += `<td>${trade.exitPrice.toFixed(5)}</td>`;
-                if (columns.pips) html += `<td class="${trade.pips >= 0 ? 'positive' : 'negative'}">${trade.pips.toFixed(1)}</td>`;
-                if (columns.pl) html += `<td class="${(trade.netPL || trade.profit) >= 0 ? 'positive' : 'negative'}">$${(trade.netPL || trade.profit).toFixed(2)}</td>`;
-                if (columns.setup) html += `<td>${trade.setupType || '-'}</td>`;
+            sortedKeys.forEach(monthKey => {
+                const trades = monthGroups.get(monthKey);
+                const [year, month] = monthKey.split('-');
+                const monthLabel = `${monthNames[parseInt(month) - 1]} ${year}`;
+                const isCollapsed = !!appState.collapsedMonthGroups[monthKey];
 
-                html += `<td><button class="btn btn-secondary" onclick="toggleTradeDetails(${index})">Details</button></td>`;
+                // Calculate month summary
+                const tradeCount = trades.length;
+                const totalPL = trades.reduce((sum, t) => sum + (t.trade.netPL || t.trade.profit || 0), 0);
+                const plClass = totalPL >= 0 ? 'positive' : 'negative';
 
-                row.innerHTML = html;
-
-                // Add expandable details row
-                const detailRow = tbody.insertRow();
-                detailRow.style.display = 'none';
-                detailRow.innerHTML = `
-                    <td colspan="${Object.values(columns).filter(Boolean).length + 1}">
-                        <div class="trade-details" id="details_${index}"></div>
+                // Insert month group header row
+                const headerRow = tbody.insertRow();
+                headerRow.className = 'month-group-header';
+                headerRow.dataset.monthKey = monthKey;
+                headerRow.onclick = function() { toggleMonthGroup(this.dataset.monthKey); };
+                headerRow.innerHTML = `
+                    <td colspan="${colCount}">
+                        <span class="month-group-toggle ${isCollapsed ? 'collapsed' : ''}">▼</span>
+                        ${monthLabel}
+                        <span class="month-group-summary">
+                            ${tradeCount} trade${tradeCount !== 1 ? 's' : ''} &nbsp;|&nbsp;
+                            <span class="${plClass}">$${totalPL.toFixed(2)}</span>
+                        </span>
                     </td>
                 `;
+
+                // Insert trade rows for this month
+                trades.forEach(({ trade, index }) => {
+                    const row = tbody.insertRow();
+                    row.className = 'trade-row';
+                    if (isCollapsed) row.style.display = 'none';
+                    row.dataset.monthGroup = monthKey;
+
+                    let html = '';
+                    if (columns.openDate) html += `<td>${trade.openDate || '-'}</td>`;
+                    if (columns.openTime) html += `<td>${trade.openTime || '-'}</td>`;
+                    if (columns.date) html += `<td>${trade.date}</td>`;
+                    if (columns.time) html += `<td>${trade.time}</td>`;
+                    if (columns.timezone) html += `<td>${trade.timezone || '-'}</td>`;
+                    if (columns.symbol) html += `<td>${trade.symbol}</td>`;
+                    if (columns.direction) html += `<td>${trade.direction}</td>`;
+                    if (columns.entry) html += `<td>${trade.entryPrice.toFixed(5)}</td>`;
+                    if (columns.exit) html += `<td>${trade.exitPrice.toFixed(5)}</td>`;
+                    if (columns.pips) html += `<td class="${trade.pips >= 0 ? 'positive' : 'negative'}">${trade.pips.toFixed(1)}</td>`;
+                    if (columns.pl) html += `<td class="${(trade.netPL || trade.profit) >= 0 ? 'positive' : 'negative'}">$${(trade.netPL || trade.profit).toFixed(2)}</td>`;
+                    if (columns.setup) html += `<td>${trade.setupType || '-'}</td>`;
+                    html += `<td><button class="btn btn-secondary" onclick="toggleTradeDetails(${index})">Details</button></td>`;
+                    row.innerHTML = html;
+
+                    // Add expandable details row
+                    const detailRow = tbody.insertRow();
+                    detailRow.style.display = 'none';
+                    detailRow.dataset.monthGroup = monthKey;
+                    if (isCollapsed) detailRow.dataset.monthCollapsed = 'true';
+                    detailRow.innerHTML = `
+                        <td colspan="${colCount}">
+                            <div class="trade-details" id="details_${index}"></div>
+                        </td>
+                    `;
+                });
             });
+        }
+
+        function toggleMonthGroup(monthKey) {
+            const isCollapsed = !appState.collapsedMonthGroups[monthKey];
+            appState.collapsedMonthGroups[monthKey] = isCollapsed;
+
+            // Toggle visibility of trade rows in this group
+            const rows = document.querySelectorAll(`[data-month-group="${monthKey}"]`);
+            rows.forEach(row => {
+                if (row.classList.contains('trade-row')) {
+                    row.style.display = isCollapsed ? 'none' : '';
+                } else {
+                    // Details rows: hide if collapsing, but only show if it was previously visible
+                    if (isCollapsed) {
+                        row.dataset.monthCollapsed = 'true';
+                        row.style.display = 'none';
+                    } else {
+                        delete row.dataset.monthCollapsed;
+                        // Details rows stay hidden unless explicitly opened
+                    }
+                }
+            });
+
+            // Update the toggle arrow
+            const headerRow = document.querySelector(`.month-group-header[data-month-key="${monthKey}"]`);
+            if (headerRow) {
+                const toggle = headerRow.querySelector('.month-group-toggle');
+                if (toggle) {
+                    toggle.classList.toggle('collapsed', isCollapsed);
+                }
+            }
         }
 
         // Export Menu Functions
