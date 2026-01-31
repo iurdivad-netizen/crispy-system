@@ -3899,6 +3899,7 @@ select.form-control {
                 openTime: true,
                 date: true,
                 time: true,
+                timezone: false,
                 symbol: true,
                 direction: true,
                 entry: true,
@@ -3914,6 +3915,14 @@ select.form-control {
         const marketConditions = ['Trending', 'Ranging', 'Volatile'];
         const emotionalStates = ['Confident', 'Uncertain', 'Fearful', 'Greedy', 'Disciplined', 'Impulsive'];
         const ruleAdherence = ['Perfect', 'Custom', 'Partial', 'None'];
+        const timezones = [
+            'UTC', 'US/Eastern', 'US/Central', 'US/Mountain', 'US/Pacific',
+            'Europe/London', 'Europe/Berlin', 'Europe/Paris', 'Europe/Moscow',
+            'Asia/Tokyo', 'Asia/Shanghai', 'Asia/Hong_Kong', 'Asia/Singapore',
+            'Asia/Kolkata', 'Asia/Dubai', 'Australia/Sydney', 'Pacific/Auckland',
+            'America/Chicago', 'America/Denver', 'America/Sao_Paulo',
+            'Africa/Johannesburg', 'Atlantic/Reykjavik'
+        ];
 
         // ============================================================================
         // PERFORMANCE OPTIMIZATION UTILITIES
@@ -6416,6 +6425,14 @@ select.form-control {
                             <option value="None" ${trade.ruleAdherence === 'None' ? 'selected' : ''}>None</option>
                         </select>
                     </div>
+
+                    <div class="form-group">
+                        <label>Timezone</label>
+                        <select class="form-control" onchange="updateTradeField(${tradeIndex}, 'timezone', this.value)">
+                            <option value="">Select timezone...</option>
+                            ${timezones.map(tz => `<option value="${tz}" ${trade.timezone === tz ? 'selected' : ''}>${tz}</option>`).join('')}
+                        </select>
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -7824,6 +7841,7 @@ select.form-control {
             if (columns.openTime) html += '<th>Open Time</th>';
             if (columns.date) html += '<th>Close Date</th>';
             if (columns.time) html += '<th>Close Time</th>';
+            if (columns.timezone) html += '<th>Timezone</th>';
             if (columns.symbol) html += '<th>Symbol</th>';
             if (columns.direction) html += '<th>Direction</th>';
             if (columns.entry) html += '<th>Entry</th>';
@@ -7851,6 +7869,7 @@ select.form-control {
                 if (columns.openTime) html += `<td>${trade.openTime || '-'}</td>`;
                 if (columns.date) html += `<td>${trade.date}</td>`;
                 if (columns.time) html += `<td>${trade.time}</td>`;
+                if (columns.timezone) html += `<td>${trade.timezone || '-'}</td>`;
                 if (columns.symbol) html += `<td>${trade.symbol}</td>`;
                 if (columns.direction) html += `<td>${trade.direction}</td>`;
                 if (columns.entry) html += `<td>${trade.entryPrice.toFixed(5)}</td>`;
@@ -8096,7 +8115,7 @@ select.form-control {
             
             // CSV Headers
             const headers = [
-                'Open Date', 'Open Time', 'Close Date', 'Close Time', 'Symbol', 'Direction', 'Entry Price', 'Exit Price',
+                'Open Date', 'Open Time', 'Close Date', 'Close Time', 'Timezone', 'Symbol', 'Direction', 'Entry Price', 'Exit Price',
                 'Volume', 'Pips', 'Gross P/L', 'Net P/L', 'Commission', 'Swap',
                 'Setup Type', 'Market Condition', 'Emotional State', 'Rule Adherence', 'Notes'
             ];
@@ -8107,6 +8126,7 @@ select.form-control {
                 trade.openTime || '',
                 formatDate(trade.closeTime || trade.date),
                 formatTime(trade.closeTime || trade.time),
+                trade.timezone || '',
                 trade.symbol,
                 trade.direction,
                 trade.entryPrice,
@@ -13913,6 +13933,7 @@ select.form-control {
                 openTime: 'Open Time',
                 date: 'Close Date',
                 time: 'Close Time',
+                timezone: 'Timezone',
                 symbol: 'Symbol',
                 direction: 'Direction',
                 entry: 'Entry Price',
