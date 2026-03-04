@@ -10060,7 +10060,7 @@ select.form-control {
             }
 
             // Rule Combinations Section
-            const ruleCombinationsContent = document.querySelector('#ruleCombinationsSection .section-content');
+            const ruleCombinationsContent = document.getElementById('ruleCombinationsContent');
             const ruleCombinationsToggle = document.getElementById('ruleCombinationsToggle');
             if (ruleCombinationsContent && ruleCombinationsToggle) {
                 ruleCombinationsContent.style.display = appState.showRuleCombinations ? 'block' : 'none';
