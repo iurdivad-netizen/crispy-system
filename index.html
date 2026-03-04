@@ -4125,6 +4125,39 @@ select.form-control {
             }
         }
 
+        // ============================================================================
+        // SCREENSHOT INDEXEDDB HELPERS - Lazy-load screenshots from separate storage
+        // ============================================================================
+
+        /** Save a screenshot data URI to IndexedDB separately from trade data */
+        async function saveScreenshotToIDB(tradeId, type, dataUri) {
+            const key = `screenshot_${tradeId}_${type}`;
+            await saveToIndexedDB(key, dataUri);
+        }
+
+        /** Load a screenshot data URI from IndexedDB */
+        async function loadScreenshotFromIDB(tradeId, type) {
+            const key = `screenshot_${tradeId}_${type}`;
+            return await loadFromIndexedDB(key);
+        }
+
+        /** Delete a screenshot from IndexedDB */
+        async function deleteScreenshotFromIDB(tradeId, type) {
+            const key = `screenshot_${tradeId}_${type}`;
+            await deleteFromIndexedDB(key);
+        }
+
+        /** Load screenshot and return display-ready data URI, or null */
+        async function getScreenshotData(tradeId, type) {
+            const data = await loadScreenshotFromIDB(tradeId, type);
+            if (data) return getScreenshotSrc(data);
+            return null;
+        }
+
+        // ============================================================================
+        // END SCREENSHOT INDEXEDDB HELPERS
+        // ============================================================================
+
         // Get IndexedDB storage size estimate
         async function getIndexedDBSize() {
             try {
@@ -4492,7 +4525,12 @@ select.form-control {
                 const dataToSave = {
                     version: APP_VERSION,
                     timestamp: new Date().toISOString(),
-                    trades: appState.trades,
+                    // Store only boolean flags for screenshots - actual data lives in IndexedDB
+                    trades: appState.trades.map(t => ({
+                        ...t,
+                        entryScreenshot: t.entryScreenshot ? true : null,
+                        exitScreenshot: t.exitScreenshot ? true : null
+                    })),
                     startingBalance: appState.startingBalance,
                     themeMode: appState.themeMode,
                     customRules: appState.customRules,
@@ -4595,6 +4633,26 @@ select.form-control {
                 if (data.trades && Array.isArray(data.trades)) {
                     appState.trades = data.trades;
                     invalidateStatsCache();
+
+                    // Migrate inline base64 screenshots to separate IndexedDB entries
+                    for (const trade of appState.trades) {
+                        if (trade.entryScreenshot && typeof trade.entryScreenshot === 'string') {
+                            try {
+                                await saveScreenshotToIDB(trade.id, 'entry', trade.entryScreenshot);
+                                trade.entryScreenshot = true;
+                            } catch (err) {
+                                console.warn('Failed to migrate entry screenshot for trade', trade.id, err);
+                            }
+                        }
+                        if (trade.exitScreenshot && typeof trade.exitScreenshot === 'string') {
+                            try {
+                                await saveScreenshotToIDB(trade.id, 'exit', trade.exitScreenshot);
+                                trade.exitScreenshot = true;
+                            } catch (err) {
+                                console.warn('Failed to migrate exit screenshot for trade', trade.id, err);
+                            }
+                        }
+                    }
                 }
                 if (data.startingBalance !== undefined) {
                     appState.startingBalance = data.startingBalance;
@@ -4846,6 +4904,13 @@ select.form-control {
                 // Also clear from IndexedDB
                 try {
                     await deleteFromIndexedDB(STORAGE_KEYS.APP_STATE);
+                    // Clear all screenshot entries from IndexedDB
+                    const allKeys = await getAllKeysFromIndexedDB();
+                    for (const key of allKeys) {
+                        if (key.startsWith('screenshot_')) {
+                            await deleteFromIndexedDB(key);
+                        }
+                    }
                 } catch (idbError) {
                     console.warn('Failed to clear IndexedDB:', idbError);
                 }
@@ -4894,7 +4959,7 @@ select.form-control {
                     });
                 }
 
-                // Calculate image sizes and analyze compression opportunities
+                // Calculate image sizes from IndexedDB
                 let imageStats = {
                     totalSize: 0,
                     count: 0,
@@ -4902,82 +4967,47 @@ select.form-control {
                     compressionOpportunities: []
                 };
 
-                if (data && data.trades) {
-                    data.trades.forEach((trade, index) => {
-                        // Check entry screenshot
-                        if (trade.entryScreenshot && typeof trade.entryScreenshot === 'string') {
-                            const size = trade.entryScreenshot.length;
-                            const sizeKB = size / 1024;
-                            imageStats.totalSize += size;
-                            imageStats.count++;
+                for (let index = 0; index < appState.trades.length; index++) {
+                    const trade = appState.trades[index];
 
-                            const imageInfo = {
+                    for (const type of ['entry', 'exit']) {
+                        const field = type === 'entry' ? 'entryScreenshot' : 'exitScreenshot';
+                        if (!trade[field]) continue;
+
+                        const screenshotData = await loadScreenshotFromIDB(trade.id, type);
+                        if (!screenshotData || typeof screenshotData !== 'string') continue;
+
+                        const size = screenshotData.length;
+                        const sizeKB = size / 1024;
+                        imageStats.totalSize += size;
+                        imageStats.count++;
+
+                        const imageInfo = {
+                            tradeIndex: index,
+                            type: type,
+                            size: size,
+                            sizeKB: sizeKB,
+                            isPNG: screenshotData.startsWith('data:image/png'),
+                            isJPEG: screenshotData.startsWith('data:image/jpeg')
+                        };
+                        imageStats.images.push(imageInfo);
+
+                        if (imageInfo.isPNG) {
+                            imageStats.compressionOpportunities.push({
                                 tradeIndex: index,
-                                type: 'entry',
-                                size: size,
-                                sizeKB: sizeKB,
-                                isPNG: trade.entryScreenshot.startsWith('data:image/png'),
-                                isJPEG: trade.entryScreenshot.startsWith('data:image/jpeg')
-                            };
-                            imageStats.images.push(imageInfo);
-
-                            // Detect compression opportunities
-                            // PNG images should be JPEG for better compression
-                            if (imageInfo.isPNG) {
-                                imageStats.compressionOpportunities.push({
-                                    tradeIndex: index,
-                                    type: 'entry',
-                                    reason: 'PNG format (convert to JPEG could reduce size by 50-70%)',
-                                    potentialSavingsKB: sizeKB * 0.6 // Estimate 60% savings
-                                });
-                            }
-                            // Large images (over 500KB) could potentially be compressed more
-                            else if (sizeKB > 500) {
-                                imageStats.compressionOpportunities.push({
-                                    tradeIndex: index,
-                                    type: 'entry',
-                                    reason: 'Large image (could reduce quality/size further)',
-                                    potentialSavingsKB: sizeKB * 0.3 // Estimate 30% savings
-                                });
-                            }
-                        }
-
-                        // Check exit screenshot
-                        if (trade.exitScreenshot && typeof trade.exitScreenshot === 'string') {
-                            const size = trade.exitScreenshot.length;
-                            const sizeKB = size / 1024;
-                            imageStats.totalSize += size;
-                            imageStats.count++;
-
-                            const imageInfo = {
+                                type: type,
+                                reason: 'PNG format (convert to JPEG could reduce size by 50-70%)',
+                                potentialSavingsKB: sizeKB * 0.6
+                            });
+                        } else if (sizeKB > 500) {
+                            imageStats.compressionOpportunities.push({
                                 tradeIndex: index,
-                                type: 'exit',
-                                size: size,
-                                sizeKB: sizeKB,
-                                isPNG: trade.exitScreenshot.startsWith('data:image/png'),
-                                isJPEG: trade.exitScreenshot.startsWith('data:image/jpeg')
-                            };
-                            imageStats.images.push(imageInfo);
-
-                            // Detect compression opportunities
-                            if (imageInfo.isPNG) {
-                                imageStats.compressionOpportunities.push({
-                                    tradeIndex: index,
-                                    type: 'exit',
-                                    reason: 'PNG format (convert to JPEG could reduce size by 50-70%)',
-                                    potentialSavingsKB: sizeKB * 0.6
-                                });
-                            }
-                            else if (sizeKB > 500) {
-                                imageStats.compressionOpportunities.push({
-                                    tradeIndex: index,
-                                    type: 'exit',
-                                    reason: 'Large image (could reduce quality/size further)',
-                                    potentialSavingsKB: sizeKB * 0.3
-                                });
-                            }
+                                type: type,
+                                reason: 'Large image (could reduce quality/size further)',
+                                potentialSavingsKB: sizeKB * 0.3
+                            });
                         }
-                    });
+                    }
                 }
 
                 // Add images to breakdown if present
@@ -6514,14 +6544,13 @@ select.form-control {
                             <button class="btn btn-screenshot" onclick="appState.activePasteTarget = 'entry'; document.getElementById('entryScreenshot_${tradeIndex}').click()" style="flex: 1;">
                                 📷 Upload Entry Screenshot
                             </button>
-                            ${trade.entryScreenshot ? `<button class="btn btn-secondary" class="btn btn-clear" onclick="clearScreenshot(${tradeIndex}, 'entry')" title="Remove Screenshot">🗑️</button>` : ''}
+                            ${trade.entryScreenshot ? `<button class="btn btn-secondary btn-clear" onclick="clearScreenshot(${tradeIndex}, 'entry')" title="Remove Screenshot">🗑️</button>` : ''}
                         </div>
                         <input type="file" id="entryScreenshot_${tradeIndex}" class="form-control" accept="image/*" onchange="handleScreenshotUpload(${tradeIndex}, 'entry', this)" style="display: none;">
                         <small style="color: var(--color-text-secondary);">Or paste with Ctrl+V (active target: entry)</small>
-                        ${trade.entryScreenshot && typeof trade.entryScreenshot === 'string' ? `
-                            <div class="screenshot-container" style="margin-top: var(--space-8);">
-                                <img src="${getScreenshotSrc(trade.entryScreenshot)}" class="screenshot" onclick="openLightbox('${getScreenshotSrc(trade.entryScreenshot)}')" onerror="console.error('Failed to load entry screenshot'); this.style.display='none';" style="max-width: 200px; max-height: 150px; cursor: pointer; border-radius: var(--radius-base); border: 1px solid var(--color-border);">
-                                <div style="font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-top: var(--space-4);">Click to view full size</div>
+                        ${trade.entryScreenshot ? `
+                            <div class="screenshot-container" style="margin-top: var(--space-8);" id="entryScreenshotContainer_${tradeIndex}">
+                                <div style="color: var(--color-text-secondary); font-size: var(--font-size-sm);">Loading screenshot...</div>
                             </div>
                         ` : ''}
                     </div>
@@ -6532,14 +6561,13 @@ select.form-control {
                             <button class="btn btn-screenshot" onclick="appState.activePasteTarget = 'exit'; document.getElementById('exitScreenshot_${tradeIndex}').click()" style="flex: 1;">
                                 📷 Upload Exit Screenshot
                             </button>
-                            ${trade.exitScreenshot ? `<button class="btn btn-secondary" class="btn btn-clear" onclick="clearScreenshot(${tradeIndex}, 'exit')" title="Remove Screenshot">🗑️</button>` : ''}
+                            ${trade.exitScreenshot ? `<button class="btn btn-secondary btn-clear" onclick="clearScreenshot(${tradeIndex}, 'exit')" title="Remove Screenshot">🗑️</button>` : ''}
                         </div>
                         <input type="file" id="exitScreenshot_${tradeIndex}" class="form-control" accept="image/*" onchange="handleScreenshotUpload(${tradeIndex}, 'exit', this)" style="display: none;">
                         <small style="color: var(--color-text-secondary);">Or paste with Ctrl+V (active target: exit)</small>
-                        ${trade.exitScreenshot && typeof trade.exitScreenshot === 'string' ? `
-                            <div class="screenshot-container" style="margin-top: var(--space-8);">
-                                <img src="${getScreenshotSrc(trade.exitScreenshot)}" class="screenshot" onclick="openLightbox('${getScreenshotSrc(trade.exitScreenshot)}')" onerror="console.error('Failed to load exit screenshot'); this.style.display='none';" style="max-width: 200px; max-height: 150px; cursor: pointer; border-radius: var(--radius-base); border: 1px solid var(--color-border);">
-                                <div style="font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-top: var(--space-4);">Click to view full size</div>
+                        ${trade.exitScreenshot ? `
+                            <div class="screenshot-container" style="margin-top: var(--space-8);" id="exitScreenshotContainer_${tradeIndex}">
+                                <div style="color: var(--color-text-secondary); font-size: var(--font-size-sm);">Loading screenshot...</div>
                             </div>
                         ` : ''}
                     </div>
@@ -6557,6 +6585,46 @@ select.form-control {
                     <button class="btn btn-secondary" onclick="printTradeWithScreenshots(${tradeIndex})">📄 Print w/ Screenshots</button>
                 </div>
             `;
+
+            // Async-load screenshots from IndexedDB and populate preview containers
+            if (trade.entryScreenshot || trade.exitScreenshot) {
+                (async () => {
+                    if (trade.entryScreenshot) {
+                        const src = await getScreenshotData(trade.id, 'entry');
+                        const el = document.getElementById(`entryScreenshotContainer_${tradeIndex}`);
+                        if (el && src) {
+                            el.innerHTML = `
+                                <img src="${src}" class="screenshot" onclick="openLightboxAsync('${trade.id}', 'entry')" onerror="console.error('Failed to load entry screenshot'); this.style.display='none';" style="max-width: 200px; max-height: 150px; cursor: pointer; border-radius: var(--radius-base); border: 1px solid var(--color-border);">
+                                <div style="font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-top: var(--space-4);">Click to view full size</div>
+                            `;
+                        } else if (el) {
+                            el.innerHTML = '<div style="color: var(--color-text-secondary); font-size: var(--font-size-sm);">Screenshot not found</div>';
+                        }
+                    }
+                    if (trade.exitScreenshot) {
+                        const src = await getScreenshotData(trade.id, 'exit');
+                        const el = document.getElementById(`exitScreenshotContainer_${tradeIndex}`);
+                        if (el && src) {
+                            el.innerHTML = `
+                                <img src="${src}" class="screenshot" onclick="openLightboxAsync('${trade.id}', 'exit')" onerror="console.error('Failed to load exit screenshot'); this.style.display='none';" style="max-width: 200px; max-height: 150px; cursor: pointer; border-radius: var(--radius-base); border: 1px solid var(--color-border);">
+                                <div style="font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-top: var(--space-4);">Click to view full size</div>
+                            `;
+                        } else if (el) {
+                            el.innerHTML = '<div style="color: var(--color-text-secondary); font-size: var(--font-size-sm);">Screenshot not found</div>';
+                        }
+                    }
+                })();
+            }
+        }
+
+        /** Async lightbox opener - loads screenshot from IDB then opens lightbox */
+        async function openLightboxAsync(tradeId, type) {
+            const src = await getScreenshotData(tradeId, type);
+            if (src) {
+                openLightbox(src);
+            } else {
+                showMessage('Screenshot not found', 'error');
+            }
         }
 
         function calculateStatistics() {
@@ -8057,7 +8125,7 @@ select.form-control {
             });
         }
         
-        function handleExportData(exportType = 'full') {
+        async function handleExportData(exportType = 'full') {
             if (appState.trades.length === 0) {
                 showMessage('No data to export', 'error');
                 return;
@@ -8069,9 +8137,20 @@ select.form-control {
             
             switch(exportType) {
                 case 'full':
-                    // Complete export with everything (screenshots are embedded in trades)
+                    // Complete export - reconstruct trades with screenshot data from IndexedDB
+                    const fullTrades = [];
+                    for (const trade of appState.trades) {
+                        const t = { ...trade };
+                        if (trade.entryScreenshot) {
+                            t.entryScreenshot = await loadScreenshotFromIDB(trade.id, 'entry') || null;
+                        }
+                        if (trade.exitScreenshot) {
+                            t.exitScreenshot = await loadScreenshotFromIDB(trade.id, 'exit') || null;
+                        }
+                        fullTrades.push(t);
+                    }
                     exportData = {
-                        trades: appState.trades,
+                        trades: fullTrades,
                         startingBalance: appState.startingBalance,
                         finalBalance: appState.currentBalance,
                         customRules: appState.customRules,
@@ -8158,7 +8237,7 @@ select.form-control {
                         return;
                     }
                     
-                    const screenshots = getScreenshotsObject();
+                    const screenshots = await getScreenshotsObject();
                     exportData = {
                         screenshots: screenshots,
                         tradeIds: Object.keys(screenshots),
@@ -8189,7 +8268,7 @@ select.form-control {
                     return handleExportCSV();
                 
                 default:
-                    exportData = { trades: appState.trades };
+                    exportData = { trades: appState.trades.map(t => ({ ...t, entryScreenshot: null, exitScreenshot: null })) };
                     filename = `trading-journal-${timestamp}.json`;
             }
             
@@ -8311,8 +8390,8 @@ select.form-control {
             return formatBytes(size);
         }
         
-        function estimateScreenshotsSize() {
-            const screenshots = getScreenshotsObject();
+        async function estimateScreenshotsSize() {
+            const screenshots = await getScreenshotsObject();
             const size = JSON.stringify(screenshots).length;
             return formatBytes(size);
         }
@@ -8347,7 +8426,7 @@ select.form-control {
             return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
         }
         
-        function updateSizeEstimates() {
+        async function updateSizeEstimates() {
             if (appState.trades.length === 0) {
                 document.getElementById('fullSizeEstimate').textContent = '~0 B';
                 document.getElementById('noScreenshotsSizeEstimate').textContent = '~0 B';
@@ -8355,11 +8434,11 @@ select.form-control {
                 document.getElementById('tradesSizeEstimate').textContent = '~0 B';
                 return;
             }
-            
+
             try {
                 document.getElementById('fullSizeEstimate').textContent = '~' + estimateFullSize();
                 document.getElementById('noScreenshotsSizeEstimate').textContent = '~' + estimateNoScreenshotsSize();
-                document.getElementById('screenshotsSizeEstimate').textContent = '~' + estimateScreenshotsSize();
+                document.getElementById('screenshotsSizeEstimate').textContent = '~' + await estimateScreenshotsSize();
                 document.getElementById('tradesSizeEstimate').textContent = '~' + estimateTradesSize();
             } catch (error) {
                 console.error('Error updating size estimates:', error);
@@ -8379,17 +8458,19 @@ select.form-control {
             alert(message);
         }
         
-        // Helper function to get screenshots object
-        function getScreenshotsObject() {
+        // Helper function to get screenshots object - loads from IndexedDB
+        async function getScreenshotsObject() {
             const screenshots = {};
-            appState.trades.forEach(trade => {
+            for (const trade of appState.trades) {
                 if (trade.entryScreenshot || trade.exitScreenshot) {
+                    const entry = trade.entryScreenshot ? await loadScreenshotFromIDB(trade.id, 'entry') : null;
+                    const exit = trade.exitScreenshot ? await loadScreenshotFromIDB(trade.id, 'exit') : null;
                     screenshots[trade.id] = {
-                        entry: trade.entryScreenshot ? [trade.entryScreenshot] : [],
-                        exit: trade.exitScreenshot ? [trade.exitScreenshot] : []
+                        entry: entry ? [entry] : [],
+                        exit: exit ? [exit] : []
                     };
                 }
-            });
+            }
             return screenshots;
         }
         
@@ -8448,10 +8529,10 @@ select.form-control {
             }
 
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = async function(e) {
                 try {
                     const data = JSON.parse(e.target.result);
-                    
+
                     // Validate data structure
                     if (!data || typeof data !== 'object') {
                         throw new Error('Invalid JSON format');
@@ -8463,21 +8544,23 @@ select.form-control {
                             showMessage('❌ No screenshots found in file', 'error');
                             return;
                         }
-                        
-                        // Merge with existing screenshots
+
+                        // Merge with existing screenshots - store in IndexedDB
                         let importedCount = 0;
-                        Object.entries(data.screenshots).forEach(([tradeId, screenshots]) => {
+                        for (const [tradeId, screenshots] of Object.entries(data.screenshots)) {
                             const trade = appState.trades.find(t => t.id === tradeId);
                             if (trade) {
                                 if (screenshots.entry && screenshots.entry.length > 0) {
-                                    trade.entryScreenshot = getScreenshotSrc(screenshots.entry[0]);
+                                    await saveScreenshotToIDB(tradeId, 'entry', getScreenshotSrc(screenshots.entry[0]));
+                                    trade.entryScreenshot = true;
                                 }
                                 if (screenshots.exit && screenshots.exit.length > 0) {
-                                    trade.exitScreenshot = getScreenshotSrc(screenshots.exit[0]);
+                                    await saveScreenshotToIDB(tradeId, 'exit', getScreenshotSrc(screenshots.exit[0]));
+                                    trade.exitScreenshot = true;
                                 }
                                 importedCount++;
                             }
-                        });
+                        }
 
                         updateUI();
                         saveToLocalStorage();
@@ -8515,30 +8598,30 @@ select.form-control {
                                 parsedTime = trade.time || '12:00';
                             }
                             
-                            // CRITICAL FIX: Handle Base64 screenshots with proper validation
+                            // Handle Base64 screenshots - extract data for IDB storage
                             let entryScreenshot = null;
                             let exitScreenshot = null;
-                            
+
                             // Check all possible screenshot field names with validation
-                            const entryScreenshotData = 
-                                trade.entryScreenshot || 
-                                trade.screenshotEntry || 
+                            const entryScreenshotRaw =
+                                trade.entryScreenshot ||
+                                trade.screenshotEntry ||
                                 trade.screenshot_entry ||
                                 null;
-                            
-                            const exitScreenshotData = 
-                                trade.exitScreenshot || 
-                                trade.screenshotExit || 
+
+                            const exitScreenshotRaw =
+                                trade.exitScreenshot ||
+                                trade.screenshotExit ||
                                 trade.screenshot_exit ||
                                 null;
-                            
-                            // Only process if we have valid string data
-                            if (entryScreenshotData && typeof entryScreenshotData === 'string') {
-                                entryScreenshot = getScreenshotSrc(entryScreenshotData);
+
+                            // Store as boolean flags - actual data goes to IDB later
+                            if (entryScreenshotRaw && typeof entryScreenshotRaw === 'string') {
+                                entryScreenshot = true;
                             }
-                            
-                            if (exitScreenshotData && typeof exitScreenshotData === 'string') {
-                                exitScreenshot = getScreenshotSrc(exitScreenshotData);
+
+                            if (exitScreenshotRaw && typeof exitScreenshotRaw === 'string') {
+                                exitScreenshot = true;
                             }
                             
                             return {
@@ -8572,60 +8655,63 @@ select.form-control {
                         });
                         invalidateStatsCache();
 
-                        // CRITICAL FIX: Import screenshots with array format handling
+                        // Save inline screenshot data from trades to IndexedDB
+                        for (const trade of appState.trades) {
+                            const origTrade = validTrades.find(t =>
+                                (t.id && t.id === trade.id) || t === trade
+                            );
+                            if (!origTrade) continue;
+
+                            const entryRaw = origTrade.entryScreenshot || origTrade.screenshotEntry || origTrade.screenshot_entry;
+                            if (entryRaw && typeof entryRaw === 'string') {
+                                await saveScreenshotToIDB(trade.id, 'entry', getScreenshotSrc(entryRaw));
+                                trade.entryScreenshot = true;
+                            }
+
+                            const exitRaw = origTrade.exitScreenshot || origTrade.screenshotExit || origTrade.screenshot_exit;
+                            if (exitRaw && typeof exitRaw === 'string') {
+                                await saveScreenshotToIDB(trade.id, 'exit', getScreenshotSrc(exitRaw));
+                                trade.exitScreenshot = true;
+                            }
+                        }
+
+                        // Import screenshots from separate screenshots object (array format handling)
                         if (data.screenshots && typeof data.screenshots === 'object' && !Array.isArray(data.screenshots)) {
-                            const screenshotsObj = {};
-                            
-                            Object.entries(data.screenshots).forEach(([tradeId, images]) => {
-                                if (images && typeof images === 'object') {
-                                    const screenshotData = {};
-                                    
-                                    // Handle entry (array or string)
-                                    if (Array.isArray(images.entry)) {
-                                        if (images.entry.length > 0 && typeof images.entry[0] === 'string') {
-                                            screenshotData.entry = images.entry[0];
-                                        }
-                                    } else if (typeof images.entry === 'string' && images.entry) {
-                                        screenshotData.entry = images.entry;
-                                    }
-                                    
-                                    // Handle exit (array or string)
-                                    if (Array.isArray(images.exit)) {
-                                        if (images.exit.length > 0 && typeof images.exit[0] === 'string') {
-                                            screenshotData.exit = images.exit[0];
-                                        }
-                                    } else if (typeof images.exit === 'string' && images.exit) {
-                                        screenshotData.exit = images.exit;
-                                    }
-                                    
-                                    // Only add if we have at least one screenshot
-                                    if (screenshotData.entry || screenshotData.exit) {
-                                        screenshotsObj[tradeId] = screenshotData;
-                                    }
+                            for (const [tradeId, images] of Object.entries(data.screenshots)) {
+                                if (!images || typeof images !== 'object') continue;
+
+                                let entryData = null;
+                                let exitData = null;
+
+                                // Handle entry (array or string)
+                                if (Array.isArray(images.entry) && images.entry.length > 0 && typeof images.entry[0] === 'string') {
+                                    entryData = images.entry[0];
+                                } else if (typeof images.entry === 'string' && images.entry) {
+                                    entryData = images.entry;
                                 }
-                            });
-                            
-                            // Apply screenshots to matching trades
-                            Object.entries(screenshotsObj).forEach(([tradeId, screenshots]) => {
+
+                                // Handle exit (array or string)
+                                if (Array.isArray(images.exit) && images.exit.length > 0 && typeof images.exit[0] === 'string') {
+                                    exitData = images.exit[0];
+                                } else if (typeof images.exit === 'string' && images.exit) {
+                                    exitData = images.exit;
+                                }
+
+                                // Save to IDB and update trade flags
                                 const trade = appState.trades.find(t => t.id === tradeId);
                                 if (trade) {
-                                    if (screenshots.entry && !trade.entryScreenshot) {
-                                        const entryScreenshotSrc = getScreenshotSrc(screenshots.entry);
-                                        if (entryScreenshotSrc) {
-                                            trade.entryScreenshot = entryScreenshotSrc;
-                                        }
+                                    if (entryData && !trade.entryScreenshot) {
+                                        await saveScreenshotToIDB(tradeId, 'entry', getScreenshotSrc(entryData));
+                                        trade.entryScreenshot = true;
                                     }
-                                    
-                                    if (screenshots.exit && !trade.exitScreenshot) {
-                                        const exitScreenshotSrc = getScreenshotSrc(screenshots.exit);
-                                        if (exitScreenshotSrc) {
-                                            trade.exitScreenshot = exitScreenshotSrc;
-                                        }
+                                    if (exitData && !trade.exitScreenshot) {
+                                        await saveScreenshotToIDB(tradeId, 'exit', getScreenshotSrc(exitData));
+                                        trade.exitScreenshot = true;
                                     }
                                 }
-                            });
-                            
-                            console.log('✅ Processed screenshots for', Object.keys(screenshotsObj).length, 'trades');
+                            }
+
+                            console.log('✅ Processed screenshots from separate screenshots object');
                         }
                         
                         appState.startingBalance = data.startingBalance || data.finalBalance - appState.trades.reduce((sum, t) => sum + t.profit, 0) || 10000;
@@ -8711,15 +8797,15 @@ select.form-control {
                                 trade.screenshot_exit ||
                                 null;
                             
-                            // Only process if we have valid string data
+                            // Store as boolean flags - actual data goes to IDB later
                             if (entryScreenshotData && typeof entryScreenshotData === 'string') {
-                                entryScreenshot = getScreenshotSrc(entryScreenshotData);
+                                entryScreenshot = true;
                             }
-                            
+
                             if (exitScreenshotData && typeof exitScreenshotData === 'string') {
-                                exitScreenshot = getScreenshotSrc(exitScreenshotData);
+                                exitScreenshot = true;
                             }
-                            
+
                             return {
                                 ...trade,
                                 id: trade.id || `${Date.now()}_${Math.random()}`,
@@ -8740,60 +8826,59 @@ select.form-control {
                         });
                         invalidateStatsCache();
 
-                        // CRITICAL FIX: Import screenshots with array format handling (simple format)
+                        // Save inline screenshot data from trades to IndexedDB (simple format)
+                        for (const trade of appState.trades) {
+                            const origTrade = validTrades.find(t =>
+                                (t.id && t.id === trade.id) || t === trade
+                            );
+                            if (!origTrade) continue;
+
+                            const entryRaw = origTrade.entryScreenshot || origTrade.screenshotEntry || origTrade.screenshot_entry;
+                            if (entryRaw && typeof entryRaw === 'string') {
+                                await saveScreenshotToIDB(trade.id, 'entry', getScreenshotSrc(entryRaw));
+                                trade.entryScreenshot = true;
+                            }
+
+                            const exitRaw = origTrade.exitScreenshot || origTrade.screenshotExit || origTrade.screenshot_exit;
+                            if (exitRaw && typeof exitRaw === 'string') {
+                                await saveScreenshotToIDB(trade.id, 'exit', getScreenshotSrc(exitRaw));
+                                trade.exitScreenshot = true;
+                            }
+                        }
+
+                        // Import screenshots from separate screenshots object (simple format)
                         if (data.screenshots && typeof data.screenshots === 'object' && !Array.isArray(data.screenshots)) {
-                            const screenshotsObj = {};
-                            
-                            Object.entries(data.screenshots).forEach(([tradeId, images]) => {
-                                if (images && typeof images === 'object') {
-                                    const screenshotData = {};
-                                    
-                                    // Handle entry (array or string)
-                                    if (Array.isArray(images.entry)) {
-                                        if (images.entry.length > 0 && typeof images.entry[0] === 'string') {
-                                            screenshotData.entry = images.entry[0];
-                                        }
-                                    } else if (typeof images.entry === 'string' && images.entry) {
-                                        screenshotData.entry = images.entry;
-                                    }
-                                    
-                                    // Handle exit (array or string)
-                                    if (Array.isArray(images.exit)) {
-                                        if (images.exit.length > 0 && typeof images.exit[0] === 'string') {
-                                            screenshotData.exit = images.exit[0];
-                                        }
-                                    } else if (typeof images.exit === 'string' && images.exit) {
-                                        screenshotData.exit = images.exit;
-                                    }
-                                    
-                                    // Only add if we have at least one screenshot
-                                    if (screenshotData.entry || screenshotData.exit) {
-                                        screenshotsObj[tradeId] = screenshotData;
-                                    }
+                            for (const [tradeId, images] of Object.entries(data.screenshots)) {
+                                if (!images || typeof images !== 'object') continue;
+
+                                let entryData = null;
+                                let exitData = null;
+
+                                if (Array.isArray(images.entry) && images.entry.length > 0 && typeof images.entry[0] === 'string') {
+                                    entryData = images.entry[0];
+                                } else if (typeof images.entry === 'string' && images.entry) {
+                                    entryData = images.entry;
                                 }
-                            });
-                            
-                            // Apply screenshots to matching trades
-                            Object.entries(screenshotsObj).forEach(([tradeId, screenshots]) => {
+
+                                if (Array.isArray(images.exit) && images.exit.length > 0 && typeof images.exit[0] === 'string') {
+                                    exitData = images.exit[0];
+                                } else if (typeof images.exit === 'string' && images.exit) {
+                                    exitData = images.exit;
+                                }
+
                                 const trade = appState.trades.find(t => t.id === tradeId);
                                 if (trade) {
-                                    if (screenshots.entry && !trade.entryScreenshot) {
-                                        const entryScreenshotSrc = getScreenshotSrc(screenshots.entry);
-                                        if (entryScreenshotSrc) {
-                                            trade.entryScreenshot = entryScreenshotSrc;
-                                        }
+                                    if (entryData && !trade.entryScreenshot) {
+                                        await saveScreenshotToIDB(tradeId, 'entry', getScreenshotSrc(entryData));
+                                        trade.entryScreenshot = true;
                                     }
-                                    
-                                    if (screenshots.exit && !trade.exitScreenshot) {
-                                        const exitScreenshotSrc = getScreenshotSrc(screenshots.exit);
-                                        if (exitScreenshotSrc) {
-                                            trade.exitScreenshot = exitScreenshotSrc;
-                                        }
+                                    if (exitData && !trade.exitScreenshot) {
+                                        await saveScreenshotToIDB(tradeId, 'exit', getScreenshotSrc(exitData));
+                                        trade.exitScreenshot = true;
                                     }
                                 }
-                            });
-                            
-                            console.log('✅ Processed screenshots for', Object.keys(screenshotsObj).length, 'trades');
+                            }
+                            console.log('✅ Processed screenshots from separate screenshots object');
                         }
                         
                         appState.startingBalance = data.startingBalance || 10000;
@@ -8862,9 +8947,12 @@ select.form-control {
         }
 
         // Helper function to clear screenshots
-        function clearScreenshot(tradeIndex, type) {
+        async function clearScreenshot(tradeIndex, type) {
             const field = type === 'entry' ? 'entryScreenshot' : 'exitScreenshot';
-            appState.trades[tradeIndex][field] = null;
+            const trade = appState.trades[tradeIndex];
+            // Remove from IndexedDB
+            await deleteScreenshotFromIDB(trade.id, type);
+            trade[field] = null;
             invalidateStatsCache();
             renderTradeDetails(tradeIndex); // Refresh the details view
             showMessage(`${type.charAt(0).toUpperCase() + type.slice(1)} screenshot removed`, 'success');
@@ -8976,14 +9064,18 @@ select.form-control {
             if (!file) return;
 
             const field = type === 'entry' ? 'entryScreenshot' : 'exitScreenshot';
+            const trade = appState.trades[tradeIndex];
 
             // Show processing message
             showMessage('Compressing image...', 'info');
 
             // Compress the image before storing
             compressImage(file)
-                .then(compressedDataUrl => {
-                    appState.trades[tradeIndex][field] = compressedDataUrl;
+                .then(async (compressedDataUrl) => {
+                    // Store screenshot data separately in IndexedDB
+                    await saveScreenshotToIDB(trade.id, type, compressedDataUrl);
+                    // Mark trade as having a screenshot (boolean flag, not data)
+                    appState.trades[tradeIndex][field] = true;
                     renderTradeDetails(tradeIndex); // Refresh to show image
                     const sizeKB = (compressedDataUrl.length / 1024).toFixed(1);
                     showMessage(`Screenshot uploaded and compressed (${sizeKB}KB)`, 'success');
@@ -9016,9 +9108,12 @@ select.form-control {
 
                     // Compress the image before storing
                     compressImage(file)
-                        .then(compressedDataUrl => {
-                            // Save the compressed screenshot to the trade
-                            appState.trades[tradeIndex][field] = compressedDataUrl;
+                        .then(async (compressedDataUrl) => {
+                            const trade = appState.trades[tradeIndex];
+                            // Store screenshot data separately in IndexedDB
+                            await saveScreenshotToIDB(trade.id, type, compressedDataUrl);
+                            // Mark trade as having a screenshot (boolean flag, not data)
+                            appState.trades[tradeIndex][field] = true;
 
                             // Refresh the trade details to show the new screenshot
                             renderTradeDetails(tradeIndex);
@@ -9104,28 +9199,35 @@ select.form-control {
             currentIndex: 0
         };
 
-        function openScreenshotsViewer(tradeIndex) {
-            // Collect all screenshots from all trades
+        async function openScreenshotsViewer(tradeIndex) {
+            // Collect all screenshots from all trades - load from IndexedDB
             screenshotsViewerState.screenshots = [];
 
-            appState.trades.forEach((trade, idx) => {
+            for (let idx = 0; idx < appState.trades.length; idx++) {
+                const trade = appState.trades[idx];
                 if (trade.entryScreenshot) {
-                    screenshotsViewerState.screenshots.push({
-                        tradeIndex: idx,
-                        type: 'entry',
-                        src: getScreenshotSrc(trade.entryScreenshot),
-                        trade: trade
-                    });
+                    const src = await getScreenshotData(trade.id, 'entry');
+                    if (src) {
+                        screenshotsViewerState.screenshots.push({
+                            tradeIndex: idx,
+                            type: 'entry',
+                            src: src,
+                            trade: trade
+                        });
+                    }
                 }
                 if (trade.exitScreenshot) {
-                    screenshotsViewerState.screenshots.push({
-                        tradeIndex: idx,
-                        type: 'exit',
-                        src: getScreenshotSrc(trade.exitScreenshot),
-                        trade: trade
-                    });
+                    const src = await getScreenshotData(trade.id, 'exit');
+                    if (src) {
+                        screenshotsViewerState.screenshots.push({
+                            tradeIndex: idx,
+                            type: 'exit',
+                            src: src,
+                            trade: trade
+                        });
+                    }
                 }
-            });
+            }
 
             if (screenshotsViewerState.screenshots.length === 0) {
                 showNotification('No screenshots available', 'warning');
@@ -13221,6 +13323,10 @@ select.form-control {
         async function printTradeWithScreenshots(tradeIndex) {
             const trade = appState.trades[tradeIndex];
 
+            // Load screenshots from IndexedDB before printing
+            const entryScreenshotData = trade.entryScreenshot ? await getScreenshotData(trade.id, 'entry') : null;
+            const exitScreenshotData = trade.exitScreenshot ? await getScreenshotData(trade.id, 'exit') : null;
+
             // Check and warn about TradingView images
             await checkTradingViewImages([trade]);
 
@@ -13563,27 +13669,27 @@ select.form-control {
             ` : ''}
         </div>
 
-        ${trade.entryScreenshot ? `
+        ${entryScreenshotData ? `
         <!-- Page 2: Entry Screenshot -->
         <div class="screenshot-page">
             <div class="screenshot-label">📸 Entry Screenshot</div>
             <h2>${escapeHtml(trade.symbol || 'N/A')} - Entry</h2>
             <p>${formatDateTime(trade.openDate, trade.openTime)} | ${escapeHtml(trade.direction || 'N/A')} @ ${trade.entryPrice ? escapeHtml(trade.entryPrice.toFixed(5)) : 'N/A'}</p>
-            <img src="${getScreenshotSrc(trade.entryScreenshot)}" alt="Entry Screenshot">
+            <img src="${entryScreenshotData}" alt="Entry Screenshot">
         </div>
         ` : ''}
 
-        ${trade.exitScreenshot ? `
+        ${exitScreenshotData ? `
         <!-- Page 3: Exit Screenshot -->
         <div class="screenshot-page">
             <div class="screenshot-label">📸 Exit Screenshot</div>
             <h2>${escapeHtml(trade.symbol || 'N/A')} - Exit</h2>
             <p>${formatDateTime(trade.date, trade.time)} | Close @ ${trade.exitPrice ? escapeHtml(trade.exitPrice.toFixed(5)) : 'N/A'} | P&L: <span class="${plClass}">$${escapeHtml(profitLoss.toFixed(2))}</span></p>
-            <img src="${getScreenshotSrc(trade.exitScreenshot)}" alt="Exit Screenshot">
+            <img src="${exitScreenshotData}" alt="Exit Screenshot">
         </div>
         ` : ''}
 
-        ${!trade.entryScreenshot && !trade.exitScreenshot ? `
+        ${!entryScreenshotData && !exitScreenshotData ? `
         <div class="screenshot-page">
             <h2 style="color: #999;">No Screenshots Available</h2>
             <p style="color: #666;">Upload screenshots to see them in print preview.</p>
@@ -13633,9 +13739,12 @@ select.form-control {
                 return formatDate(dateStr);
             };
 
-            // Generate HTML for all trades
+            // Generate HTML for all trades - load screenshots from IndexedDB
             let tradesHtml = '';
-            appState.trades.forEach((trade, tradeIndex) => {
+            for (let tradeIndex = 0; tradeIndex < appState.trades.length; tradeIndex++) {
+                const trade = appState.trades[tradeIndex];
+                const entryScreenshotData = trade.entryScreenshot ? await getScreenshotData(trade.id, 'entry') : null;
+                const exitScreenshotData = trade.exitScreenshot ? await getScreenshotData(trade.id, 'exit') : null;
                 const pipClass = trade.pips >= 0 ? 'positive' : 'negative';
                 const profitLoss = trade.netPL || trade.netProfit || trade.profit || 0;
                 const plClass = profitLoss >= 0 ? 'positive' : 'negative';
@@ -13741,31 +13850,31 @@ select.form-control {
 `;
 
                 // Entry screenshot page
-                if (trade.entryScreenshot) {
+                if (entryScreenshotData) {
                     tradesHtml += `
         <!-- Trade #${tradeIndex + 1}: Entry Screenshot -->
         <div class="screenshot-page">
             <div class="screenshot-label">📸 Entry Screenshot</div>
             <h2>${escapeHtml(trade.symbol || 'N/A')} - Entry (Trade #${tradeIndex + 1})</h2>
             <p>${formatDateTime(trade.openDate, trade.openTime)} | ${escapeHtml(trade.direction || 'N/A')} @ ${trade.entryPrice ? escapeHtml(trade.entryPrice.toFixed(5)) : 'N/A'}</p>
-            <img src="${getScreenshotSrc(trade.entryScreenshot)}" alt="Entry Screenshot">
+            <img src="${entryScreenshotData}" alt="Entry Screenshot">
         </div>
 `;
                 }
 
                 // Exit screenshot page
-                if (trade.exitScreenshot) {
+                if (exitScreenshotData) {
                     tradesHtml += `
         <!-- Trade #${tradeIndex + 1}: Exit Screenshot -->
         <div class="screenshot-page">
             <div class="screenshot-label">📸 Exit Screenshot</div>
             <h2>${escapeHtml(trade.symbol || 'N/A')} - Exit (Trade #${tradeIndex + 1})</h2>
             <p>${formatDateTime(trade.date, trade.time)} | Close @ ${trade.exitPrice ? escapeHtml(trade.exitPrice.toFixed(5)) : 'N/A'} | P&L: <span class="${plClass}">$${escapeHtml(profitLoss.toFixed(2))}</span></p>
-            <img src="${getScreenshotSrc(trade.exitScreenshot)}" alt="Exit Screenshot">
+            <img src="${exitScreenshotData}" alt="Exit Screenshot">
         </div>
 `;
                 }
-            });
+            }
 
             const htmlContent = `
 <!DOCTYPE html>
