@@ -9768,11 +9768,14 @@ select.form-control {
         function toggleRuleCombinations() {
             appState.showRuleCombinations = !appState.showRuleCombinations;
             updateRuleCombinationsDisplay();
+            if (appState.showRuleCombinations) {
+                updateRuleCombinationsAnalysis();
+            }
             saveToLocalStorage();
         }
         
         function updateRuleCombinationsDisplay() {
-            const content = document.getElementById('ruleCombinationsContent');
+            const content = document.querySelector('#ruleCombinationsSection .section-content');
             const toggleButton = document.getElementById('ruleCombinationsToggle');
 
             if (appState.showRuleCombinations) {
