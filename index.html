@@ -2391,7 +2391,7 @@ select.form-control {
                             style="background: none; border: none; color: white; font-size: var(--font-size-xl); cursor: pointer; padding: var(--space-4); border-radius: var(--radius-sm); transition: background-color var(--duration-fast) var(--ease-standard);"
                             title="Collapse/Expand"
                             onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'"
-                            onmouseout="this.style.backgroundColor='transparent'">▼</button>
+                            onmouseout="this.style.backgroundColor='transparent'">▶</button>
                         <span style="font-size: var(--font-size-xs); color: rgba(255,255,255,0.8);">
                             (Find best rule combinations)
                         </span>
@@ -9419,9 +9419,9 @@ select.form-control {
             if (combinations.length === 0) {
                 resultsDiv.innerHTML = `
                     <div style="padding: 2rem; text-center; color: var(--color-text-secondary);">
-                        <p>No trades with Custom rule adherence found.</p>
+                        <p>No trades with rules followed found.</p>
                         <p style="font-size: var(--font-size-xs); margin-top: var(--space-8);">
-                            Mark trades as "Custom" and check which rules you followed to see analysis.
+                            Check which custom rules you followed on your trades to see combination analysis.
                         </p>
                     </div>
                 `;
@@ -9676,9 +9676,8 @@ select.form-control {
         function calculateRuleCombinations(year = null, month = null) {
             if (!appState.trades.length || !appState.customRules.length) return [];
 
-            // Get all trades with Custom rule adherence and rules followed
+            // Get all trades with rules followed
             let customTrades = appState.trades.filter(t =>
-                t.ruleAdherence === 'Custom' &&
                 Array.isArray(t.rulesFollowed) &&
                 t.rulesFollowed.length > 0
             );
