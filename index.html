@@ -6459,6 +6459,25 @@ select.form-control {
             container.innerHTML = `
                 <div class="form-grid">
                     <div class="form-group">
+                        <label>Open Date</label>
+                        <input type="date" class="form-control" value="${trade.openDate || ''}" onchange="updateTradeField(${tradeIndex}, 'openDate', this.value)">
+                    </div>
+                    <div class="form-group">
+                        <label>Open Time</label>
+                        <input type="time" class="form-control" step="1" value="${trade.openTime || ''}" onchange="updateTradeField(${tradeIndex}, 'openTime', this.value)">
+                    </div>
+                    <div class="form-group">
+                        <label>Close Date</label>
+                        <input type="date" class="form-control" value="${trade.date || ''}" onchange="updateTradeField(${tradeIndex}, 'date', this.value)">
+                    </div>
+                    <div class="form-group">
+                        <label>Close Time</label>
+                        <input type="time" class="form-control" step="1" value="${trade.time || ''}" onchange="updateTradeField(${tradeIndex}, 'time', this.value)">
+                    </div>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-group">
                         <label>Setup Type</label>
                         <select class="form-control" onchange="updateTradeField(${tradeIndex}, 'setupType', this.value)">
                             <option value="">Select setup...</option>
