@@ -7744,12 +7744,30 @@ select.form-control {
             statsGrid.innerHTML = html;
         }
 
+        function getChartFilteredTrades() {
+            if (appState.analyticsCurrentMonth === -1) {
+                return appState.trades;
+            }
+            const year = appState.analyticsCurrentYear;
+            const month = appState.analyticsCurrentMonth;
+            const selectedMonthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
+            return appState.trades.filter(trade => {
+                const tradeDate = new Date(trade.date);
+                const tradeMonthKey = `${tradeDate.getFullYear()}-${String(tradeDate.getMonth() + 1).padStart(2, '0')}`;
+                return tradeMonthKey === selectedMonthKey;
+            });
+        }
+
         function updateChartsDisplay() {
+            // Destroy existing charts so they get recreated with filtered data
+            ['equity', 'dailyPL', 'winLoss'].forEach(key => {
+                if (appState.chartInstances[key]) {
+                    appState.chartInstances[key].destroy();
+                    appState.chartInstances[key] = null;
+                }
+            });
+
             if (appState.trades.length === 0) {
-                // Clear all charts when no data
-                Object.values(appState.chartInstances).forEach(chart => {
-                    if (chart) chart.destroy();
-                });
                 appState.chartInstances = {};
                 return;
             }
@@ -7759,14 +7777,14 @@ select.form-control {
             document.getElementById('dailyPLContainer').style.display = appState.visibleCharts.dailyPL ? 'block' : 'none';
             document.getElementById('winLossContainer').style.display = appState.visibleCharts.winLoss ? 'block' : 'none';
 
-            // Performance optimization: Update charts if they exist, only recreate if necessary
+            // Recreate charts with current month filter
             if (appState.visibleCharts.equityCurve) drawEquityCurve();
             if (appState.visibleCharts.dailyPL) drawDailyPLChart();
             if (appState.visibleCharts.winLoss) drawWinLossChart();
         }
 
         function drawEquityCurve() {
-            const trades = [...appState.trades]; // Create copy to avoid mutation
+            const trades = [...getChartFilteredTrades()]; // Create copy to avoid mutation
 
             // CORRECTED: Sort trades by date/time for proper equity curve
             trades.sort((a, b) => {
@@ -7891,7 +7909,7 @@ select.form-control {
         }
 
         function drawDailyPLChart() {
-            const trades = appState.trades;
+            const trades = getChartFilteredTrades();
 
             // Group trades by date using correct P/L field
             const dailyPL = {};
@@ -7977,12 +7995,14 @@ select.form-control {
         }
 
         function drawWinLossChart() {
-            const stats = appState.statistics;
+            const trades = getChartFilteredTrades();
+            const wins = trades.filter(t => (t.netPL || t.profit) > 0).length;
+            const losses = trades.filter(t => (t.netPL || t.profit) < 0).length;
             const colors = getChartColors();
 
             // Performance optimization: Update existing chart if possible
             if (appState.chartInstances.winLoss) {
-                appState.chartInstances.winLoss.data.datasets[0].data = [stats.winningTrades, stats.losingTrades];
+                appState.chartInstances.winLoss.data.datasets[0].data = [wins, losses];
                 appState.chartInstances.winLoss.data.datasets[0].backgroundColor = [colors.success, colors.error];
                 appState.chartInstances.winLoss.data.datasets[0].borderColor = [colors.successMedium, colors.errorMedium];
                 appState.chartInstances.winLoss.options.plugins.legend.labels.color = colors.text;
@@ -7997,7 +8017,7 @@ select.form-control {
                 data: {
                     labels: ['Wins', 'Losses'],
                     datasets: [{
-                        data: [stats.winningTrades, stats.losingTrades],
+                        data: [wins, losses],
                         backgroundColor: [colors.success, colors.error],
                         borderColor: [colors.successMedium, colors.errorMedium],
                         borderWidth: 2
@@ -12290,6 +12310,7 @@ select.form-control {
             updateOpenHourlyStats();
             updateHourlyStats();
             updateStatisticsDisplay();
+            updateChartsDisplay();
         }
 
         function resetToTotalView() {
@@ -12301,6 +12322,7 @@ select.form-control {
             updateOpenHourlyStats();
             updateHourlyStats();
             updateStatisticsDisplay();
+            updateChartsDisplay();
         }
 
         function changeSetupFilter(setupType) {
