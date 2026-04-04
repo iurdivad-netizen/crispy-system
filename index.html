@@ -1669,6 +1669,10 @@ select.form-control {
                     🖨️ Print
                 </button>
 
+                <button class="btn btn-secondary" onclick="toggleMonthlyReportModal()" id="monthlyReportBtn" disabled>
+                    📄 Monthly Report
+                </button>
+
                 <!-- Export with dropdown -->
                 <div class="export-menu-container" style="position: relative; display: inline-block;">
                     <button onclick="toggleExportMenu()" class="btn btn-secondary" id="exportBtn" disabled title="Export options">💾 Export ▾</button>
@@ -3403,6 +3407,84 @@ select.form-control {
             <div style="display: flex; gap: var(--space-8);">
                 <button onclick="toggleAPIImportModal()" class="btn btn--secondary" style="flex: 1;">Cancel</button>
                 <button onclick="handleAPIImport()" class="btn btn--primary" style="flex: 1;">Import Trades</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Monthly Report Modal -->
+    <div id="monthlyReportModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(var(--color-black-rgb), 0.7); z-index: 10000; justify-content: center; align-items: center; overflow-y: auto;">
+        <div style="background: var(--color-surface); padding: 2rem; border-radius: var(--radius-lg); max-width: 520px; width: 90%; box-shadow: var(--shadow-xl); margin: 2rem auto; max-height: 90vh; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h3 style="margin: 0; color: var(--color-text); display: flex; align-items: center; gap: var(--space-8);">
+                    <span>📄</span>
+                    <span>Print Monthly Report</span>
+                </h3>
+                <button onclick="toggleMonthlyReportModal()" style="background: none; border: none; font-size: 2rem; color: var(--color-text-secondary); cursor: pointer; line-height: 1; padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;" onmouseover="this.style.color='var(--color-text)'" onmouseout="this.style.color='var(--color-text-secondary)'">×</button>
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+                <label class="form-label" style="display: block; margin-bottom: var(--space-8); font-weight: var(--font-weight-medium);">Report Period</label>
+                <select id="reportPeriodSelect" class="form-control">
+                    <option value="current">Current View (synced with analytics month)</option>
+                    <option value="all">All Time</option>
+                </select>
+            </div>
+
+            <div style="margin-bottom: 1.5rem;">
+                <label class="form-label" style="display: block; margin-bottom: var(--space-12); font-weight: var(--font-weight-medium);">Select Sections to Include</label>
+                <div style="display: flex; flex-direction: column; gap: var(--space-8);">
+                    <label style="display: flex; align-items: center; gap: var(--space-8); font-size: var(--font-size-sm); color: var(--color-text);">
+                        <input type="checkbox" id="reportIncludeStats" checked style="border-radius: var(--radius-sm);">
+                        <span>Performance Statistics</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: var(--space-8); font-size: var(--font-size-sm); color: var(--color-text);">
+                        <input type="checkbox" id="reportIncludeEquity" checked style="border-radius: var(--radius-sm);">
+                        <span>Equity Curve</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: var(--space-8); font-size: var(--font-size-sm); color: var(--color-text);">
+                        <input type="checkbox" id="reportIncludeDailyPL" checked style="border-radius: var(--radius-sm);">
+                        <span>Daily P&amp;L Chart</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: var(--space-8); font-size: var(--font-size-sm); color: var(--color-text);">
+                        <input type="checkbox" id="reportIncludeWinLoss" checked style="border-radius: var(--radius-sm);">
+                        <span>Win/Loss Distribution</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: var(--space-8); font-size: var(--font-size-sm); color: var(--color-text);">
+                        <input type="checkbox" id="reportIncludeBreakdowns" checked style="border-radius: var(--radius-sm);">
+                        <span>Performance Breakdowns (Setup, Market, Emotion, Rules)</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: var(--space-8); font-size: var(--font-size-sm); color: var(--color-text);">
+                        <input type="checkbox" id="reportIncludeDaily" checked style="border-radius: var(--radius-sm);">
+                        <span>Day of Week Analysis</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: var(--space-8); font-size: var(--font-size-sm); color: var(--color-text);">
+                        <input type="checkbox" id="reportIncludeHourly" style="border-radius: var(--radius-sm);">
+                        <span>Hourly Performance (Open &amp; Close)</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: var(--space-8); font-size: var(--font-size-sm); color: var(--color-text);">
+                        <input type="checkbox" id="reportIncludeCalendar" checked style="border-radius: var(--radius-sm);">
+                        <span>Calendar View</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: var(--space-8); font-size: var(--font-size-sm); color: var(--color-text);">
+                        <input type="checkbox" id="reportIncludeRuleCombos" style="border-radius: var(--radius-sm);">
+                        <span>Rule Combinations</span>
+                    </label>
+                </div>
+                <div style="display: flex; gap: var(--space-12); margin-top: var(--space-12);">
+                    <button onclick="document.querySelectorAll('#monthlyReportModal input[type=checkbox]').forEach(c=>c.checked=true)" style="background: none; border: none; color: var(--color-primary); font-size: var(--font-size-xs); cursor: pointer; padding: 0;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">Select All</button>
+                    <button onclick="document.querySelectorAll('#monthlyReportModal input[type=checkbox]').forEach(c=>c.checked=false)" style="background: none; border: none; color: var(--color-primary); font-size: var(--font-size-xs); cursor: pointer; padding: 0;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">Deselect All</button>
+                </div>
+            </div>
+
+            <div style="padding: var(--space-12); background: var(--color-bg-1); border-radius: var(--radius-base); margin-bottom: 1.5rem;">
+                <p style="font-size: var(--font-size-xs); color: var(--color-text); margin: 0;">
+                    📄 This report includes only summary analytics — no individual trade details. Charts are exported as images for print compatibility.
+                </p>
+            </div>
+
+            <div style="display: flex; gap: var(--space-8);">
+                <button onclick="toggleMonthlyReportModal()" class="btn btn--secondary" style="flex: 1;">Cancel</button>
+                <button onclick="printMonthlyReport()" class="btn btn--primary" style="flex: 1;">Generate Report</button>
             </div>
         </div>
     </div>
@@ -5336,7 +5418,8 @@ select.form-control {
             // Enable buttons
             document.getElementById('exportBtn').disabled = !hasData;
             document.getElementById('printBtn').disabled = !hasData;
-            
+            document.getElementById('monthlyReportBtn').disabled = !hasData;
+
             if (hasData) {
                 calculateStatistics();
                 updateStatisticsDisplay();
@@ -14107,6 +14190,468 @@ select.form-control {
 
             // Wait for all images to load before making print available
             await waitForImagesToLoad(printWindow);
+        }
+
+        // Monthly Report Modal
+        function toggleMonthlyReportModal() {
+            const modal = document.getElementById('monthlyReportModal');
+            modal.style.display = modal.style.display === 'none' ? 'flex' : 'none';
+        }
+
+        // Print Monthly Report - summary analytics without individual trade details
+        async function printMonthlyReport() {
+            if (!appState.trades || appState.trades.length === 0) {
+                showNotification('No trades to generate report', 'error');
+                return;
+            }
+
+            const periodSelect = document.getElementById('reportPeriodSelect').value;
+            const includeStats = document.getElementById('reportIncludeStats').checked;
+            const includeEquity = document.getElementById('reportIncludeEquity').checked;
+            const includeDailyPL = document.getElementById('reportIncludeDailyPL').checked;
+            const includeWinLoss = document.getElementById('reportIncludeWinLoss').checked;
+            const includeBreakdowns = document.getElementById('reportIncludeBreakdowns').checked;
+            const includeDaily = document.getElementById('reportIncludeDaily').checked;
+            const includeHourly = document.getElementById('reportIncludeHourly').checked;
+            const includeCalendar = document.getElementById('reportIncludeCalendar').checked;
+            const includeRuleCombos = document.getElementById('reportIncludeRuleCombos').checked;
+
+            // Determine month/year for the report
+            let reportMonth, reportYear, isAllTime;
+            if (periodSelect === 'all' || appState.analyticsCurrentMonth === -1) {
+                isAllTime = true;
+                reportMonth = -1;
+                reportYear = null;
+            } else {
+                isAllTime = false;
+                reportMonth = appState.analyticsCurrentMonth;
+                reportYear = appState.analyticsCurrentYear;
+            }
+
+            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                'July', 'August', 'September', 'October', 'November', 'December'];
+            const reportTitle = isAllTime ? 'All Time Performance Report' : `${monthNames[reportMonth]} ${reportYear} — Monthly Report`;
+
+            // Filter trades for the selected period
+            let trades;
+            if (isAllTime) {
+                trades = [...appState.trades];
+            } else {
+                const selectedMonthKey = `${reportYear}-${String(reportMonth + 1).padStart(2, '0')}`;
+                trades = appState.trades.filter(trade => {
+                    const tradeDate = new Date(trade.date);
+                    const tradeMonthKey = `${tradeDate.getFullYear()}-${String(tradeDate.getMonth() + 1).padStart(2, '0')}`;
+                    return tradeMonthKey === selectedMonthKey;
+                });
+            }
+
+            if (trades.length === 0) {
+                showNotification('No trades found for the selected period', 'error');
+                return;
+            }
+
+            // Get stats for the period
+            const stats = isAllTime ? appState.statistics : calculateStatisticsForMonth(reportYear, reportMonth);
+
+            // Close modal
+            toggleMonthlyReportModal();
+
+            // Capture chart images before opening print window
+            const chartImages = {};
+            if (includeEquity && appState.chartInstances.equity) {
+                try { chartImages.equity = appState.chartInstances.equity.toBase64Image(); } catch(e) {}
+            }
+            if (includeDailyPL && appState.chartInstances.dailyPL) {
+                try { chartImages.dailyPL = appState.chartInstances.dailyPL.toBase64Image(); } catch(e) {}
+            }
+            if (includeWinLoss && appState.chartInstances.winLoss) {
+                try { chartImages.winLoss = appState.chartInstances.winLoss.toBase64Image(); } catch(e) {}
+            }
+
+            // Build report sections
+            let reportHtml = '';
+
+            // Performance Statistics Section
+            if (includeStats) {
+                reportHtml += generateReportStatsHtml(stats);
+            }
+
+            // Charts Section
+            if (includeEquity || includeDailyPL || includeWinLoss) {
+                reportHtml += '<div class="report-section">';
+                reportHtml += '<h2 class="section-title">Performance Charts</h2>';
+                reportHtml += '<div class="charts-row">';
+                if (includeEquity && chartImages.equity) {
+                    reportHtml += `<div class="chart-img-container"><h3>Equity Curve</h3><img src="${chartImages.equity}" alt="Equity Curve"></div>`;
+                }
+                if (includeDailyPL && chartImages.dailyPL) {
+                    reportHtml += `<div class="chart-img-container"><h3>Daily P&amp;L</h3><img src="${chartImages.dailyPL}" alt="Daily P&L"></div>`;
+                }
+                if (includeWinLoss && chartImages.winLoss) {
+                    reportHtml += `<div class="chart-img-container"><h3>Win/Loss Distribution</h3><img src="${chartImages.winLoss}" alt="Win/Loss Distribution"></div>`;
+                }
+                reportHtml += '</div></div>';
+            }
+
+            // Performance Breakdowns
+            if (includeBreakdowns) {
+                reportHtml += generateReportBreakdownsHtml(trades);
+            }
+
+            // Day of Week Analysis
+            if (includeDaily) {
+                reportHtml += generateReportDailyHtml(trades);
+            }
+
+            // Hourly Performance
+            if (includeHourly) {
+                reportHtml += generateReportHourlyHtml(trades);
+            }
+
+            // Calendar View
+            if (includeCalendar) {
+                if (isAllTime) {
+                    // For all-time, show the current calendar month
+                    reportHtml += generateReportCalendarHtml(appState.currentYear, appState.currentMonth, appState.trades);
+                } else {
+                    reportHtml += generateReportCalendarHtml(reportYear, reportMonth, appState.trades);
+                }
+            }
+
+            // Rule Combinations
+            if (includeRuleCombos && appState.customRules.length > 0) {
+                reportHtml += generateReportRuleCombosHtml(trades);
+            }
+
+            // Open print window
+            const printWindow = window.open('', '', 'width=1200,height=800');
+            if (!printWindow) {
+                showNotification('Unable to open print window. Please check pop-up blocker settings.', 'error');
+                return;
+            }
+
+            const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>${escapeHtml(reportTitle)}</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; color: #000; }
+        .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 12px; margin-bottom: 24px; }
+        .header h1 { font-size: 1.6em; margin: 0 0 4px 0; }
+        .header .subtitle { color: #666; font-size: 0.95em; margin: 4px 0 0 0; }
+        .report-section { margin: 24px 0; page-break-inside: avoid; }
+        .section-title { font-size: 1.2em; border-bottom: 1px solid #ccc; padding-bottom: 6px; margin-bottom: 12px; color: #333; }
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 10px 0; }
+        .stat-card { padding: 8px 10px; background: #f5f5f5; border-left: 3px solid #333; }
+        .stat-card .label { font-size: 0.72em; color: #666; margin-bottom: 2px; text-transform: uppercase; }
+        .stat-card .value { font-size: 0.95em; font-weight: bold; }
+        .positive { color: green; }
+        .negative { color: red; }
+        .charts-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+        .chart-img-container { text-align: center; }
+        .chart-img-container h3 { font-size: 0.95em; color: #555; margin: 0 0 6px 0; }
+        .chart-img-container img { max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; }
+        .breakdown-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; margin: 8px 0; }
+        .breakdown-card { padding: 8px; background: #f9f9f9; border: 1px solid #e0e0e0; border-radius: 4px; font-size: 0.85em; }
+        .breakdown-card .bd-header { font-weight: bold; margin-bottom: 4px; color: #333; }
+        .breakdown-card .bd-stats { color: #555; line-height: 1.5; }
+        .sub-section { margin: 16px 0; }
+        .sub-section h3 { font-size: 1em; color: #444; margin: 0 0 8px 0; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin: 8px 0; }
+        .cal-header { text-align: center; font-weight: bold; font-size: 0.75em; padding: 4px; background: #eee; }
+        .cal-day { text-align: center; padding: 6px 2px; font-size: 0.75em; border: 1px solid #eee; min-height: 40px; }
+        .cal-day .day-num { font-weight: bold; }
+        .cal-day .day-pl { font-size: 0.85em; }
+        .cal-day.profit { background: #e8f5e9; }
+        .cal-day.loss { background: #ffebee; }
+        .cal-day.empty { background: #fafafa; }
+        .rule-combo-table { width: 100%; border-collapse: collapse; font-size: 0.85em; }
+        .rule-combo-table th, .rule-combo-table td { border: 1px solid #ddd; padding: 5px 8px; text-align: left; }
+        .rule-combo-table th { background: #f0f0f0; font-weight: bold; }
+
+        /* Print Preview Controls */
+        .print-preview-controls {
+            position: fixed; top: 0; left: 0; right: 0;
+            background: #2c3e50; color: white; padding: 15px;
+            text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 1000;
+        }
+        .print-btn { background: #27ae60; color: white; border: none; padding: 10px 30px; font-size: 16px; cursor: pointer; border-radius: 5px; margin: 0 10px; }
+        .print-btn:hover { background: #229954; }
+        .close-btn { background: #e74c3c; color: white; border: none; padding: 10px 30px; font-size: 16px; cursor: pointer; border-radius: 5px; margin: 0 10px; }
+        .close-btn:hover { background: #c0392b; }
+        .print-content { margin-top: 90px; }
+
+        @media print {
+            .print-preview-controls { display: none; }
+            .print-content { margin-top: 0; }
+            @page { size: landscape; margin: 0.5in; }
+            body { margin: 0; }
+            .report-section { page-break-inside: avoid; }
+            img {
+                max-width: 100%;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color-adjust: exact !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="print-preview-controls">
+        <h2 style="margin: 0 0 10px 0;">Monthly Report Preview</h2>
+        <p style="margin: 5px 0; font-size: 14px;">Review the report below, then print.</p>
+        <div>
+            <button class="print-btn" onclick="window.print()">🖨️ Print (Ctrl+P)</button>
+            <button class="close-btn" onclick="window.close()">✕ Close</button>
+        </div>
+    </div>
+    <div class="print-content">
+        <div class="header">
+            <h1>📊 ${escapeHtml(reportTitle)}</h1>
+            <p class="subtitle">${trades.length} trades | Generated ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+        </div>
+        ${reportHtml}
+    </div>
+</body>
+</html>`;
+
+            printWindow.document.open();
+            printWindow.document.write(htmlContent);
+            printWindow.document.close();
+
+            await waitForImagesToLoad(printWindow);
+        }
+
+        // Generate Performance Statistics HTML for report
+        function generateReportStatsHtml(stats) {
+            const statEntries = [
+                { label: 'Total Trades', value: stats.totalTrades, cls: '' },
+                { label: 'Winning Trades', value: stats.winningTrades, cls: 'positive' },
+                { label: 'Losing Trades', value: stats.losingTrades, cls: 'negative' },
+                { label: 'Win Rate', value: formatPercentage(stats.winRate), cls: stats.winRate >= 50 ? 'positive' : 'negative' },
+                { label: 'Net P&L', value: formatCurrency(stats.netPL), cls: stats.netPL >= 0 ? 'positive' : 'negative' },
+                { label: 'Profit Factor', value: stats.profitFactor.toFixed(2), cls: stats.profitFactor >= 1 ? 'positive' : 'negative' },
+                { label: 'Expectancy', value: formatCurrency(stats.expectancy), cls: stats.expectancy >= 0 ? 'positive' : 'negative' },
+                { label: 'Risk/Reward Ratio', value: stats.riskRewardRatio.toFixed(2), cls: '' },
+                { label: 'Avg Win', value: formatCurrency(stats.avgWin), cls: 'positive' },
+                { label: 'Avg Loss', value: formatCurrency(stats.avgLoss), cls: 'negative' },
+                { label: 'Largest Win', value: formatCurrency(stats.largestWin), cls: 'positive' },
+                { label: 'Largest Loss', value: formatCurrency(stats.largestLoss), cls: 'negative' },
+                { label: 'Max Drawdown', value: formatCurrency(stats.maxDrawdown), cls: 'negative' },
+                { label: 'Max Drawdown %', value: formatPercentage(stats.maxDrawdownPercent), cls: 'negative' },
+                { label: 'Sharpe Ratio', value: stats.sharpeRatio.toFixed(2), cls: '' },
+                { label: 'Account Growth', value: formatPercentage(stats.accountGrowth), cls: stats.accountGrowth >= 0 ? 'positive' : 'negative' },
+                { label: 'Starting Balance', value: formatCurrency(stats.startingBalance), cls: '' },
+                { label: 'Current Balance', value: formatCurrency(stats.currentBalance), cls: '' },
+                { label: 'Longest Win Streak', value: stats.longestWinStreak, cls: 'positive' },
+                { label: 'Longest Loss Streak', value: stats.longestLossStreak, cls: 'negative' },
+            ];
+
+            let html = '<div class="report-section">';
+            html += '<h2 class="section-title">Performance Statistics</h2>';
+            html += '<div class="stats-grid">';
+            statEntries.forEach(s => {
+                html += `<div class="stat-card"><div class="label">${s.label}</div><div class="value ${s.cls}">${s.value}</div></div>`;
+            });
+            html += '</div></div>';
+            return html;
+        }
+
+        // Generate Performance Breakdowns HTML for report
+        function generateReportBreakdownsHtml(trades) {
+            const setupTypes = ['Breakout', 'Pullback', 'Reversal', 'Range', 'Trend Following'];
+            const marketConditions = ['Trending', 'Ranging', 'Volatile'];
+            const emotionalStates = ['Confident', 'Uncertain', 'Fearful', 'Greedy', 'Disciplined', 'Impulsive'];
+
+            const calcBreakdown = (filterFn, categories) => {
+                const result = {};
+                categories.forEach(cat => {
+                    const filtered = trades.filter(t => filterFn(t) === cat);
+                    const wins = filtered.filter(t => (t.netPL || t.profit) > 0);
+                    const totalPL = filtered.reduce((sum, t) => sum + (t.netPL || t.profit), 0);
+                    result[cat] = { trades: filtered.length, winRate: filtered.length > 0 ? (wins.length / filtered.length * 100) : 0, totalPL };
+                });
+                return result;
+            };
+
+            const renderCards = (data) => Object.entries(data).map(([key, d]) =>
+                `<div class="breakdown-card"><div class="bd-header">${escapeHtml(key)}</div><div class="bd-stats">Trades: ${d.trades}<br>Win Rate: <span class="${d.winRate >= 50 ? 'positive' : 'negative'}">${d.winRate.toFixed(1)}%</span><br>P&L: <span class="${d.totalPL >= 0 ? 'positive' : 'negative'}">${formatCurrency(d.totalPL)}</span></div></div>`
+            ).join('');
+
+            const setupData = calcBreakdown(t => t.setupType, setupTypes);
+            const marketData = calcBreakdown(t => t.marketCondition, marketConditions);
+            const emotionData = calcBreakdown(t => t.emotionalState, emotionalStates);
+
+            let html = '<div class="report-section">';
+            html += '<h2 class="section-title">Performance Breakdowns</h2>';
+
+            html += '<div class="sub-section"><h3>By Setup Type</h3><div class="breakdown-grid">' + renderCards(setupData) + '</div></div>';
+            html += '<div class="sub-section"><h3>By Market Condition</h3><div class="breakdown-grid">' + renderCards(marketData) + '</div></div>';
+            html += '<div class="sub-section"><h3>By Emotional State</h3><div class="breakdown-grid">' + renderCards(emotionData) + '</div></div>';
+
+            html += '</div>';
+            return html;
+        }
+
+        // Generate Day of Week Analysis HTML for report
+        function generateReportDailyHtml(trades) {
+            const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            const dailyData = {};
+            daysOfWeek.forEach(day => { dailyData[day] = { trades: 0, profit: 0, wins: 0 }; });
+
+            trades.forEach(trade => {
+                const tradeDate = new Date(trade.closeTime || `${trade.date}T${trade.time}:00`);
+                const dayOfWeek = daysOfWeek[tradeDate.getDay()];
+                dailyData[dayOfWeek].trades++;
+                dailyData[dayOfWeek].profit += (trade.netPL || trade.profit);
+                if ((trade.netPL || trade.profit) > 0) dailyData[dayOfWeek].wins++;
+            });
+
+            let html = '<div class="report-section">';
+            html += '<h2 class="section-title">Day of Week Analysis</h2>';
+            html += '<div class="breakdown-grid">';
+            daysOfWeek.forEach(day => {
+                const d = dailyData[day];
+                const winRate = d.trades > 0 ? ((d.wins / d.trades) * 100).toFixed(1) : '0.0';
+                html += `<div class="breakdown-card"><div class="bd-header">${day}</div><div class="bd-stats">Trades: ${d.trades}<br>Win Rate: ${winRate}%<br>P&L: <span class="${d.profit >= 0 ? 'positive' : 'negative'}">${formatCurrency(d.profit)}</span></div></div>`;
+            });
+            html += '</div></div>';
+            return html;
+        }
+
+        // Generate Hourly Performance HTML for report
+        function generateReportHourlyHtml(trades) {
+            const buildHourlyData = (getHourFn) => {
+                const hourlyData = {};
+                for (let h = 0; h < 24; h++) hourlyData[h] = { trades: 0, profit: 0, wins: 0 };
+                trades.forEach(trade => {
+                    const hour = getHourFn(trade);
+                    if (hour !== null && hour >= 0 && hour < 24) {
+                        hourlyData[hour].trades++;
+                        hourlyData[hour].profit += (trade.netPL || trade.profit);
+                        if ((trade.netPL || trade.profit) > 0) hourlyData[hour].wins++;
+                    }
+                });
+                return hourlyData;
+            };
+
+            const openHourly = buildHourlyData(t => {
+                if (t.openTime) { const parts = t.openTime.split(':'); return parseInt(parts[0]); }
+                return null;
+            });
+            const closeHourly = buildHourlyData(t => {
+                if (t.time) { const parts = t.time.split(':'); return parseInt(parts[0]); }
+                return null;
+            });
+
+            const renderHourly = (data) => {
+                let cards = '';
+                for (let h = 0; h < 24; h++) {
+                    const d = data[h];
+                    if (d.trades === 0) continue;
+                    const winRate = d.trades > 0 ? ((d.wins / d.trades) * 100).toFixed(1) : '0.0';
+                    cards += `<div class="breakdown-card"><div class="bd-header">${String(h).padStart(2, '0')}:00</div><div class="bd-stats">Trades: ${d.trades}<br>Win Rate: ${winRate}%<br>P&L: <span class="${d.profit >= 0 ? 'positive' : 'negative'}">${formatCurrency(d.profit)}</span></div></div>`;
+                }
+                return cards || '<p style="color: #999; font-size: 0.85em;">No hourly data available</p>';
+            };
+
+            let html = '<div class="report-section">';
+            html += '<h2 class="section-title">Hourly Performance</h2>';
+            html += '<div class="sub-section"><h3>By Entry Hour</h3><div class="breakdown-grid">' + renderHourly(openHourly) + '</div></div>';
+            html += '<div class="sub-section"><h3>By Exit Hour</h3><div class="breakdown-grid">' + renderHourly(closeHourly) + '</div></div>';
+            html += '</div>';
+            return html;
+        }
+
+        // Generate Calendar View HTML for report
+        function generateReportCalendarHtml(year, month, allTrades) {
+            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                'July', 'August', 'September', 'October', 'November', 'December'];
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            const monthlyTrades = {};
+            let monthTotalPL = 0;
+            allTrades.forEach(trade => {
+                try {
+                    const tradeDate = new Date(trade.closeTime || `${trade.date}T${trade.time}:00`);
+                    if (tradeDate.getMonth() === month && tradeDate.getFullYear() === year) {
+                        const day = tradeDate.getDate();
+                        const pl = (parseFloat(trade.netPL) || parseFloat(trade.profit) || 0);
+                        if (!monthlyTrades[day]) monthlyTrades[day] = { count: 0, profit: 0 };
+                        monthlyTrades[day].count++;
+                        monthlyTrades[day].profit += pl;
+                        monthTotalPL += pl;
+                    }
+                } catch (e) {}
+            });
+
+            let html = '<div class="report-section">';
+            html += `<h2 class="section-title">Calendar View — ${monthNames[month]} ${year}</h2>`;
+            html += `<p style="font-size: 0.85em; color: #555; margin-bottom: 8px;">Month Total: <span class="${monthTotalPL >= 0 ? 'positive' : 'negative'}">${formatCurrency(monthTotalPL)}</span></p>`;
+            html += '<div class="calendar-grid">';
+
+            // Day headers
+            ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].forEach(d => {
+                html += `<div class="cal-header">${d}</div>`;
+            });
+
+            // Empty cells before first day
+            for (let i = 0; i < firstDay; i++) {
+                html += '<div class="cal-day empty"></div>';
+            }
+
+            // Day cells
+            for (let day = 1; day <= daysInMonth; day++) {
+                const data = monthlyTrades[day];
+                const cls = data ? (data.profit > 0 ? 'profit' : data.profit < 0 ? 'loss' : '') : '';
+                html += `<div class="cal-day ${cls}"><div class="day-num">${day}</div>`;
+                if (data) {
+                    html += `<div class="day-pl"><span class="${data.profit >= 0 ? 'positive' : 'negative'}">${formatCurrency(data.profit)}</span></div>`;
+                    html += `<div style="font-size: 0.8em; color: #888;">${data.count} trade${data.count > 1 ? 's' : ''}</div>`;
+                }
+                html += '</div>';
+            }
+
+            html += '</div></div>';
+            return html;
+        }
+
+        // Generate Rule Combinations HTML for report
+        function generateReportRuleCombosHtml(trades) {
+            const tradesWithRules = trades.filter(t => t.rulesFollowed && t.rulesFollowed.length > 0);
+            if (tradesWithRules.length === 0) {
+                return '<div class="report-section"><h2 class="section-title">Rule Combinations</h2><p style="color: #999;">No trades with rule data found.</p></div>';
+            }
+
+            const combos = {};
+            tradesWithRules.forEach(trade => {
+                const key = [...trade.rulesFollowed].sort().join('+');
+                if (!combos[key]) combos[key] = { trades: [], wins: 0, totalPL: 0, rules: trade.rulesFollowed };
+                combos[key].trades.push(trade);
+                combos[key].totalPL += (trade.netPL || trade.profit);
+                if ((trade.netPL || trade.profit) > 0) combos[key].wins++;
+            });
+
+            const sorted = Object.entries(combos).sort((a, b) => b[1].totalPL - a[1].totalPL);
+
+            let html = '<div class="report-section">';
+            html += '<h2 class="section-title">Rule Combinations</h2>';
+            html += '<table class="rule-combo-table"><thead><tr><th>Rules</th><th>Trades</th><th>Win Rate</th><th>P&L</th></tr></thead><tbody>';
+
+            sorted.forEach(([key, data]) => {
+                const ruleNames = data.rules.map(ruleId => {
+                    const rule = appState.customRules.find(r => r.id === ruleId);
+                    return rule ? rule.text : ruleId;
+                }).join(', ');
+                const winRate = (data.wins / data.trades.length * 100).toFixed(1);
+                html += `<tr><td>${escapeHtml(ruleNames)}</td><td>${data.trades.length}</td><td>${winRate}%</td><td class="${data.totalPL >= 0 ? 'positive' : 'negative'}">${formatCurrency(data.totalPL)}</td></tr>`;
+            });
+
+            html += '</tbody></table></div>';
+            return html;
         }
 
         // Configuration Functions
