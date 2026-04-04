@@ -7772,6 +7772,19 @@ select.form-control {
             });
         }
 
+        function getChartAccumulatedTrades() {
+            if (appState.analyticsCurrentMonth === -1) {
+                return null; // No accumulated view in TOTAL mode
+            }
+            const year = appState.analyticsCurrentYear;
+            const month = appState.analyticsCurrentMonth;
+            const endDate = new Date(year, month + 1, 0, 23, 59, 59);
+            return appState.trades.filter(trade => {
+                const tradeDate = new Date(trade.date);
+                return tradeDate <= endDate;
+            });
+        }
+
         function updateChartsDisplay() {
             // Destroy existing charts so they get recreated with filtered data
             ['equity', 'dailyPL', 'winLoss'].forEach(key => {
@@ -7799,57 +7812,81 @@ select.form-control {
 
         function drawEquityCurve() {
             const trades = [...getChartFilteredTrades()]; // Create copy to avoid mutation
+            const accTrades = getChartAccumulatedTrades();
+            const isMonthlyView = accTrades !== null;
 
-            // CORRECTED: Sort trades by date/time for proper equity curve
-            trades.sort((a, b) => {
+            // Sort helper
+            const sortByTime = (a, b) => {
                 const dateA = new Date(a.closeTime || `${a.date}T${a.time}:00`);
                 const dateB = new Date(b.closeTime || `${b.date}T${b.time}:00`);
                 return dateA - dateB;
-            });
+            };
 
-            // CORRECTED: Calculate cumulative balance properly using netPL
+            trades.sort(sortByTime);
+
+            // Build monthly equity data
             let cumulative = 0;
             const cumulativeData = [];
-
-            // Add starting point at trade 0
             cumulativeData.push({ x: 0, y: appState.startingBalance });
-
             trades.forEach((trade, index) => {
-                // Use netPL consistently for P/L calculations
                 const tradePL = parseFloat(trade.netPL) || parseFloat(trade.profit) || 0;
                 cumulative += tradePL;
-                const balance = appState.startingBalance + cumulative;
                 cumulativeData.push({
-                    x: index + 1, // Trade number 1, 2, 3, ...
-                    y: parseFloat(balance.toFixed(2)) // Cumulative balance
+                    x: index + 1,
+                    y: parseFloat((appState.startingBalance + cumulative).toFixed(2))
                 });
             });
 
-            // Performance optimization: Update existing chart if possible
-            if (appState.chartInstances.equity) {
-                appState.chartInstances.equity.data.datasets[0].data = cumulativeData;
-                appState.chartInstances.equity.update('none'); // 'none' mode = no animation, faster
-                return;
+            // Build accumulated equity data if in monthly view
+            const datasets = [];
+            if (isMonthlyView) {
+                const sortedAcc = [...accTrades].sort(sortByTime);
+                let accCum = 0;
+                const accData = [];
+                accData.push({ x: 0, y: appState.startingBalance });
+                sortedAcc.forEach((trade, index) => {
+                    const tradePL = parseFloat(trade.netPL) || parseFloat(trade.profit) || 0;
+                    accCum += tradePL;
+                    accData.push({
+                        x: index + 1,
+                        y: parseFloat((appState.startingBalance + accCum).toFixed(2))
+                    });
+                });
+                const chartColors = getChartColors();
+                datasets.push({
+                    label: 'Accumulated Balance',
+                    data: accData,
+                    borderColor: 'rgba(148, 163, 184, 0.4)',
+                    backgroundColor: 'rgba(148, 163, 184, 0.08)',
+                    borderWidth: 1.5,
+                    borderDash: [4, 4],
+                    fill: true,
+                    tension: 0.1,
+                    pointRadius: 0,
+                    pointHoverRadius: 3,
+                    order: 2
+                });
             }
 
-            // Create new chart if it doesn't exist
-            const ctx = document.getElementById('equityChart').getContext('2d');
             const chartColors = getChartColors();
+            datasets.push({
+                label: isMonthlyView ? 'Monthly Balance' : 'Account Balance',
+                data: cumulativeData,
+                borderColor: chartColors.blue,
+                backgroundColor: chartColors.blueLight,
+                borderWidth: 2,
+                fill: true,
+                tension: 0.1,
+                pointRadius: 1,
+                pointHoverRadius: 4,
+                order: 1
+            });
+
+            // Create new chart
+            const ctx = document.getElementById('equityChart').getContext('2d');
             appState.chartInstances.equity = new Chart(ctx, {
                 type: 'line',
-                data: {
-                    datasets: [{
-                        label: 'Account Balance',
-                        data: cumulativeData,
-                        borderColor: chartColors.blue,
-                        backgroundColor: chartColors.blueLight,
-                        borderWidth: 2,
-                        fill: true,
-                        tension: 0.1,
-                        pointRadius: 1,
-                        pointHoverRadius: 4
-                    }]
-                },
+                data: { datasets },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
@@ -7873,7 +7910,7 @@ select.form-control {
                                     return context[0].parsed.x === 0 ? 'Starting Balance' : `Trade ${context[0].parsed.x}`;
                                 },
                                 label: function(context) {
-                                    return 'Account Balance: $' + context.parsed.y.toFixed(2);
+                                    return context.dataset.label + ': $' + context.parsed.y.toFixed(2);
                                 }
                             }
                         }
@@ -7924,49 +7961,71 @@ select.form-control {
 
         function drawDailyPLChart() {
             const trades = getChartFilteredTrades();
+            const accTrades = getChartAccumulatedTrades();
+            const isMonthlyView = accTrades !== null;
 
             // Group trades by date using correct P/L field
             const dailyPL = {};
             trades.forEach(trade => {
-                if (!dailyPL[trade.date]) {
-                    dailyPL[trade.date] = 0;
-                }
+                if (!dailyPL[trade.date]) dailyPL[trade.date] = 0;
                 dailyPL[trade.date] += (trade.netPL || trade.profit);
             });
 
-            const dates = Object.keys(dailyPL).sort();
-            const values = dates.map(date => dailyPL[date]);
             const colors = getChartColors();
+            const datasets = [];
 
-            // Performance optimization: Update existing chart if possible
-            if (appState.chartInstances.dailyPL) {
-                appState.chartInstances.dailyPL.data.labels = dates;
-                appState.chartInstances.dailyPL.data.datasets[0].data = values;
-                appState.chartInstances.dailyPL.data.datasets[0].backgroundColor = values.map(v => v >= 0 ? colors.success : colors.error);
-                appState.chartInstances.dailyPL.data.datasets[0].borderColor = values.map(v => v >= 0 ? colors.success : colors.error);
-                appState.chartInstances.dailyPL.options.plugins.legend.labels.color = colors.text;
-                appState.chartInstances.dailyPL.options.scales.x.ticks.color = colors.textSecondary;
-                appState.chartInstances.dailyPL.options.scales.x.grid.color = colors.gridColor;
-                appState.chartInstances.dailyPL.options.scales.y.title.color = colors.textSecondary;
-                appState.chartInstances.dailyPL.options.scales.y.ticks.color = colors.textSecondary;
-                appState.chartInstances.dailyPL.options.scales.y.grid.color = colors.gridColor;
-                appState.chartInstances.dailyPL.update('none');
-                return;
+            // Build accumulated daily P&L if in monthly view
+            if (isMonthlyView) {
+                const accDailyPL = {};
+                accTrades.forEach(trade => {
+                    if (!accDailyPL[trade.date]) accDailyPL[trade.date] = 0;
+                    accDailyPL[trade.date] += (trade.netPL || trade.profit);
+                });
+
+                const accDates = Object.keys(accDailyPL).sort();
+                const accValues = accDates.map(date => accDailyPL[date]);
+
+                // Use all accumulated dates as labels so both datasets align
+                var allDates = accDates;
+                var monthValues = allDates.map(date => dailyPL[date] || null);
+
+                datasets.push({
+                    label: 'Acc. Daily P&L',
+                    data: accValues,
+                    backgroundColor: accValues.map(v => v >= 0 ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)'),
+                    borderColor: accValues.map(v => v >= 0 ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'),
+                    borderWidth: 1,
+                    order: 2
+                });
+
+                datasets.push({
+                    label: 'Monthly Daily P&L',
+                    data: monthValues,
+                    backgroundColor: monthValues.map(v => v === null ? 'transparent' : (v >= 0 ? colors.success : colors.error)),
+                    borderColor: monthValues.map(v => v === null ? 'transparent' : (v >= 0 ? colors.success : colors.error)),
+                    borderWidth: 1,
+                    order: 1
+                });
+            } else {
+                var allDates = Object.keys(dailyPL).sort();
+                const values = allDates.map(date => dailyPL[date]);
+
+                datasets.push({
+                    label: 'Daily P&L',
+                    data: values,
+                    backgroundColor: values.map(v => v >= 0 ? colors.success : colors.error),
+                    borderColor: values.map(v => v >= 0 ? colors.success : colors.error),
+                    borderWidth: 1
+                });
             }
 
-            // Create new chart if it doesn't exist
+            // Create new chart
             const ctx = document.getElementById('dailyPLChart').getContext('2d');
             appState.chartInstances.dailyPL = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: dates,
-                    datasets: [{
-                        label: 'Daily P&L',
-                        data: values,
-                        backgroundColor: values.map(v => v >= 0 ? colors.success : colors.error),
-                        borderColor: values.map(v => v >= 0 ? colors.success : colors.error),
-                        borderWidth: 1
-                    }]
+                    labels: allDates,
+                    datasets: datasets
                 },
                 options: {
                     responsive: true,
@@ -7975,6 +8034,14 @@ select.form-control {
                         legend: {
                             labels: {
                                 color: colors.text
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    if (context.parsed.y === null) return null;
+                                    return context.dataset.label + ': $' + context.parsed.y.toFixed(2);
+                                }
                             }
                         }
                     },
@@ -8010,32 +8077,39 @@ select.form-control {
 
         function drawWinLossChart() {
             const trades = getChartFilteredTrades();
+            const accTrades = getChartAccumulatedTrades();
+            const isMonthlyView = accTrades !== null;
             const wins = trades.filter(t => (t.netPL || t.profit) > 0).length;
             const losses = trades.filter(t => (t.netPL || t.profit) < 0).length;
             const colors = getChartColors();
 
-            // Performance optimization: Update existing chart if possible
-            if (appState.chartInstances.winLoss) {
-                appState.chartInstances.winLoss.data.datasets[0].data = [wins, losses];
-                appState.chartInstances.winLoss.data.datasets[0].backgroundColor = [colors.success, colors.error];
-                appState.chartInstances.winLoss.data.datasets[0].borderColor = [colors.successMedium, colors.errorMedium];
-                appState.chartInstances.winLoss.options.plugins.legend.labels.color = colors.text;
-                appState.chartInstances.winLoss.update('none');
-                return;
+            const datasets = [{
+                label: isMonthlyView ? 'Monthly' : 'Total',
+                data: [wins, losses],
+                backgroundColor: [colors.success, colors.error],
+                borderColor: [colors.successMedium, colors.errorMedium],
+                borderWidth: 2
+            }];
+
+            if (isMonthlyView) {
+                const accWins = accTrades.filter(t => (t.netPL || t.profit) > 0).length;
+                const accLosses = accTrades.filter(t => (t.netPL || t.profit) < 0).length;
+                datasets.push({
+                    label: 'Accumulated',
+                    data: [accWins, accLosses],
+                    backgroundColor: ['rgba(34, 197, 94, 0.3)', 'rgba(239, 68, 68, 0.3)'],
+                    borderColor: ['rgba(34, 197, 94, 0.5)', 'rgba(239, 68, 68, 0.5)'],
+                    borderWidth: 1
+                });
             }
 
-            // Create new chart if it doesn't exist
+            // Create new chart
             const ctx = document.getElementById('winLossChart').getContext('2d');
             appState.chartInstances.winLoss = new Chart(ctx, {
-                type: 'pie',
+                type: 'doughnut',
                 data: {
                     labels: ['Wins', 'Losses'],
-                    datasets: [{
-                        data: [wins, losses],
-                        backgroundColor: [colors.success, colors.error],
-                        borderColor: [colors.successMedium, colors.errorMedium],
-                        borderWidth: 2
-                    }]
+                    datasets: datasets
                 },
                 options: {
                     responsive: true,
@@ -8046,6 +8120,16 @@ select.form-control {
                             labels: {
                                 color: colors.text,
                                 padding: 20
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.parsed;
+                                    const dsLabel = context.dataset.label || '';
+                                    return `${dsLabel} ${label}: ${value}`;
+                                }
                             }
                         }
                     }
