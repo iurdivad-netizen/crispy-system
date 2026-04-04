@@ -882,6 +882,23 @@ select.form-control {
             gap: 0.25rem;
         }
 
+        .stat-accumulated {
+            font-size: 0.75rem;
+            color: var(--color-text-secondary);
+            margin-top: 0.25rem;
+            padding-top: 0.25rem;
+            border-top: 1px solid var(--color-border);
+            opacity: 0.85;
+        }
+
+        .stat-accumulated.positive {
+            color: var(--color-success);
+        }
+
+        .stat-accumulated.negative {
+            color: var(--color-error);
+        }
+
         .stat-info-icon {
             font-size: 0.75rem;
             color: var(--color-primary);
@@ -7140,6 +7157,47 @@ select.form-control {
         }
 
         // Calculate statistics for a specific month
+        function calculateEmptyStats() {
+            return {
+                totalTrades: 0, winningTrades: 0, losingTrades: 0, winRate: 0, rulesWinRate: 0,
+                netPL: 0, totalFees: 0, totalProfit: 0, totalLoss: 0, profitFactor: 0,
+                avgWin: 0, avgLoss: 0, largestWin: 0, largestLoss: 0, expectancy: 0,
+                accountGrowth: 0, currentBalance: appState.startingBalance, startingBalance: appState.startingBalance,
+                maxDrawdown: 0, maxDrawdownPercent: 0, recoveryFactor: 0, currentStreak: 0,
+                longestWinStreak: 0, longestLossStreak: 0, riskRewardRatio: 0, avgTradeDuration: 0,
+                stdDevReturns: 0, sharpeRatio: 0, sqn: 0, breakEvenWinRate: 0,
+                avgDrawdownDuration: 0, avgDrawdownDays: 0, avgDrawdownTrades: 0, profitConsistencyScore: 0,
+                asianSessionTrades: 0, asianSessionWinRate: 0, asianSessionPL: 0,
+                londonSessionTrades: 0, londonSessionWinRate: 0, londonSessionPL: 0,
+                newYorkSessionTrades: 0, newYorkSessionWinRate: 0, newYorkSessionPL: 0,
+                overlapSessionTrades: 0, overlapSessionWinRate: 0, overlapSessionPL: 0,
+                tradeTimingScore: 0,
+                prob2WinsRow: 0, prob3WinsRow: 0, prob4WinsRow: 0, prob5WinsRow: 0,
+                prob2LossesRow: 0, prob3LossesRow: 0, prob4LossesRow: 0, prob5LossesRow: 0,
+                expectedMaxWinStreak: 0, expectedMaxLossStreak: 0
+            };
+        }
+
+        function calculateStatisticsUpToMonth(year, month) {
+            // Filter trades up to and including the selected month
+            const endDate = new Date(year, month + 1, 0, 23, 59, 59); // Last day of the month
+            let filteredTrades = appState.trades.filter(trade => {
+                const tradeDate = new Date(trade.date);
+                return tradeDate <= endDate;
+            });
+
+            // Apply setup filter if selected
+            if (appState.selectedSetup !== 'all') {
+                filteredTrades = filteredTrades.filter(t => t.setupType === appState.selectedSetup);
+            }
+
+            if (filteredTrades.length === 0) {
+                return calculateEmptyStats();
+            }
+
+            return calculateStatisticsForTrades(filteredTrades);
+        }
+
         function calculateStatisticsForMonth(year, month) {
             // Filter trades for the selected month
             const selectedMonthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
@@ -7155,72 +7213,13 @@ select.form-control {
             }
 
             if (monthTrades.length === 0) {
-                return {
-                    totalTrades: 0,
-                    winningTrades: 0,
-                    losingTrades: 0,
-                    winRate: 0,
-                    rulesWinRate: 0,
-                    netPL: 0,
-                    totalFees: 0,
-                    totalProfit: 0,
-                    totalLoss: 0,
-                    profitFactor: 0,
-                    avgWin: 0,
-                    avgLoss: 0,
-                    largestWin: 0,
-                    largestLoss: 0,
-                    expectancy: 0,
-                    accountGrowth: 0,
-                    currentBalance: appState.startingBalance,
-                    startingBalance: appState.startingBalance,
-                    maxDrawdown: 0,
-                    maxDrawdownPercent: 0,
-                    recoveryFactor: 0,
-                    currentStreak: 0,
-                    longestWinStreak: 0,
-                    longestLossStreak: 0,
-                    riskRewardRatio: 0,
-                    avgTradeDuration: 0,
-                    // Phase 2 New Stats
-                    stdDevReturns: 0,
-                    sharpeRatio: 0,
-                    sqn: 0,
-                    breakEvenWinRate: 0,
-                    avgDrawdownDuration: 0,
-                    avgDrawdownDays: 0,
-                    avgDrawdownTrades: 0,
-                    profitConsistencyScore: 0,
-                    // Market Session Performance
-                    asianSessionTrades: 0,
-                    asianSessionWinRate: 0,
-                    asianSessionPL: 0,
-                    londonSessionTrades: 0,
-                    londonSessionWinRate: 0,
-                    londonSessionPL: 0,
-                    newYorkSessionTrades: 0,
-                    newYorkSessionWinRate: 0,
-                    newYorkSessionPL: 0,
-                    overlapSessionTrades: 0,
-                    overlapSessionWinRate: 0,
-                    overlapSessionPL: 0,
-                    tradeTimingScore: 0,
-                    // Phase 3 Streak Probability Stats
-                    prob2WinsRow: 0,
-                    prob3WinsRow: 0,
-                    prob4WinsRow: 0,
-                    prob5WinsRow: 0,
-                    prob2LossesRow: 0,
-                    prob3LossesRow: 0,
-                    prob4LossesRow: 0,
-                    prob5LossesRow: 0,
-                    expectedMaxWinStreak: 0,
-                    expectedMaxLossStreak: 0
-                };
+                return calculateEmptyStats();
             }
 
-            // Use same calculation logic as calculateStatistics but with filtered trades
-            const trades = monthTrades;
+            return calculateStatisticsForTrades(monthTrades);
+        }
+
+        function calculateStatisticsForTrades(trades) {
             const wins = trades.filter(t => (t.netPL || t.profit) > 0);
             const losses = trades.filter(t => (t.netPL || t.profit) < 0);
             const totalProfit = wins.reduce((sum, t) => sum + (t.netPL || t.profit), 0);
@@ -7560,9 +7559,13 @@ select.form-control {
             const statsConfig = appState.visibleStats;
 
             // Get stats based on selected view: TOTAL (-1) or specific month
-            const stats = appState.analyticsCurrentMonth === -1
-                ? appState.statistics
-                : calculateStatisticsForMonth(appState.analyticsCurrentYear, appState.analyticsCurrentMonth);
+            const isMonthlyView = appState.analyticsCurrentMonth !== -1;
+            const stats = isMonthlyView
+                ? calculateStatisticsForMonth(appState.analyticsCurrentYear, appState.analyticsCurrentMonth)
+                : appState.statistics;
+            const accumulatedStats = isMonthlyView
+                ? calculateStatisticsUpToMonth(appState.analyticsCurrentYear, appState.analyticsCurrentMonth)
+                : null;
 
             // Helper function to format a stat value
             const formatStatValue = (value, format) => {
@@ -7730,6 +7733,16 @@ select.form-control {
                 const formattedValue = formatStatValue(displayValue, stat.format);
                 const valueClass = getStatClass(stat.key, displayValue, stat.format);
 
+                // Accumulated stats line (only in monthly view)
+                let accumulatedHtml = '';
+                if (accumulatedStats) {
+                    const accValue = accumulatedStats[stat.key];
+                    const accDisplayValue = (stat.key === 'avgLoss' || stat.key === 'largestLoss') ? Math.abs(accValue) : accValue;
+                    const accFormattedValue = formatStatValue(accDisplayValue, stat.format);
+                    const accValueClass = getStatClass(stat.key, accDisplayValue, stat.format);
+                    accumulatedHtml = `<div class="stat-accumulated ${accValueClass}">Acc: ${accFormattedValue}</div>`;
+                }
+
                 html += `
                     <div class="stat-card" title="${stat.tooltip || ''}">
                         <div class="stat-label">
@@ -7737,6 +7750,7 @@ select.form-control {
                             ${stat.tooltip ? '<span class="stat-info-icon">ⓘ</span>' : ''}
                         </div>
                         <div class="stat-value ${valueClass}">${formattedValue}</div>
+                        ${accumulatedHtml}
                     </div>
                 `;
             });
