@@ -37,8 +37,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!--
+      Content-Security-Policy
+
+      Script sources: 'self' for any future local JS bundle, cdn.jsdelivr.net for Chart.js,
+      and 'unsafe-inline' because the app still uses many inline onclick/onchange handlers
+      and an inline <script> block. Removing 'unsafe-inline' requires migrating those
+      handlers to event delegation — tracked as a follow-up.
+
+      Connect sources: MetaApi MetaStats endpoint for trade import.
+      Image sources: data: and blob: for pasted/compressed screenshots; https: for
+      TradingView and user-supplied image URLs.
+    -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https://metastats-api-v1.new-york.agiliumtrade.ai https://mt-client-api-v1.new-york.agiliumtrade.ai; font-src 'self' data:; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'">
     <title>Comprehensive Trading Journal</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!--
+      Chart.js is pinned to a specific version to prevent silent upgrades.
+      SRI (integrity=) should be added before production deploy:
+        curl -L https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.js \
+          | openssl dgst -sha384 -binary | openssl base64 -A
+      Then paste the result as integrity="sha384-<hash>".
+    -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.js" crossorigin="anonymous"></script>
     <style>
         :root {
   /* Primitive Color Tokens */
@@ -1632,7 +1652,7 @@ select.form-control {
             <!-- Save Status Indicator -->
             <div style="text-align: center; margin-bottom: 1rem; padding: 0.75rem; background: var(--color-bg-1); border: 1px solid var(--color-border); border-radius: var(--radius-base); display: flex; justify-content: center; align-items: center; gap: 1rem; flex-wrap: wrap;">
                 <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
-                    <span id="saveStatusIndicator" style="font-size: var(--font-size-sm); font-weight: var(--font-weight-medium);">
+                    <span id="saveStatusIndicator" aria-live="polite" aria-atomic="true" style="font-size: var(--font-size-sm); font-weight: var(--font-weight-medium);">
                         💾 Not saved
                     </span>
                     <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0.75rem; background: var(--color-secondary); border-radius: var(--radius-base);">
@@ -1794,8 +1814,8 @@ select.form-control {
                 <!-- Download help button removed -->
             </div>
 
-            <!-- Messages -->
-            <div id="messages"></div>
+            <!-- Messages (live region so screen readers announce toasts) -->
+            <div id="messages" role="status" aria-live="polite" aria-atomic="true"></div>
 
             <!-- ACCOUNT SETTINGS SECTION - NEW LOCATION -->
             <div id="accountSettingsSection" class="section" style="margin-bottom: 1.5rem;">
@@ -2065,6 +2085,12 @@ select.form-control {
                             <span>MetaTrader API (MetaApi)</span>
                         </label>
 
+                        <div style="padding: var(--space-12); background: rgba(var(--color-warning-rgb), 0.1); border-left: 3px solid var(--color-warning); border-radius: var(--radius-sm); margin-bottom: var(--space-12);">
+                            <p style="font-size: var(--font-size-xs); color: var(--color-text); margin: 0;">
+                                ⚠️ <strong>Security notice:</strong> By default the auth token is stored in browser localStorage in plaintext. Any XSS in this page could exfiltrate it. Use the "Session only" option below if you do not want it persisted across reloads, and "Forget token" to wipe it from storage.
+                            </p>
+                        </div>
+
                         <div style="margin-bottom: var(--space-8);">
                             <label style="display: flex; align-items: center; gap: var(--space-8); margin-bottom: var(--space-4);">
                                 <input
@@ -2074,16 +2100,26 @@ select.form-control {
                                     style="accent-color: var(--color-primary);">
                                 <span style="font-size: var(--font-size-sm);">Enable MetaTrader API</span>
                             </label>
+                            <label style="display: flex; align-items: center; gap: var(--space-8); margin-bottom: var(--space-4);">
+                                <input
+                                    type="checkbox"
+                                    id="mtSessionOnly"
+                                    onchange="apiCredentials.metatrader.sessionOnly = this.checked"
+                                    style="accent-color: var(--color-primary);">
+                                <span style="font-size: var(--font-size-sm);">Session only (do not persist token to localStorage)</span>
+                            </label>
                         </div>
 
                         <div style="margin-bottom: var(--space-8);">
-                            <label class="form-label" style="font-size: var(--font-size-xs); margin-bottom: var(--space-4);">Auth Token</label>
+                            <label class="form-label" style="font-size: var(--font-size-xs); margin-bottom: var(--space-4);" for="mtAuthToken">Auth Token</label>
                             <input
                                 type="password"
                                 id="mtAuthToken"
                                 class="form-control"
                                 placeholder="Your MetaApi auth token"
                                 onchange="apiCredentials.metatrader.authToken = this.value"
+                                autocomplete="off"
+                                spellcheck="false"
                                 style="font-size: var(--font-size-sm);">
                             <p style="font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-top: var(--space-4); margin-bottom: 0;">
                                 Get your token at <a href="https://app.metaapi.cloud/token" target="_blank" rel="noopener noreferrer" style="color: var(--color-primary);">app.metaapi.cloud/token</a>
@@ -2091,14 +2127,21 @@ select.form-control {
                         </div>
 
                         <div style="margin-bottom: var(--space-8);">
-                            <label class="form-label" style="font-size: var(--font-size-xs); margin-bottom: var(--space-4);">Account ID</label>
+                            <label class="form-label" style="font-size: var(--font-size-xs); margin-bottom: var(--space-4);" for="mtAccountId">Account ID</label>
                             <input
                                 type="text"
                                 id="mtAccountId"
                                 class="form-control"
                                 placeholder="Your MetaApi account ID"
                                 onchange="apiCredentials.metatrader.accountId = this.value"
+                                autocomplete="off"
                                 style="font-size: var(--font-size-sm);">
+                        </div>
+
+                        <div style="margin-top: var(--space-8);">
+                            <button type="button" class="btn btn--secondary" onclick="forgetApiCredentials()" aria-label="Forget MetaApi token and wipe from storage" style="font-size: var(--font-size-xs);">
+                                🗑️ Forget token (wipe from storage)
+                            </button>
                         </div>
                     </div>
 
@@ -3337,20 +3380,20 @@ select.form-control {
     </div>
 
     <!-- Lightbox for screenshots -->
-    <div id="lightbox" class="lightbox" style="display: none;" onclick="closeLightbox()">
-        <button class="lightbox-close" onclick="closeLightbox()">×</button>
+    <div id="lightbox" class="lightbox" style="display: none;" role="dialog" aria-modal="true" aria-label="Full-size screenshot" onclick="closeLightbox()">
+        <button class="lightbox-close" onclick="closeLightbox()" aria-label="Close full-size screenshot">×</button>
         <img id="lightboxImage" alt="Trade Screenshot">
     </div>
 
     <!-- Screenshots Viewer Page -->
-    <div id="screenshotsViewer" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--color-background); z-index: 10000; overflow-y: auto;">
+    <div id="screenshotsViewer" role="dialog" aria-modal="true" aria-labelledby="screenshotsViewerTitle" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--color-background); z-index: 10000; overflow-y: auto;">
         <div style="max-width: 1400px; margin: 0 auto; padding: 2rem;">
             <!-- Header -->
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 2px solid var(--color-border);">
-                <h2 style="margin: 0; color: var(--color-text); display: flex; align-items: center; gap: var(--space-12);">
+                <h2 id="screenshotsViewerTitle" style="margin: 0; color: var(--color-text); display: flex; align-items: center; gap: var(--space-12);">
                     <span>📸</span> Trade Screenshots Gallery
                 </h2>
-                <button class="btn btn-secondary" onclick="closeScreenshotsViewer()" style="font-size: 1.5rem; padding: 0.5rem 1rem;">×</button>
+                <button class="btn btn-secondary" onclick="closeScreenshotsViewer()" aria-label="Close screenshots gallery" style="font-size: 1.5rem; padding: 0.5rem 1rem;">×</button>
             </div>
 
             <!-- Navigation Controls -->
@@ -3679,12 +3722,43 @@ select.form-control {
         // SECURITY FUNCTIONS - Added for XSS and injection protection
         // ============================================================================
         
-        // Security: HTML sanitization helper
+        // Security: HTML sanitization helper (safe for element text content).
+        // NOTE: textContent→innerHTML escapes &, <, > but NOT quotes — do NOT use
+        // this for attribute values. Use escapeAttr() for attributes.
         function escapeHtml(text) {
-            if (!text) return '';
+            if (text === null || text === undefined) return '';
             const div = document.createElement('div');
-            div.textContent = text;
+            div.textContent = String(text);
             return div.innerHTML;
+        }
+
+        // Security: escape a string for use inside a double-quoted HTML attribute value.
+        // Escapes &, <, >, " and ' so the string cannot break out of the attribute
+        // context nor introduce tags/events.
+        function escapeAttr(text) {
+            if (text === null || text === undefined) return '';
+            return String(text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        // Security: escape a string for use inside a JS string literal inside an inline
+        // event handler (e.g. onclick="fn('${escapeJsAttr(id)}')"). Escapes backslash,
+        // single/double quotes, newlines, and then HTML-attribute-escapes the result.
+        function escapeJsAttr(text) {
+            if (text === null || text === undefined) return '';
+            const jsEscaped = String(text)
+                .replace(/\\/g, '\\\\')
+                .replace(/'/g, "\\'")
+                .replace(/"/g, '\\"')
+                .replace(/\n/g, '\\n')
+                .replace(/\r/g, '\\r')
+                .replace(/</g, '\\u003c')
+                .replace(/>/g, '\\u003e');
+            return escapeAttr(jsEscaped);
         }
 
         // Security: URL sanitization helper
@@ -3744,6 +3818,62 @@ select.form-control {
         // Security: File size validation constant
         const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
 
+        // Return an epoch-ms timestamp for sorting and timeline math. MetaApi
+        // supplies an ISO string in `closeTime`; CSV imports build "YYYY-MM-DDTHH:MM:SS"
+        // which Date parses as local time. This single choke point lets callers
+        // sort trades without needing to know which importer produced them.
+        //
+        // Known limitation: when trades come from multiple brokers in different
+        // timezones, local-time parsing can mis-order them. Future work: honour
+        // trade.timezone to produce a true UTC instant. Tracked as follow-up.
+        function getTradeCloseTimestamp(trade) {
+            if (!trade) return 0;
+            if (trade.closeTime) {
+                const t = Date.parse(trade.closeTime);
+                if (Number.isFinite(t)) return t;
+            }
+            const d = trade.date || trade.openDate || '';
+            const tm = trade.time || trade.openTime || '00:00:00';
+            const parsed = Date.parse(`${d}T${tm}`);
+            return Number.isFinite(parsed) ? parsed : 0;
+        }
+
+        function getTradeOpenTimestamp(trade) {
+            if (!trade) return 0;
+            if (trade.openTime && trade.openDate) {
+                // openTime on MetaApi is an ISO string; on CSV it's HH:MM:SS
+                const asIso = Date.parse(trade.openTime);
+                if (Number.isFinite(asIso) && /T|Z|\d{4}-/.test(String(trade.openTime))) return asIso;
+                const parsed = Date.parse(`${trade.openDate}T${trade.openTime}`);
+                if (Number.isFinite(parsed)) return parsed;
+            }
+            return getTradeCloseTimestamp(trade);
+        }
+
+        // Security: maximum number of trades accepted from a single import.
+        // Protects against accidental/malicious huge-row DoS.
+        const MAX_IMPORT_TRADES = 50000;
+
+        // Security: maximum length for free-form string fields on imported trades.
+        const MAX_TRADE_STRING_LEN = 2000;
+        const MAX_TRADE_SYMBOL_LEN = 32;
+
+        // Security: strip an imported free-form string to a safe length and remove
+        // control characters. Escaping for rendering is done separately at render time.
+        function sanitizeFreeformString(value, maxLen) {
+            if (value === null || value === undefined) return '';
+            const s = String(value).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+            const cap = typeof maxLen === 'number' ? maxLen : MAX_TRADE_STRING_LEN;
+            return s.length > cap ? s.slice(0, cap) : s;
+        }
+
+        // Security: coerce an enum string to a member of `allowed` (case-sensitive)
+        // or the empty string. Used to reject arbitrary values in imported data.
+        function sanitizeEnum(value, allowed) {
+            if (!value || typeof value !== 'string') return '';
+            return allowed.indexOf(value) !== -1 ? value : '';
+        }
+
         // ============================================================================
         // THEME HELPER FUNCTIONS
         // ============================================================================
@@ -3779,7 +3909,9 @@ select.form-control {
             };
         }
 
-        // Security: Trade data validation
+        // Security: Trade data validation. Mutates `trade` in place to coerce enum
+        // fields to known values and cap free-form strings. Throws on hard-invalid
+        // data (bad numbers, empty symbol, symbol too long).
         function validateTrade(trade) {
             if (!trade || typeof trade !== 'object') {
                 throw new Error('Invalid trade object');
@@ -3787,12 +3919,49 @@ select.form-control {
             if (!trade.symbol || typeof trade.symbol !== 'string' || trade.symbol.length === 0) {
                 throw new Error('Invalid symbol');
             }
+            if (trade.symbol.length > MAX_TRADE_SYMBOL_LEN) {
+                throw new Error('Symbol too long');
+            }
             if (!Number.isFinite(trade.entryPrice) || trade.entryPrice < 0) {
                 throw new Error('Invalid entry price');
             }
             if (!Number.isFinite(trade.exitPrice) || trade.exitPrice < 0) {
                 throw new Error('Invalid exit price');
             }
+
+            // Coerce enum fields against the app's allowed values. Unknown values
+            // become '' so they can't be used to smuggle payloads into templates.
+            trade.symbol = sanitizeFreeformString(trade.symbol, MAX_TRADE_SYMBOL_LEN);
+            if (trade.setupType !== undefined) {
+                trade.setupType = sanitizeEnum(trade.setupType, setupTypes);
+            }
+            if (trade.marketCondition !== undefined) {
+                trade.marketCondition = sanitizeEnum(trade.marketCondition, marketConditions);
+            }
+            if (trade.emotionalState !== undefined) {
+                trade.emotionalState = sanitizeEnum(trade.emotionalState, emotionalStates);
+            }
+            if (trade.ruleAdherence !== undefined) {
+                trade.ruleAdherence = sanitizeEnum(trade.ruleAdherence, ruleAdherence);
+            }
+            if (trade.timezone !== undefined && trade.timezone !== '') {
+                trade.timezone = sanitizeEnum(trade.timezone, timezones);
+            }
+            if (trade.direction !== undefined) {
+                trade.direction = sanitizeEnum(trade.direction, ['Buy', 'Sell']);
+            }
+
+            // Free-form strings: strip control chars and cap length.
+            if (trade.notes !== undefined) {
+                trade.notes = sanitizeFreeformString(trade.notes);
+            }
+            if (trade.tradingViewEntry !== undefined) {
+                trade.tradingViewEntry = sanitizeFreeformString(trade.tradingViewEntry, 500);
+            }
+            if (trade.tradingViewExit !== undefined) {
+                trade.tradingViewExit = sanitizeFreeformString(trade.tradingViewExit, 500);
+            }
+
             return true;
         }
 
@@ -4315,7 +4484,8 @@ select.form-control {
             metatrader: {
                 enabled: false,
                 authToken: '',
-                accountId: ''
+                accountId: '',
+                sessionOnly: false // when true, authToken is not persisted to localStorage
             }
         };
 
@@ -4359,15 +4529,37 @@ select.form-control {
             }
         }
 
-        // Save API credentials to localStorage
+        // Save API credentials to localStorage. When sessionOnly is true for
+        // MetaTrader, the authToken is kept in memory only — the persisted copy
+        // stores an empty token so a subsequent reload requires re-entry.
         function saveAPICredentials() {
             try {
-                localStorage.setItem(STORAGE_KEYS.API_CONFIG, JSON.stringify(apiCredentials));
+                const toPersist = JSON.parse(JSON.stringify(apiCredentials));
+                if (toPersist.metatrader && toPersist.metatrader.sessionOnly) {
+                    toPersist.metatrader.authToken = '';
+                }
+                localStorage.setItem(STORAGE_KEYS.API_CONFIG, JSON.stringify(toPersist));
                 showMessage('✅ API credentials saved successfully');
             } catch (error) {
                 console.error('Error saving API credentials:', error);
-                showMessage('❌ Error saving API credentials', 'error');
+                showMessage('❌ Error saving API credentials: ' + (error && error.message ? error.message : 'unknown error'), 'error');
             }
+        }
+
+        // Wipe API credentials from both localStorage and the in-memory object.
+        // Invoked from the "Forget token" button so a user can quickly revoke.
+        function forgetApiCredentials() {
+            try {
+                localStorage.removeItem(STORAGE_KEYS.API_CONFIG);
+            } catch (error) {
+                console.error('Error clearing API credentials from storage:', error);
+            }
+            apiCredentials.metatrader.enabled = false;
+            apiCredentials.metatrader.authToken = '';
+            apiCredentials.metatrader.accountId = '';
+            apiCredentials.metatrader.sessionOnly = false;
+            populateAPICredentialsUI();
+            showMessage('🗑️ API token cleared from memory and storage');
         }
 
         // Populate API credentials UI from loaded data
@@ -4377,10 +4569,12 @@ select.form-control {
                 const mtEnabled = document.getElementById('mtEnabled');
                 const mtAuthToken = document.getElementById('mtAuthToken');
                 const mtAccountId = document.getElementById('mtAccountId');
+                const mtSessionOnly = document.getElementById('mtSessionOnly');
 
                 if (mtEnabled) mtEnabled.checked = apiCredentials.metatrader.enabled || false;
                 if (mtAuthToken) mtAuthToken.value = apiCredentials.metatrader.authToken || '';
                 if (mtAccountId) mtAccountId.value = apiCredentials.metatrader.accountId || '';
+                if (mtSessionOnly) mtSessionOnly.checked = apiCredentials.metatrader.sessionOnly || false;
             } catch (error) {
                 console.error('Error populating API credentials UI:', error);
             }
@@ -4493,7 +4687,16 @@ select.form-control {
                     tradingViewExit: '',
                     rulesFollowed: []
                 };
-            }).filter(trade => validateTrade(trade));
+            })
+            .slice(0, MAX_IMPORT_TRADES)
+            .filter(trade => {
+                try {
+                    return validateTrade(trade);
+                } catch (err) {
+                    console.warn('Skipping invalid MetaTrader trade:', err.message);
+                    return false;
+                }
+            });
         }
 
         // Note: cTrader WebSocket implementation requires additional libraries
@@ -5461,10 +5664,22 @@ select.form-control {
 
         // CSV Import Functions
 
-        // Helper function to generate a unique fingerprint for a trade
+        // Helper function to generate a unique fingerprint for a trade.
+        // Broker-supplied ticket/position IDs are preferred when available because
+        // they are stable and avoid false collisions from tick-precision diffs in
+        // the composite-key fallback. The fallback rounds prices to 5dp so a
+        // broker that serves trades with variable precision still matches.
         function getTradeFingerprint(trade) {
-            // Create a unique identifier based on key trade properties
-            return `${trade.symbol}_${trade.openDate}_${trade.openTime}_${trade.date}_${trade.time}_${trade.entryPrice}_${trade.exitPrice}_${trade.volume}`;
+            if (trade && trade.ticketId) return `ticket:${trade.ticketId}`;
+            if (trade && trade.positionId) return `position:${trade.positionId}`;
+            // Heuristic: some importers use `trade.id` only for broker-sourced trades
+            // (MetaApi sets it to positionId). Pure app-generated ids look like
+            // `mt-<epoch>-<rand>`; treat those as non-stable.
+            if (trade && typeof trade.id === 'string' && trade.id && !trade.id.startsWith('mt-')) {
+                return `id:${trade.id}`;
+            }
+            const round = (n) => Number.isFinite(Number(n)) ? Number(n).toFixed(5) : '';
+            return `${trade.symbol}_${trade.openDate}_${trade.openTime}_${trade.date}_${trade.time}_${round(trade.entryPrice)}_${round(trade.exitPrice)}_${round(trade.volume)}`;
         }
 
         // Helper function to calculate similarity between existing and new trades
@@ -6052,18 +6267,22 @@ select.form-control {
 
                         trades.push(trade);
                         tradeIndex++;
+                        if (trades.length >= MAX_IMPORT_TRADES) {
+                            console.warn(`Import capped at ${MAX_IMPORT_TRADES} trades`);
+                            break;
+                        }
                     } catch (error) {
                         console.warn(`Error parsing trade row ${i}:`, error, lines[i]);
                     }
                 }
-                
+
                 if (trades.length === 0) {
                     if (skippedTrades.length > 0) {
                         throw new Error(`No valid trades found. ${skippedTrades.length} trades skipped due to invalid symbols (numeric-only): ${skippedTrades.slice(0, 3).map(t => t.symbol).join(', ')}${skippedTrades.length > 3 ? '...' : ''}`);
                     }
                     throw new Error('No valid trades found. Please check your CSV format.');
                 }
-                
+
                 return { trades, startingBalance, skippedCount: skippedTrades.length };
             } catch (error) {
                 console.error('CSV parsing failed:', error);
@@ -6212,6 +6431,10 @@ select.form-control {
 
                         if (validateTrade(trade)) {
                             trades.push(trade);
+                            if (trades.length >= MAX_IMPORT_TRADES) {
+                                console.warn(`Import capped at ${MAX_IMPORT_TRADES} trades`);
+                                break;
+                            }
                         } else {
                             skippedTrades.push({ symbol: trade.symbol, reason: 'Validation failed' });
                         }
@@ -6373,6 +6596,10 @@ select.form-control {
 
                         if (validateTrade(trade)) {
                             trades.push(trade);
+                            if (trades.length >= MAX_IMPORT_TRADES) {
+                                console.warn(`Import capped at ${MAX_IMPORT_TRADES} trades`);
+                                break;
+                            }
                         } else {
                             skippedTrades.push({ symbol: trade.symbol, reason: 'Validation failed' });
                         }
@@ -6549,30 +6776,31 @@ select.form-control {
             const trade = appState.trades[tradeIndex];
             const container = document.getElementById(`details_${tradeIndex}`);
 
-            // Log for debugging
-            console.log('renderTradeDetails - Rendering:', {
-                tradeIndex,
-                tradeId: trade.id,
-                rulesFollowed: trade.rulesFollowed
-            });
+            // Enum select helper: options list is built from an app-controlled
+            // allowlist (enums are constants), so option values are safe — only
+            // the trade's current value needs attribute-escaping for the 'selected'
+            // comparison (safe here because enums are normalized).
+            const buildEnumOptions = (list, current) => list.map(v =>
+                `<option value="${escapeAttr(v)}" ${current === v ? 'selected' : ''}>${escapeHtml(v)}</option>`
+            ).join('');
 
             container.innerHTML = `
                 <div class="form-grid">
                     <div class="form-group">
                         <label>Open Date</label>
-                        <input type="date" class="form-control" value="${trade.openDate || ''}" onchange="updateTradeField(${tradeIndex}, 'openDate', this.value)">
+                        <input type="date" class="form-control" value="${escapeAttr(trade.openDate || '')}" onchange="updateTradeField(${tradeIndex}, 'openDate', this.value)">
                     </div>
                     <div class="form-group">
                         <label>Open Time</label>
-                        <input type="time" class="form-control" step="1" value="${trade.openTime || ''}" onchange="updateTradeField(${tradeIndex}, 'openTime', this.value)">
+                        <input type="time" class="form-control" step="1" value="${escapeAttr(trade.openTime || '')}" onchange="updateTradeField(${tradeIndex}, 'openTime', this.value)">
                     </div>
                     <div class="form-group">
                         <label>Close Date</label>
-                        <input type="date" class="form-control" value="${trade.date || ''}" onchange="updateTradeField(${tradeIndex}, 'date', this.value)">
+                        <input type="date" class="form-control" value="${escapeAttr(trade.date || '')}" onchange="updateTradeField(${tradeIndex}, 'date', this.value)">
                     </div>
                     <div class="form-group">
                         <label>Close Time</label>
-                        <input type="time" class="form-control" step="1" value="${trade.time || ''}" onchange="updateTradeField(${tradeIndex}, 'time', this.value)">
+                        <input type="time" class="form-control" step="1" value="${escapeAttr(trade.time || '')}" onchange="updateTradeField(${tradeIndex}, 'time', this.value)">
                     </div>
                 </div>
 
@@ -6581,7 +6809,7 @@ select.form-control {
                         <label>Setup Type</label>
                         <select class="form-control" onchange="updateTradeField(${tradeIndex}, 'setupType', this.value)">
                             <option value="">Select setup...</option>
-                            ${setupTypes.map(type => `<option value="${type}" ${trade.setupType === type ? 'selected' : ''}>${type}</option>`).join('')}
+                            ${buildEnumOptions(setupTypes, trade.setupType)}
                         </select>
                     </div>
 
@@ -6589,7 +6817,7 @@ select.form-control {
                         <label>Market Condition</label>
                         <select class="form-control" onchange="updateTradeField(${tradeIndex}, 'marketCondition', this.value)">
                             <option value="">Select condition...</option>
-                            ${marketConditions.map(condition => `<option value="${condition}" ${trade.marketCondition === condition ? 'selected' : ''}>${condition}</option>`).join('')}
+                            ${buildEnumOptions(marketConditions, trade.marketCondition)}
                         </select>
                     </div>
 
@@ -6597,7 +6825,7 @@ select.form-control {
                         <label>Emotional State</label>
                         <select class="form-control" onchange="updateTradeField(${tradeIndex}, 'emotionalState', this.value)">
                             <option value="">Select state...</option>
-                            ${emotionalStates.map(state => `<option value="${state}" ${trade.emotionalState === state ? 'selected' : ''}>${state}</option>`).join('')}
+                            ${buildEnumOptions(emotionalStates, trade.emotionalState)}
                         </select>
                     </div>
 
@@ -6605,10 +6833,7 @@ select.form-control {
                         <label>Rule Adherence</label>
                         <select class="form-control" onchange="updateTradeField(${tradeIndex}, 'ruleAdherence', this.value)">
                             <option value="">Select...</option>
-                            <option value="Perfect" ${trade.ruleAdherence === 'Perfect' ? 'selected' : ''}>Perfect</option>
-                            <option value="Custom" ${trade.ruleAdherence === 'Custom' ? 'selected' : ''}>Custom</option>
-                            <option value="Partial" ${trade.ruleAdherence === 'Partial' ? 'selected' : ''}>Partial</option>
-                            <option value="None" ${trade.ruleAdherence === 'None' ? 'selected' : ''}>None</option>
+                            ${buildEnumOptions(ruleAdherence, trade.ruleAdherence)}
                         </select>
                     </div>
 
@@ -6616,14 +6841,14 @@ select.form-control {
                         <label>Timezone</label>
                         <select class="form-control" onchange="updateTradeField(${tradeIndex}, 'timezone', this.value)">
                             <option value="">Select timezone...</option>
-                            ${timezones.map(tz => `<option value="${tz}" ${trade.timezone === tz ? 'selected' : ''}>${tz}</option>`).join('')}
+                            ${buildEnumOptions(timezones, trade.timezone)}
                         </select>
                     </div>
                 </div>
 
                 <div class="form-group">
                     <label>Trading Notes</label>
-                    <textarea class="form-control" rows="3" placeholder="Add your trading notes..." onchange="updateTradeField(${tradeIndex}, 'notes', this.value)">${trade.notes || ''}</textarea>
+                    <textarea class="form-control" rows="3" placeholder="Add your trading notes..." onchange="updateTradeField(${tradeIndex}, 'notes', this.value)">${escapeHtml(trade.notes || '')}</textarea>
                 </div>
 
                 <!-- Enhanced TradingView Links Section -->
@@ -6631,8 +6856,8 @@ select.form-control {
                     <div class="form-group">
                         <label>TradingView Entry Link</label>
                         <div style="display: flex; gap: var(--space-8); align-items: center;">
-                            <input type="url" class="form-control" style="flex: 1;" placeholder="https://tradingview.com/x/ABC123/" value="${trade.tradingViewEntry || ''}" onchange="updateTradeField(${tradeIndex}, 'tradingViewEntry', this.value)" id="tvEntry_${tradeIndex}">
-                            <button class="btn btn-tradingview" onclick="openTradingViewLink(${tradeIndex}, 'entry')" ${!trade.tradingViewEntry ? 'disabled' : ''} title="Open TradingView Entry Link">
+                            <input type="url" class="form-control" style="flex: 1;" placeholder="https://tradingview.com/x/ABC123/" value="${escapeAttr(trade.tradingViewEntry || '')}" onchange="updateTradeField(${tradeIndex}, 'tradingViewEntry', this.value)" id="tvEntry_${tradeIndex}">
+                            <button class="btn btn-tradingview" onclick="openTradingViewLink(${tradeIndex}, 'entry')" ${!trade.tradingViewEntry ? 'disabled' : ''} title="Open TradingView Entry Link" aria-label="Open TradingView entry link">
                                 🔗 Open
                             </button>
                         </div>
@@ -6641,8 +6866,8 @@ select.form-control {
                     <div class="form-group">
                         <label>TradingView Exit Link</label>
                         <div style="display: flex; gap: var(--space-8); align-items: center;">
-                            <input type="url" class="form-control" style="flex: 1;" placeholder="https://tradingview.com/x/ABC123/" value="${trade.tradingViewExit || ''}" onchange="updateTradeField(${tradeIndex}, 'tradingViewExit', this.value)" id="tvExit_${tradeIndex}">
-                            <button class="btn btn-tradingview" onclick="openTradingViewLink(${tradeIndex}, 'exit')" ${!trade.tradingViewExit ? 'disabled' : ''} title="Open TradingView Exit Link">
+                            <input type="url" class="form-control" style="flex: 1;" placeholder="https://tradingview.com/x/ABC123/" value="${escapeAttr(trade.tradingViewExit || '')}" onchange="updateTradeField(${tradeIndex}, 'tradingViewExit', this.value)" id="tvExit_${tradeIndex}">
+                            <button class="btn btn-tradingview" onclick="openTradingViewLink(${tradeIndex}, 'exit')" ${!trade.tradingViewExit ? 'disabled' : ''} title="Open TradingView Exit Link" aria-label="Open TradingView exit link">
                                 🔗 Open
                             </button>
                         </div>
@@ -6705,31 +6930,53 @@ select.form-control {
                 </div>
             `;
 
-            // Async-load screenshots from IndexedDB and populate preview containers
+            // Async-load screenshots from IndexedDB and populate preview containers.
+            // Build the <img> via DOM APIs (not innerHTML) so src and tradeId are safe
+            // even if they came from imported JSON. openLightboxAsync is wired up as a
+            // listener rather than an inline handler so a quote in tradeId can't break
+            // out of the JS string context.
+            const renderScreenshotPreview = (el, src, tradeId, type) => {
+                el.textContent = '';
+                const img = document.createElement('img');
+                img.src = src;
+                img.className = 'screenshot';
+                img.style.cssText = 'max-width: 200px; max-height: 150px; cursor: pointer; border-radius: var(--radius-base); border: 1px solid var(--color-border);';
+                img.addEventListener('click', () => openLightboxAsync(tradeId, type));
+                img.addEventListener('error', () => { img.style.display = 'none'; });
+                const caption = document.createElement('div');
+                caption.style.cssText = 'font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-top: var(--space-4);';
+                caption.textContent = 'Click to view full size';
+                el.appendChild(img);
+                el.appendChild(caption);
+            };
+            const renderScreenshotMissing = (el) => {
+                el.textContent = '';
+                const d = document.createElement('div');
+                d.style.cssText = 'color: var(--color-text-secondary); font-size: var(--font-size-sm);';
+                d.textContent = 'Screenshot not found';
+                el.appendChild(d);
+            };
+
             if (trade.entryScreenshot || trade.exitScreenshot) {
                 (async () => {
                     if (trade.entryScreenshot) {
-                        const src = await getScreenshotData(trade.id, 'entry');
-                        const el = document.getElementById(`entryScreenshotContainer_${tradeIndex}`);
-                        if (el && src) {
-                            el.innerHTML = `
-                                <img src="${src}" class="screenshot" onclick="openLightboxAsync('${trade.id}', 'entry')" onerror="console.error('Failed to load entry screenshot'); this.style.display='none';" style="max-width: 200px; max-height: 150px; cursor: pointer; border-radius: var(--radius-base); border: 1px solid var(--color-border);">
-                                <div style="font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-top: var(--space-4);">Click to view full size</div>
-                            `;
-                        } else if (el) {
-                            el.innerHTML = '<div style="color: var(--color-text-secondary); font-size: var(--font-size-sm);">Screenshot not found</div>';
+                        try {
+                            const src = await getScreenshotData(trade.id, 'entry');
+                            const el = document.getElementById(`entryScreenshotContainer_${tradeIndex}`);
+                            if (el && src) renderScreenshotPreview(el, src, trade.id, 'entry');
+                            else if (el) renderScreenshotMissing(el);
+                        } catch (err) {
+                            console.error('Entry screenshot load failed:', err);
                         }
                     }
                     if (trade.exitScreenshot) {
-                        const src = await getScreenshotData(trade.id, 'exit');
-                        const el = document.getElementById(`exitScreenshotContainer_${tradeIndex}`);
-                        if (el && src) {
-                            el.innerHTML = `
-                                <img src="${src}" class="screenshot" onclick="openLightboxAsync('${trade.id}', 'exit')" onerror="console.error('Failed to load exit screenshot'); this.style.display='none';" style="max-width: 200px; max-height: 150px; cursor: pointer; border-radius: var(--radius-base); border: 1px solid var(--color-border);">
-                                <div style="font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-top: var(--space-4);">Click to view full size</div>
-                            `;
-                        } else if (el) {
-                            el.innerHTML = '<div style="color: var(--color-text-secondary); font-size: var(--font-size-sm);">Screenshot not found</div>';
+                        try {
+                            const src = await getScreenshotData(trade.id, 'exit');
+                            const el = document.getElementById(`exitScreenshotContainer_${tradeIndex}`);
+                            if (el && src) renderScreenshotPreview(el, src, trade.id, 'exit');
+                            else if (el) renderScreenshotMissing(el);
+                        } catch (err) {
+                            console.error('Exit screenshot load failed:', err);
                         }
                     }
                 })();
@@ -7815,12 +8062,9 @@ select.form-control {
             const accTrades = getChartAccumulatedTrades();
             const isMonthlyView = accTrades !== null;
 
-            // Sort helper
-            const sortByTime = (a, b) => {
-                const dateA = new Date(a.closeTime || `${a.date}T${a.time}:00`);
-                const dateB = new Date(b.closeTime || `${b.date}T${b.time}:00`);
-                return dateA - dateB;
-            };
+            // Sort helper — delegated to getTradeCloseTimestamp so every timeline
+            // view uses the same parsing rules.
+            const sortByTime = (a, b) => getTradeCloseTimestamp(a) - getTradeCloseTimestamp(b);
 
             trades.sort(sortByTime);
 
@@ -7882,8 +8126,14 @@ select.form-control {
                 order: 1
             });
 
-            // Create new chart
+            // Create new chart. Destroy any existing instance first so that
+            // repeated zoom/filter updates do not leak detached canvases and
+            // dangling event listeners.
             const ctx = document.getElementById('equityChart').getContext('2d');
+            if (appState.chartInstances.equity) {
+                appState.chartInstances.equity.destroy();
+                appState.chartInstances.equity = null;
+            }
             appState.chartInstances.equity = new Chart(ctx, {
                 type: 'line',
                 data: { datasets },
@@ -8019,8 +8269,12 @@ select.form-control {
                 });
             }
 
-            // Create new chart
+            // Create new chart (destroy previous to prevent canvas leaks).
             const ctx = document.getElementById('dailyPLChart').getContext('2d');
+            if (appState.chartInstances.dailyPL) {
+                appState.chartInstances.dailyPL.destroy();
+                appState.chartInstances.dailyPL = null;
+            }
             appState.chartInstances.dailyPL = new Chart(ctx, {
                 type: 'bar',
                 data: {
@@ -8103,8 +8357,12 @@ select.form-control {
                 });
             }
 
-            // Create new chart
+            // Create new chart (destroy previous to prevent canvas leaks).
             const ctx = document.getElementById('winLossChart').getContext('2d');
+            if (appState.chartInstances.winLoss) {
+                appState.chartInstances.winLoss.destroy();
+                appState.chartInstances.winLoss = null;
+            }
             appState.chartInstances.winLoss = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
@@ -8238,20 +8496,26 @@ select.form-control {
                     if (isCollapsed) row.style.display = 'none';
                     row.dataset.monthGroup = monthKey;
 
+                    // Row cells: escape every trade string field — any value may have
+                    // come from an imported CSV/JSON/MetaApi payload. Numeric fields
+                    // are fed through toFixed() so they're safe as-is. Prefix +/- to
+                    // P&L / pips so the sign is readable without relying on color.
+                    const pipsVal = Number(trade.pips) || 0;
+                    const plVal = Number(trade.netPL || trade.profit) || 0;
                     let html = '';
-                    if (columns.openDate) html += `<td>${trade.openDate || '-'}</td>`;
-                    if (columns.openTime) html += `<td>${trade.openTime || '-'}</td>`;
-                    if (columns.date) html += `<td>${trade.date}</td>`;
-                    if (columns.time) html += `<td>${trade.time}</td>`;
-                    if (columns.timezone) html += `<td>${trade.timezone || '-'}</td>`;
-                    if (columns.symbol) html += `<td>${trade.symbol}</td>`;
-                    if (columns.direction) html += `<td>${trade.direction}</td>`;
-                    if (columns.entry) html += `<td>${trade.entryPrice.toFixed(5)}</td>`;
-                    if (columns.exit) html += `<td>${trade.exitPrice.toFixed(5)}</td>`;
-                    if (columns.pips) html += `<td class="${trade.pips >= 0 ? 'positive' : 'negative'}">${trade.pips.toFixed(1)}</td>`;
-                    if (columns.pl) html += `<td class="${(trade.netPL || trade.profit) >= 0 ? 'positive' : 'negative'}">$${(trade.netPL || trade.profit).toFixed(2)}</td>`;
-                    if (columns.setup) html += `<td>${trade.setupType || '-'}</td>`;
-                    html += `<td><button class="btn btn-secondary" onclick="toggleTradeDetails(${index})">Details</button></td>`;
+                    if (columns.openDate) html += `<td>${escapeHtml(trade.openDate || '-')}</td>`;
+                    if (columns.openTime) html += `<td>${escapeHtml(trade.openTime || '-')}</td>`;
+                    if (columns.date) html += `<td>${escapeHtml(trade.date || '')}</td>`;
+                    if (columns.time) html += `<td>${escapeHtml(trade.time || '')}</td>`;
+                    if (columns.timezone) html += `<td>${escapeHtml(trade.timezone || '-')}</td>`;
+                    if (columns.symbol) html += `<td>${escapeHtml(trade.symbol || '')}</td>`;
+                    if (columns.direction) html += `<td>${escapeHtml(trade.direction || '')}</td>`;
+                    if (columns.entry) html += `<td>${(Number(trade.entryPrice) || 0).toFixed(5)}</td>`;
+                    if (columns.exit) html += `<td>${(Number(trade.exitPrice) || 0).toFixed(5)}</td>`;
+                    if (columns.pips) html += `<td class="${pipsVal >= 0 ? 'positive' : 'negative'}">${pipsVal >= 0 ? '+' : ''}${pipsVal.toFixed(1)}</td>`;
+                    if (columns.pl) html += `<td class="${plVal >= 0 ? 'positive' : 'negative'}">${plVal >= 0 ? '+' : '-'}$${Math.abs(plVal).toFixed(2)}</td>`;
+                    if (columns.setup) html += `<td>${escapeHtml(trade.setupType || '-')}</td>`;
+                    html += `<td><button class="btn btn-secondary" onclick="toggleTradeDetails(${index})" aria-label="Toggle trade details">Details</button></td>`;
                     row.innerHTML = html;
 
                     // Add expandable details row
@@ -9356,9 +9620,9 @@ select.form-control {
                 const isChecked = followedRules.includes(rule.id);
                 return `
                     <label style="display: block; margin-bottom: 0.5rem;">
-                        <input type="checkbox" ${isChecked ? 'checked' : ''} 
-                               onchange="toggleTradeRule(${tradeIndex}, ${rule.id}, this.checked)">
-                        ${rule.text}
+                        <input type="checkbox" ${isChecked ? 'checked' : ''}
+                               onchange="toggleTradeRule(${Number(tradeIndex)}, ${Number(rule.id)}, this.checked)">
+                        ${escapeHtml(rule.text || '')}
                     </label>
                 `;
             }).join('');
@@ -9416,7 +9680,8 @@ select.form-control {
         // Screenshots Viewer Functions
         let screenshotsViewerState = {
             screenshots: [],
-            currentIndex: 0
+            currentIndex: 0,
+            previousFocus: null
         };
 
         async function openScreenshotsViewer(tradeIndex) {
@@ -9458,16 +9723,31 @@ select.form-control {
             const targetIndex = screenshotsViewerState.screenshots.findIndex(s => s.tradeIndex === tradeIndex);
             screenshotsViewerState.currentIndex = targetIndex >= 0 ? targetIndex : 0;
 
+            // Remember which element opened the dialog so we can restore focus on close.
+            screenshotsViewerState.previousFocus = document.activeElement;
+
             // Show the viewer
-            document.getElementById('screenshotsViewer').style.display = 'block';
+            const viewer = document.getElementById('screenshotsViewer');
+            viewer.style.display = 'block';
             document.body.style.overflow = 'hidden'; // Prevent background scrolling
 
             renderScreenshotViewer();
+
+            // Move focus into the dialog for keyboard users.
+            const closeBtn = viewer.querySelector('button[aria-label="Close screenshots gallery"]');
+            if (closeBtn) closeBtn.focus();
         }
 
         function closeScreenshotsViewer() {
             document.getElementById('screenshotsViewer').style.display = 'none';
             document.body.style.overflow = ''; // Restore scrolling
+
+            // Return focus to the element that opened the dialog, if it is still
+            // in the DOM and focusable.
+            const prev = screenshotsViewerState && screenshotsViewerState.previousFocus;
+            if (prev && typeof prev.focus === 'function' && document.contains(prev)) {
+                try { prev.focus(); } catch (e) { /* ignore */ }
+            }
         }
 
         function navigateScreenshot(direction) {
@@ -9507,7 +9787,15 @@ select.form-control {
             document.getElementById('prevScreenshotBtn').disabled = currentIndex === 0;
             document.getElementById('nextScreenshotBtn').disabled = currentIndex === screenshots.length - 1;
 
-            // Render main content
+            // Trade string fields (symbol, notes, direction) may be imported.
+            // Numeric fields are coerced via toFixed(). The main <img> is wired
+            // up via addEventListener below so the src cannot break into JS.
+            const plVal = Number(trade.netPL || trade.netProfit || trade.profit || 0);
+            const directionSafe = escapeHtml(trade.direction || 'N/A');
+            const dirColor = (trade.direction === 'Long' || trade.direction === 'Buy')
+                ? 'var(--color-success)' : 'var(--color-danger)';
+            const plColor = plVal >= 0 ? 'var(--color-success)' : 'var(--color-danger)';
+            const typeSafe = escapeHtml(current.type);
             const contentHtml = `
                 <div style="display: grid; gap: 2rem;">
                     <!-- Trade Information -->
@@ -9518,32 +9806,31 @@ select.form-control {
                         </div>
                         <div>
                             <div style="font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: 0.25rem;">Screenshot Type</div>
-                            <div style="font-weight: 600; color: var(--color-text); text-transform: capitalize;">${current.type}</div>
+                            <div style="font-weight: 600; color: var(--color-text); text-transform: capitalize;">${typeSafe}</div>
                         </div>
                         <div>
                             <div style="font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: 0.25rem;">Symbol</div>
-                            <div style="font-weight: 600; color: var(--color-text);">${trade.symbol || 'N/A'}</div>
+                            <div style="font-weight: 600; color: var(--color-text);">${escapeHtml(trade.symbol || 'N/A')}</div>
                         </div>
                         <div>
                             <div style="font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: 0.25rem;">Date</div>
-                            <div style="font-weight: 600; color: var(--color-text);">${current.type === 'entry' ? formatDate(trade.openDate) : formatDate(trade.date)}</div>
+                            <div style="font-weight: 600; color: var(--color-text);">${escapeHtml(current.type === 'entry' ? formatDate(trade.openDate) : formatDate(trade.date))}</div>
                         </div>
                         <div>
                             <div style="font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: 0.25rem;">Direction</div>
-                            <div style="font-weight: 600; color: ${trade.direction === 'Long' || trade.direction === 'Buy' ? 'var(--color-success)' : 'var(--color-danger)'};">${trade.direction || 'N/A'}</div>
+                            <div style="font-weight: 600; color: ${dirColor};">${directionSafe}</div>
                         </div>
                         <div>
                             <div style="font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: 0.25rem;">P&L</div>
-                            <div style="font-weight: 600; color: ${((trade.netPL || trade.netProfit || trade.profit || 0) >= 0) ? 'var(--color-success)' : 'var(--color-danger)'};">$${(trade.netPL || trade.netProfit || trade.profit || 0).toFixed(2)}</div>
+                            <div style="font-weight: 600; color: ${plColor};">${plVal >= 0 ? '+' : '-'}$${Math.abs(plVal).toFixed(2)}</div>
                         </div>
                     </div>
 
-                    <!-- Screenshot Image -->
+                    <!-- Screenshot Image (src wired via JS below) -->
                     <div style="text-align: center;">
-                        <img src="${current.src}"
-                             alt="${current.type} screenshot for trade #${current.tradeIndex + 1}"
-                             style="max-width: 100%; max-height: 70vh; border-radius: var(--radius-base); box-shadow: var(--shadow-lg); cursor: zoom-in;"
-                             onclick="openLightbox('${current.src}')">
+                        <img id="screenshotViewerMainImage"
+                             alt="${escapeAttr(current.type)} screenshot for trade #${current.tradeIndex + 1}"
+                             style="max-width: 100%; max-height: 70vh; border-radius: var(--radius-base); box-shadow: var(--shadow-lg); cursor: zoom-in;">
                         <div style="margin-top: 1rem; color: var(--color-text-secondary); font-size: var(--font-size-sm);">
                             Click image to view full size
                         </div>
@@ -9553,7 +9840,7 @@ select.form-control {
                     ${trade.notes ? `
                         <div style="padding: 1rem; background: var(--color-background); border-radius: var(--radius-base); border-left: 3px solid var(--color-primary);">
                             <div style="font-weight: 600; margin-bottom: 0.5rem; color: var(--color-text);">Notes:</div>
-                            <div style="color: var(--color-text-secondary); white-space: pre-wrap;">${trade.notes}</div>
+                            <div style="color: var(--color-text-secondary); white-space: pre-wrap;">${escapeHtml(trade.notes)}</div>
                         </div>
                     ` : ''}
 
@@ -9566,25 +9853,51 @@ select.form-control {
                 </div>
             `;
 
-            document.getElementById('screenshotViewerContent').innerHTML = contentHtml;
+            const viewerContent = document.getElementById('screenshotViewerContent');
+            viewerContent.innerHTML = contentHtml;
+            const mainImg = document.getElementById('screenshotViewerMainImage');
+            if (mainImg) {
+                mainImg.src = current.src;
+                mainImg.addEventListener('click', () => openLightbox(current.src));
+            }
 
-            // Render thumbnails
-            const thumbnailsHtml = screenshots.map((ss, idx) => `
-                <div onclick="jumpToScreenshot(${idx})"
-                     style="flex-shrink: 0; cursor: pointer; border: 3px solid ${idx === currentIndex ? 'var(--color-primary)' : 'var(--color-border)'}; border-radius: var(--radius-base); overflow: hidden; transition: all 0.2s; opacity: ${idx === currentIndex ? '1' : '0.6'};"
-                     onmouseover="this.style.opacity='1'; this.style.transform='scale(1.05)'"
-                     onmouseout="this.style.opacity='${idx === currentIndex ? '1' : '0.6'}'; this.style.transform='scale(1)'">
-                    <img src="${ss.src}"
-                         alt="Trade #${ss.tradeIndex + 1} ${ss.type}"
-                         style="width: 120px; height: 80px; object-fit: cover; display: block;">
-                    <div style="padding: 0.25rem 0.5rem; background: var(--color-background); font-size: var(--font-size-xs); text-align: center;">
-                        #${ss.tradeIndex + 1} ${ss.type}
-                    </div>
-                </div>
-            `).join('');
-
-            document.getElementById('screenshotThumbnails').innerHTML = thumbnailsHtml ||
-                '<div style="color: var(--color-text-secondary); padding: 1rem; text-align: center; width: 100%;">No thumbnails available</div>';
+            // Render thumbnails. Each thumbnail's <img> src is set via JS (not
+            // interpolated into an HTML string) so malicious src values cannot
+            // escape attribute context.
+            const thumbsContainer = document.getElementById('screenshotThumbnails');
+            thumbsContainer.textContent = '';
+            if (screenshots.length === 0) {
+                const empty = document.createElement('div');
+                empty.style.cssText = 'color: var(--color-text-secondary); padding: 1rem; text-align: center; width: 100%;';
+                empty.textContent = 'No thumbnails available';
+                thumbsContainer.appendChild(empty);
+            } else {
+                screenshots.forEach((ss, idx) => {
+                    const wrapper = document.createElement('div');
+                    const borderColor = idx === currentIndex ? 'var(--color-primary)' : 'var(--color-border)';
+                    const initialOpacity = idx === currentIndex ? '1' : '0.6';
+                    wrapper.style.cssText = `flex-shrink: 0; cursor: pointer; border: 3px solid ${borderColor}; border-radius: var(--radius-base); overflow: hidden; transition: all 0.2s; opacity: ${initialOpacity};`;
+                    wrapper.addEventListener('click', () => jumpToScreenshot(idx));
+                    wrapper.addEventListener('mouseover', () => {
+                        wrapper.style.opacity = '1';
+                        wrapper.style.transform = 'scale(1.05)';
+                    });
+                    wrapper.addEventListener('mouseout', () => {
+                        wrapper.style.opacity = initialOpacity;
+                        wrapper.style.transform = 'scale(1)';
+                    });
+                    const img = document.createElement('img');
+                    img.src = ss.src;
+                    img.alt = `Trade #${ss.tradeIndex + 1} ${ss.type}`;
+                    img.style.cssText = 'width: 120px; height: 80px; object-fit: cover; display: block;';
+                    const caption = document.createElement('div');
+                    caption.style.cssText = 'padding: 0.25rem 0.5rem; background: var(--color-background); font-size: var(--font-size-xs); text-align: center;';
+                    caption.textContent = `#${ss.tradeIndex + 1} ${ss.type}`;
+                    wrapper.appendChild(img);
+                    wrapper.appendChild(caption);
+                    thumbsContainer.appendChild(wrapper);
+                });
+            }
 
             // Scroll active thumbnail into view
             const thumbnailsContainer = document.getElementById('screenshotThumbnails');
@@ -9693,7 +10006,7 @@ select.form-control {
                                         <div style="display: flex; flex-wrap: wrap; gap: var(--space-4);">
                                             ${combo.ruleNames.map((name, i) => `
                                                 <span style="padding: var(--space-2) var(--space-6); background: var(--color-bg-3); color: var(--color-primary); border-radius: var(--radius-sm); font-size: var(--font-size-xs);">
-                                                    ${name}
+                                                    ${escapeHtml(name)}
                                                 </span>
                                             `).join('')}
                                         </div>
@@ -9731,9 +10044,9 @@ select.form-control {
                 <div style="margin-top: 1rem; padding: var(--space-12); background: var(--color-bg-3); border: 1px solid rgba(var(--color-primary-rgb), 0.3); border-radius: var(--radius-base);">
                     <h4 style="font-weight: var(--font-weight-semibold); color: var(--color-primary); margin-bottom: var(--space-8); font-size: var(--font-size-sm);">💡 Key Insights:</h4>
                     <ul style="font-size: var(--font-size-sm); color: var(--color-text); margin: 0; padding-left: var(--space-16); line-height: 1.6;">
-                        <li style="margin-bottom: var(--space-4);">🥇 <strong>Best combination:</strong> ${bestCombination.displayName} with ${bestCombination.winRate.toFixed(1)}% win rate (${bestCombination.totalTrades} trades)</li>
-                        <li style="margin-bottom: var(--space-4);">📊 <strong>Most profitable:</strong> ${mostProfitableCombination.displayName} with $${mostProfitableCombination.totalPL.toFixed(2)} total P&L</li>
-                        <li style="margin-bottom: 0;">⚠️ <strong>Least effective:</strong> ${worstCombination.displayName} with ${worstCombination.winRate.toFixed(1)}% win rate</li>
+                        <li style="margin-bottom: var(--space-4);">🥇 <strong>Best combination:</strong> ${escapeHtml(bestCombination.displayName)} with ${bestCombination.winRate.toFixed(1)}% win rate (${bestCombination.totalTrades} trades)</li>
+                        <li style="margin-bottom: var(--space-4);">📊 <strong>Most profitable:</strong> ${escapeHtml(mostProfitableCombination.displayName)} with $${mostProfitableCombination.totalPL.toFixed(2)} total P&L</li>
+                        <li style="margin-bottom: 0;">⚠️ <strong>Least effective:</strong> ${escapeHtml(worstCombination.displayName)} with ${worstCombination.winRate.toFixed(1)}% win rate</li>
                     </ul>
                 </div>
             `;
@@ -9743,12 +10056,14 @@ select.form-control {
             const rulesGrid = document.getElementById('rulesGrid');
             const ruleStats = document.getElementById('ruleStats');
             
+            // Rule text is user-supplied — escape for the attribute context.
+            // rule.id is numeric (Math.max + 1 in addCustomRule) so inline.
             rulesGrid.innerHTML = appState.customRules.map((rule, index) => `
                 <div class="rule-card">
-                    <input type="text" class="form-control" value="${rule.text}" 
-                           onchange="updateCustomRule(${rule.id}, this.value)" 
+                    <input type="text" class="form-control" value="${escapeAttr(rule.text || '')}"
+                           onchange="updateCustomRule(${Number(rule.id)}, this.value)"
                            placeholder="Rule description...">
-                    <button class="btn btn-secondary" onclick="removeCustomRule(${rule.id})">Remove</button>
+                    <button class="btn btn-secondary" onclick="removeCustomRule(${Number(rule.id)})" aria-label="Remove rule">Remove</button>
                     <div class="rule-stats">
                         <span>Followed: ${getRuleFollowedCount(rule.id)}</span>
                         <span>Win Rate: ${getRuleWinRate(rule.id).toFixed(1)}%</span>
