@@ -3181,7 +3181,14 @@ select.form-control {
 
             <!-- AI Analysis -->
             <div class="section" id="aiSection" style="display: none;">
-                <div class="section-header" style="cursor: pointer;" onclick="toggleAI()">
+                <div class="section-header"
+                     style="cursor: pointer;"
+                     role="button"
+                     tabindex="0"
+                     aria-expanded="true"
+                     aria-controls="aiSectionContent"
+                     onclick="toggleAI()"
+                     onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleAI();}">
                     <div style="display: flex; align-items: center; gap: var(--space-12);">
                         <h3 style="margin: 0; display: flex; align-items: center; gap: var(--space-8);">
                             🤖 AI Analysis
@@ -3206,13 +3213,15 @@ select.form-control {
                         </h3>
                         <button
                             id="aiToggle"
+                            aria-hidden="true"
+                            tabindex="-1"
                             style="background: none; border: none; color: white; font-size: var(--font-size-xl); cursor: pointer; padding: var(--space-4); border-radius: var(--radius-sm); transition: background-color var(--duration-fast) var(--ease-standard);"
                             title="Collapse/Expand"
                             onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'"
                             onmouseout="this.style.backgroundColor='transparent'">▼</button>
                     </div>
                 </div>
-                <div class="section-content">
+                <div class="section-content" id="aiSectionContent">
                     <!-- Strategy Context Box - NEW -->
                     <div style="margin-bottom: 1rem; padding: 1rem; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-base);">
                         <h4 style="font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); margin-bottom: var(--space-12); color: var(--color-text);">📋 Strategy Context (Optional)</h4>
@@ -3265,6 +3274,20 @@ select.form-control {
                         </div>
                     </div>
                     
+                    <!-- Quick Profile Selector -->
+                    <div style="margin-bottom: 1rem; padding: 1rem; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-base);">
+                        <h4 style="font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); margin-bottom: var(--space-12); color: var(--color-text);">⚡ Quick Profile</h4>
+                        <p style="font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: var(--space-12);">
+                            Apply a preset to quickly configure the prompt for common analysis types. You can fine-tune the checkboxes below afterward.
+                        </p>
+                        <select id="promptProfileSelector" class="form-control" onchange="applyPromptProfile(this.value)">
+                            <option value="custom">Custom — pick your own</option>
+                            <option value="quick">Quick Review — overview, setups, recent trades</option>
+                            <option value="deep">Deep Dive — everything, full context</option>
+                            <option value="psychology">Psychology Audit — emotions, rules, behavior focus</option>
+                        </select>
+                    </div>
+
                     <!-- Include in Prompt checkboxes -->
                     <div style="margin-bottom: 1rem; padding: 1rem; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-base);">
                         <h4 style="font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); margin-bottom: var(--space-12); color: var(--color-text);">📋 Include in AI Prompt:</h4>
@@ -3320,12 +3343,12 @@ select.form-control {
                                 </label>
                                 <select id="tradesOption" class="form-control" onchange="updateAiPromptInclusion('tradesOption', this.value)" style="width: 100%;">
                                     <option value="none">None - Don't include trades</option>
-                                    <option value="recent10">Recent 10 trades</option>
+                                    <option value="recent10" selected>Recent 10 trades</option>
                                     <option value="recent20">Recent 20 trades</option>
                                     <option value="recent50">Recent 50 trades</option>
                                     <option value="all">All trades</option>
-                                    <option value="winning">Winning trades only</option>
-                                    <option value="losing">Losing trades only</option>
+                                    <option value="winning">Winning trades only (max 50)</option>
+                                    <option value="losing">Losing trades only (max 50)</option>
                                     <option value="bestWorst">Best 5 &amp; Worst 5 trades</option>
                                 </select>
                                 <p id="tradesOptionHelper" style="font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-top: var(--space-4);"></p>
@@ -3342,17 +3365,18 @@ select.form-control {
                     </div>
                     
                     <div style="display: flex; gap: var(--space-8); margin-bottom: var(--space-16);">
-                        <button class="btn" onclick="generateAIAnalysisPrompt()">Generate AI Analysis</button>
+                        <button class="btn" onclick="generateAIAnalysisPrompt()">Generate Prompt</button>
                         <button class="btn btn-secondary" onclick="copyAIPromptToClipboard()" id="copyPromptBtn" disabled>📋 Copy Prompt</button>
                     </div>
-                    
-                    <div id="promptCopiedMessage" style="display: none; padding: var(--space-8); background: var(--color-bg-3); color: var(--color-success); border-radius: var(--radius-base); font-size: var(--font-size-sm); margin-bottom: var(--space-16);">✅ Prompt copied to clipboard!</div>
-                    
+
+                    <div id="promptCopiedMessage" role="status" aria-live="polite" style="display: none; padding: var(--space-8); background: var(--color-bg-3); color: var(--color-success); border-radius: var(--radius-base); font-size: var(--font-size-sm); margin-bottom: var(--space-16);">✅ Prompt copied to clipboard!</div>
+
                     <div id="analysisPrompt" style="margin-top: 1rem; display: none;">
                         <label for="promptText" style="display: block; margin-bottom: var(--space-8); font-size: var(--font-size-sm); color: var(--color-text-secondary);">
                             💡 Edit the prompt below if needed, then click Copy Prompt
                         </label>
-                        <textarea id="promptText" class="form-control" rows="15"></textarea>
+                        <textarea id="promptText" class="form-control" rows="15" oninput="updatePromptSizeEstimate()" aria-describedby="promptSizeEstimate"></textarea>
+                        <div id="promptSizeEstimate" style="margin-top: var(--space-4); font-size: var(--font-size-xs); color: var(--color-text-secondary); text-align: right;"></div>
                     </div>
                 </div>
             </div>
@@ -4108,7 +4132,7 @@ select.form-control {
                 openHourlyPerformance: true,
                 closeHourlyPerformance: true,
                 customRules: true,
-                tradesOption: 'none',  // Changed from boolean to string with options
+                tradesOption: 'recent10',  // Changed from boolean to string with options
                 screenshots: false  // Don't include screenshots in prompt
             },
             exportPromptFormat: 'readable',
@@ -10392,6 +10416,7 @@ select.form-control {
             appState.showAI = !appState.showAI;
             const content = document.querySelector('#aiSection .section-content');
             const toggleButton = document.getElementById('aiToggle');
+            const header = document.querySelector('#aiSection .section-header');
             if (appState.showAI) {
                 content.style.display = 'block';
                 toggleButton.textContent = '▼';
@@ -10399,6 +10424,7 @@ select.form-control {
                 content.style.display = 'none';
                 toggleButton.textContent = '▶';
             }
+            if (header) header.setAttribute('aria-expanded', String(appState.showAI));
             saveToLocalStorage();
         }
 
@@ -10583,10 +10609,12 @@ select.form-control {
             // AI Section
             const aiContent = document.querySelector('#aiSection .section-content');
             const aiToggle = document.getElementById('aiToggle');
+            const aiHeader = document.querySelector('#aiSection .section-header');
             if (aiContent && aiToggle) {
                 aiContent.style.display = appState.showAI ? 'block' : 'none';
                 aiToggle.textContent = appState.showAI ? '▼' : '▶';
             }
+            if (aiHeader) aiHeader.setAttribute('aria-expanded', String(appState.showAI));
 
             // Monte Carlo Section
             const monteCarloContent = document.querySelector('#monteCarloSection .section-content');
@@ -12885,10 +12913,95 @@ select.form-control {
         }
 
         // AI Analysis Functions
+        const AI_INCLUSION_CHECKBOX_IDS = {
+            overview: 'includeOverview',
+            setupPerformance: 'includeSetupPerformance',
+            marketCondition: 'includeMarketCondition',
+            emotionalState: 'includeEmotionalState',
+            ruleAdherence: 'includeRuleAdherence',
+            monthlyPerformance: 'includeMonthlyPerformance',
+            monthOverMonthAnalysis: 'includeMonthOverMonth',
+            dailyPerformance: 'includeDailyPerformance',
+            openHourlyPerformance: 'includeOpenHourlyPerformance',
+            closeHourlyPerformance: 'includeCloseHourlyPerformance',
+            customRules: 'includeCustomRules'
+        };
+
+        const PROMPT_PROFILES = {
+            quick: {
+                label: 'Quick Review',
+                overview: true,
+                setupPerformance: true,
+                marketCondition: false,
+                emotionalState: false,
+                ruleAdherence: false,
+                monthlyPerformance: false,
+                monthOverMonthAnalysis: false,
+                dailyPerformance: true,
+                openHourlyPerformance: false,
+                closeHourlyPerformance: false,
+                customRules: false,
+                tradesOption: 'recent10'
+            },
+            deep: {
+                label: 'Deep Dive',
+                overview: true,
+                setupPerformance: true,
+                marketCondition: true,
+                emotionalState: true,
+                ruleAdherence: true,
+                monthlyPerformance: true,
+                monthOverMonthAnalysis: true,
+                dailyPerformance: true,
+                openHourlyPerformance: true,
+                closeHourlyPerformance: true,
+                customRules: true,
+                tradesOption: 'recent50'
+            },
+            psychology: {
+                label: 'Psychology Audit',
+                overview: true,
+                setupPerformance: false,
+                marketCondition: false,
+                emotionalState: true,
+                ruleAdherence: true,
+                monthlyPerformance: false,
+                monthOverMonthAnalysis: false,
+                dailyPerformance: false,
+                openHourlyPerformance: false,
+                closeHourlyPerformance: false,
+                customRules: true,
+                tradesOption: 'bestWorst'
+            }
+        };
+
+        function applyPromptProfile(profileKey) {
+            if (profileKey === 'custom' || !PROMPT_PROFILES[profileKey]) {
+                return;
+            }
+            const profile = PROMPT_PROFILES[profileKey];
+            Object.entries(AI_INCLUSION_CHECKBOX_IDS).forEach(([stateKey, elementId]) => {
+                const value = !!profile[stateKey];
+                appState.aiPromptInclusions[stateKey] = value;
+                const checkbox = document.getElementById(elementId);
+                if (checkbox) checkbox.checked = value;
+            });
+            appState.aiPromptInclusions.tradesOption = profile.tradesOption;
+            const tradesOptionEl = document.getElementById('tradesOption');
+            if (tradesOptionEl) tradesOptionEl.value = profile.tradesOption;
+            updateTradesOptionHelper();
+            saveToLocalStorage();
+            showMessage(`✅ Applied ${profile.label} profile — customize further below if needed`);
+        }
+
         function updateAiPromptInclusion(key, value) {
             appState.aiPromptInclusions[key] = value;
             if (key === 'tradesOption') {
                 updateTradesOptionHelper();
+            }
+            const profileSelector = document.getElementById('promptProfileSelector');
+            if (profileSelector && profileSelector.value !== 'custom') {
+                profileSelector.value = 'custom';
             }
         }
         
@@ -12913,12 +13026,20 @@ select.form-control {
                 case 'all':
                     text = `⚠️ Including all ${totalTrades} trades may create a very long prompt`;
                     break;
-                case 'winning':
-                    text = `Including ${winningTrades} winning trades`;
+                case 'winning': {
+                    const actual = Math.min(50, winningTrades);
+                    text = winningTrades > 50
+                        ? `Including 50 most recent winning trades (of ${winningTrades} total, capped to keep prompt size reasonable)`
+                        : `Including ${actual} winning trades`;
                     break;
-                case 'losing':
-                    text = `Including ${losingTrades} losing trades`;
+                }
+                case 'losing': {
+                    const actual = Math.min(50, losingTrades);
+                    text = losingTrades > 50
+                        ? `Including 50 most recent losing trades (of ${losingTrades} total, capped to keep prompt size reasonable)`
+                        : `Including ${actual} losing trades`;
                     break;
+                }
                 case 'bestWorst':
                     text = `Including best 5 and worst 5 trades (10 total)`;
                     break;
@@ -12944,11 +13065,23 @@ select.form-control {
                 showMessage('No trading data available for analysis', 'error');
                 return;
             }
-            
+
             const prompt = buildAnalysisPrompt();
             document.getElementById('promptText').value = prompt;
             document.getElementById('analysisPrompt').style.display = 'block';
             document.getElementById('copyPromptBtn').disabled = false;
+            updatePromptSizeEstimate();
+        }
+
+        function updatePromptSizeEstimate() {
+            const textarea = document.getElementById('promptText');
+            const estimate = document.getElementById('promptSizeEstimate');
+            if (!textarea || !estimate) return;
+            const chars = textarea.value.length;
+            const approxTokens = Math.ceil(chars / 4);
+            const warn = approxTokens > 100000;
+            estimate.textContent = `${chars.toLocaleString()} characters · ~${approxTokens.toLocaleString()} tokens (rough estimate)`;
+            estimate.style.color = warn ? 'var(--color-error)' : 'var(--color-text-secondary)';
         }
         
         function buildAnalysisPrompt() {
@@ -13225,6 +13358,9 @@ select.form-control {
                 prompt += `\n`;
             }
             
+            prompt += `⚠️ STATISTICAL SIGNIFICANCE NOTE:\n`;
+            prompt += `Some of the buckets above may have small sample sizes. Treat any category with fewer than 10 trades as a weak/noisy signal — win rate, profit factor, and averages are unreliable at small N. When making claims, explicitly flag low-sample groups and prioritize insights backed by larger samples. Cite specific trade dates or symbols where possible rather than relying only on aggregated percentages.\n\n`;
+
             prompt += `PLEASE ANALYZE AND PROVIDE:\n\n`;
             prompt += `PERFORMANCE & STRATEGY:\n`;
             prompt += `1. Overall performance assessment\n`;
@@ -13270,7 +13406,8 @@ select.form-control {
             if (appState.strategyContext) {
                 prompt += ` in the context of the provided strategy`;
             }
-            prompt += ` and provide insights.`;
+            prompt += ` and provide insights.\n\n`;
+            prompt += `Statistical note: treat any grouping with fewer than 10 trades as a weak signal — win rate and profit factor are noisy at small sample sizes. Explicitly flag low-N findings and prioritize patterns backed by larger samples.`;
             return prompt;
         }
         
@@ -13395,17 +13532,17 @@ select.form-control {
                     return sortedTrades;
                 
                 case 'winning':
-                    return sortedTrades.filter(t => (parseFloat(t.netPL) || parseFloat(t.profit) || 0) > 0);
-                
+                    return sortedTrades.filter(t => (parseFloat(t.netPL) || parseFloat(t.profit) || 0) > 0).slice(0, 50);
+
                 case 'losing':
-                    return sortedTrades.filter(t => (parseFloat(t.netPL) || parseFloat(t.profit) || 0) < 0);
-                
+                    return sortedTrades.filter(t => (parseFloat(t.netPL) || parseFloat(t.profit) || 0) < 0).slice(0, 50);
+
                 case 'bestWorst':
-                    const sortedByPL = [...sortedTrades].sort((a, b) => 
+                    const sortedByPL = [...sortedTrades].sort((a, b) =>
                         (parseFloat(b.netPL) || parseFloat(b.profit) || 0) - (parseFloat(a.netPL) || parseFloat(a.profit) || 0)
                     );
                     const best5 = sortedByPL.slice(0, 5);
-                    const worst5 = sortedByPL.slice(-5);
+                    const worst5 = sortedByPL.slice(-5).reverse();
                     return [...best5, ...worst5];
                 
                 default:
